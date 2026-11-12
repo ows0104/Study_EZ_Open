@@ -8,12 +8,18 @@
 
     python -m runner.root_choices --run-id 261110_03 --no-upload   # 만들어 보기만(올리지 않음)
     python -m runner.root_choices --run-id 261110_03               # 만들어 올리기
+    python -m runner.root_choices --run-id 261102_02 --run-id 261102_03 --workers 2   # 여러 강의를 함께
+    python -m runner.root_choices --all-published --subject 감염과 면역                # 이 PC에서 게시한 그 과목 강의 전부
+
+여러 강의는 `--workers`개씩 함께 돌고(2026-11-12 사용자 「묶음 병렬식 처리로 시간 단축」), 강의 안의 묶음도
+생성기에서 함께 돈다(`quizbank.root_choices.WORKERS`). 한 강의의 실패는 다른 강의를 멈추지 않는다.
 """
 from __future__ import annotations
 
 import json
 import shutil
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import transport
@@ -67,9 +73,8 @@ def publish(client: transport.Client, subject: str, run_id: str, out: Path, payl
         return False
 
 
-def published_run(runs: Path, run_id: str, subject: str | None = None, generation: str | None = None) -> tuple[Path, dict, dict]:
-    """이 강의의 게시된 실행 폴더·packet·결과. 게시 응답의 판과 결과 문서의 판이 같은 것만, 여럿이면 가장 최근 게시."""
-    found = []
+def _published(runs: Path, subject: str | None = None, generation: str | None = None):
+    """게시 응답의 판과 결과 문서의 판이 같은 실행 (게시 시각, 폴더, packet, 결과)."""
     for folder in sorted((runs / "_root-generation").glob("*/")):
         if generation and folder.name != generation:
             continue
@@ -79,46 +84,81 @@ def published_run(runs: Path, run_id: str, subject: str | None = None, generatio
             result_path = next(p for p in (folder / "generation" / "result.json", folder / "result.json") if p.exists())
         except (OSError, ValueError, StopIteration):
             continue
-        if packet.get("runId") != run_id or (subject and packet.get("subject") != subject) or posted.get("status") != "ready":
+        if (subject and packet.get("subject") != subject) or posted.get("status") != "ready":
             continue
         payload = json.loads(result_path.read_text(encoding="utf-8"))
         if payload.get("document", {}).get("revision") != posted.get("revision"):
             continue
-        found.append(((folder / "published.json").stat().st_mtime, folder, packet, payload))
+        yield (folder / "published.json").stat().st_mtime, folder, packet, payload
+
+
+def published_run(runs: Path, run_id: str, subject: str | None = None, generation: str | None = None) -> tuple[Path, dict, dict]:
+    """이 강의의 게시된 실행 폴더·packet·결과. 게시 응답의 판과 결과 문서의 판이 같은 것만, 여럿이면 가장 최근 게시."""
+    found = [row for row in _published(runs, subject, generation) if row[2].get("runId") == run_id]
     if not found:
         raise SystemExit(f"{run_id}: 게시된 Main-Quiz 실행을 runs/_root-generation에서 찾지 못했다")
     _, folder, packet, payload = max(found, key=lambda row: row[0])
     return folder, packet, payload
 
 
+def published_run_ids(runs: Path, subject: str) -> list[str]:
+    """이 PC에서 그 과목에 게시한 강의 run ID 전부(정렬)."""
+    return sorted({row[2]["runId"] for row in _published(runs, subject) if row[2].get("runId")})
+
+
+def one(run_id: str, args, client) -> bool:
+    """강의 하나. 실패는 False로 돌려주고 다른 강의를 멈추지 않는다."""
+    try:
+        folder, packet, payload = published_run(args.runs, run_id, args.subject, args.generation)
+    except SystemExit as missing:
+        print(missing, flush=True)
+        return False
+    document = payload["document"]
+    print(f"Main-Quiz {run_id}: 판 {document['revision']} ({folder.name}) 선지 작성", flush=True)
+    if client is None:
+        path = build(document, folder / "choices", run_id, model=args.model)
+        print(f"{run_id} 만들기만 함: {path}" if path else f"{run_id} 선지 작성 실패", flush=True)
+        return path is not None
+    return publish(client, packet["subject"], run_id, folder, payload, model=args.model)
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     ap = argparse.ArgumentParser(description="이미 게시된 Main-Quiz 판에 단답·나열 선지를 만들어 붙인다")
-    ap.add_argument("--run-id", required=True)
-    ap.add_argument("--subject", help="같은 run ID가 여러 과목에 있을 때")
-    ap.add_argument("--generation", help="runs/_root-generation의 실행 ID를 직접 지정")
+    ap.add_argument("--run-id", action="append", default=[], help="여러 번 줄 수 있다")
+    ap.add_argument("--all-published", action="store_true", help="--subject 과목에서 이 PC가 게시한 강의 전부")
+    ap.add_argument("--subject", help="같은 run ID가 여러 과목에 있을 때, 또는 --all-published의 과목")
+    ap.add_argument("--generation", help="runs/_root-generation의 실행 ID를 직접 지정(강의 하나일 때)")
     ap.add_argument("--runs", type=Path, default=Path("runs"))
+    ap.add_argument("--workers", type=int, default=2, help="함께 도는 강의 수")
     ap.add_argument("--model")
     ap.add_argument("--no-upload", action="store_true", help="만들기만 하고 올리지 않는다")
     ap.add_argument("--api")
     ap.add_argument("--token")
     args = ap.parse_args(argv)
-    folder, packet, payload = published_run(args.runs, args.run_id, args.subject, args.generation)
-    document = payload["document"]
-    print(f"Main-Quiz {args.run_id}: 판 {document['revision']} ({folder.name}) 선지 작성", flush=True)
-    if args.no_upload:
-        path = build(document, folder / "choices", args.run_id, model=args.model)
-        print(f"만들기만 함: {path}" if path else "선지 작성 실패", flush=True)
-        return 0 if path else 1
-    import os
-    from . import cycle, publish as publishing
-    token = cycle.runner_token(args.token)
-    if not token:
-        print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token으로 준다")
-        return 2
-    api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publishing.DEFAULT_API_BASE).rstrip("/")
-    ok = publish(publishing.Client(api, token), packet["subject"], args.run_id, folder, payload, model=args.model)
-    return 0 if ok else 1
+    if args.all_published and not args.subject:
+        ap.error("--all-published에는 --subject가 필요하다")
+    run_ids = list(dict.fromkeys([*args.run_id, *(published_run_ids(args.runs, args.subject) if args.all_published else [])]))
+    if not run_ids:
+        ap.error("--run-id나 --all-published가 필요하다")
+    if args.generation and len(run_ids) != 1:
+        ap.error("--generation은 강의 하나일 때만 쓴다")
+    client = None
+    if not args.no_upload:
+        import os
+        from . import cycle, publish as publishing
+        token = cycle.runner_token(args.token)
+        if not token:
+            print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token으로 준다")
+            return 2
+        api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publishing.DEFAULT_API_BASE).rstrip("/")
+        client = publishing.Client(api, token)
+    print(f"선지 작성 {len(run_ids)}강의 · 함께 {max(1, args.workers)}: {', '.join(run_ids)}", flush=True)
+    with ThreadPoolExecutor(max_workers=max(1, min(args.workers, len(run_ids)))) as pool:
+        done = list(pool.map(lambda run_id: one(run_id, args, client), run_ids))
+    failed = [r for r, ok in zip(run_ids, done) if not ok]
+    print(f"선지 작성 끝: 성공 {len(run_ids) - len(failed)} · 실패 {len(failed)}" + (f" ({', '.join(failed)})" if failed else ""), flush=True)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

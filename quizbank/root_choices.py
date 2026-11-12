@@ -6,6 +6,8 @@
 ③ 계약 검사(`studyez_contracts/roots/choices.py`)를 통과한 문항만 `root-choices/1` JSON 하나에 담는다.
 의학 검토가 지적한 오답은 빼고, 남은 오답이 모자라면 그 문항은 선지 없이 둔다. 검토를 받지 못한 문항은 싣지 않는다.
 강의 PDF·족보는 보내지 않는다. 묶음이 실패하면 그 묶음의 문항만 선지 없이 둔다.
+묶음(작성 → 그 묶음의 의학 검토)은 서로 기다리지 않고 `WORKERS`개씩 함께 돈다(2026-11-12 사용자 「묶음 병렬식 처리로
+시간 단축」). 결과·건너뜀·사용량은 묶음 순서로 모으므로 끝나는 순서와 상관없이 같은 파일이 된다.
 """
 from __future__ import annotations
 
@@ -13,6 +15,7 @@ import argparse
 import hashlib
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -24,6 +27,7 @@ REVIEW_PROMPT = PROMPTS / "review.md"
 REVIEW_POLICY = "choices-medical/1"
 BATCH = 40
 ATTEMPTS = 2
+WORKERS = 3   # 함께 도는 묶음 수(출제 파이프라인의 BATCH_WORKERS와 같다)
 _STR = {"type": "string"}
 
 
@@ -135,36 +139,52 @@ def _stage(work: Path, name: str, prompt: str, schema: dict, data: dict, model: 
     return None, error
 
 
+def _batch(document: dict, by_id: dict, batch: list[dict], work: Path, index: int, total: int, run_id: str,
+           prompts: tuple[str, str], model: str | None, call) -> dict:
+    """묶음 하나: 작성 → 의학 검토 → 반영. 다른 묶음과 아무것도 나누지 않는다."""
+    prompt, review_prompt = prompts
+    got = {"questions": {}, "skipped": {}, "reviewed": {}, "failed": 0, "usage": []}
+    output, error = _stage(work, f"choices-{index}", prompt, PROPOSALS, batch_input(document, batch), model,
+                           f"Main-Quiz {run_id} 선지 작성 {index + 1}/{total}", call, got["usage"])
+    if output is None:
+        got["failed"] = 1
+        got["skipped"].update({q["question_id"]: f"묶음 호출 실패: {error}" for q in batch})
+        return got
+    drafts, missed = drafts_of(batch, output)
+    got["skipped"].update(missed)
+    if not drafts:
+        return got
+    verdicts, error = _stage(work / "review", f"choices-review-{index}", review_prompt, REVIEWS,
+                             review_input(document, drafts, by_id), model,
+                             f"Main-Quiz {run_id} 선지 의학 검토 {index + 1}/{total}", call, got["usage"])
+    if verdicts is None:  # 검토를 받지 못한 오답은 싣지 않는다
+        got["failed"] = 1
+        got["skipped"].update({qid: f"의학 검토 호출 실패: {error}" for qid in drafts})
+        return got
+    entries, missed, record = apply_review(by_id, drafts, verdicts)
+    got["questions"].update(entries)
+    got["skipped"].update(missed)
+    got["reviewed"].update(record)
+    return got
+
+
 def build(document: dict, out: Path, run_id: str, *, model: str | None = None, call=_call) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     by_id = {q["question_id"]: q for q in document["bank_snapshot"]["questions"]}
     targets = [q for q in by_id.values() if contract.eligible(q)]
-    prompt, review_prompt = PROMPT.read_text(encoding="utf-8"), REVIEW_PROMPT.read_text(encoding="utf-8")
+    prompts = (PROMPT.read_text(encoding="utf-8"), REVIEW_PROMPT.read_text(encoding="utf-8"))
     questions, skipped, usage, reviewed, failed = {}, {}, [], {}, 0
     batches = [targets[i:i + BATCH] for i in range(0, len(targets), BATCH)]
-    for index, batch in enumerate(batches):
-        work = out / f"batch-{index}"
-        output, error = _stage(work, f"choices-{index}", prompt, PROPOSALS, batch_input(document, batch), model,
-                               f"Main-Quiz {run_id} 선지 작성 {index + 1}/{len(batches)}", call, usage)
-        if output is None:
-            failed += 1
-            skipped.update({q["question_id"]: f"묶음 호출 실패: {error}" for q in batch})
-            continue
-        drafts, missed = drafts_of(batch, output)
-        skipped.update(missed)
-        if not drafts:
-            continue
-        verdicts, error = _stage(work / "review", f"choices-review-{index}", review_prompt, REVIEWS,
-                                 review_input(document, drafts, by_id), model,
-                                 f"Main-Quiz {run_id} 선지 의학 검토 {index + 1}/{len(batches)}", call, usage)
-        if verdicts is None:  # 검토를 받지 못한 오답은 싣지 않는다
-            failed += 1
-            skipped.update({qid: f"의학 검토 호출 실패: {error}" for qid in drafts})
-            continue
-        entries, missed, record = apply_review(by_id, drafts, verdicts)
-        questions.update(entries)
-        skipped.update(missed)
-        reviewed.update(record)
+    with ThreadPoolExecutor(max_workers=max(1, min(WORKERS, len(batches)))) as pool:
+        futures = [pool.submit(_batch, document, by_id, batch, out / f"batch-{index}", index, len(batches), run_id,
+                               prompts, model, call) for index, batch in enumerate(batches)]
+        results = [f.result() for f in futures]
+    for got in results:  # 묶음 순서로 모은다
+        questions.update(got["questions"])
+        skipped.update(got["skipped"])
+        reviewed.update(got["reviewed"])
+        usage.extend(got["usage"])
+        failed += got["failed"]
     asset = {"schema": contract.SCHEMA, "revision": document["revision"], "createdAt": datetime.now(UTC).isoformat(),
              "counts": {"eligible": len(targets), "written": len(questions), "skipped": len(skipped), "failedBatches": failed,
                         "removedByReview": sum(len(r["removed"]) for r in reviewed.values())},

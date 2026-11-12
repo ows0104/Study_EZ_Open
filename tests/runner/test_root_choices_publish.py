@@ -102,3 +102,35 @@ def test_게시_경로는_선지_단계를_부르지_않는다():
     from pathlib import Path
     source = (Path(root_choices.__file__).parent / "connection_generation.py").read_text(encoding="utf-8")
     assert "root_choices" not in source
+
+
+def test_여러_강의를_함께_돌리고_한_강의의_실패가_나머지를_막지_않는다(tmp_path, monkeypatch, capsys):
+    import threading
+    for gid, run_id in (("a" * 32, "261102_02"), ("b" * 32, "261102_03"), ("c" * 32, "261104_03")):
+        _run(tmp_path, gid, run_id, "rev-" + run_id)
+    _run(tmp_path, "d" * 32, "261199_01", "rev-other")
+    import json
+    other = tmp_path / "_root-generation" / ("d" * 32) / "packet.json"
+    other.write_text(json.dumps({"runId": "261199_01", "subject": "다른 과목"}), encoding="utf-8")
+    together, seen, lock = threading.Barrier(2, timeout=5), [], threading.Lock()
+
+    def build(document, out, run_id, *, model=None, run=None):
+        with lock:
+            seen.append(run_id)
+        if run_id in ("261102_02", "261102_03"):
+            together.wait()  # 앞의 두 강의는 서로를 기다릴 수 있어야 끝난다: 함께 돈다
+        return None if run_id == "261102_03" else out / f"{document['revision']}.json"
+
+    monkeypatch.setattr(root_choices, "build", build)
+    code = root_choices.main(["--all-published", "--subject", "감염과 면역", "--runs", str(tmp_path), "--no-upload", "--workers", "2"])
+    assert code == 1 and sorted(seen) == ["261102_02", "261102_03", "261104_03"]
+    out = capsys.readouterr().out
+    assert "성공 2 · 실패 1 (261102_03)" in out and "261199_01" not in out
+
+
+def test_all_published에는_과목이_필요하다(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit):
+        root_choices.main(["--all-published", "--runs", str(tmp_path), "--no-upload"])
+    with pytest.raises(SystemExit):
+        root_choices.main(["--runs", str(tmp_path), "--no-upload"])

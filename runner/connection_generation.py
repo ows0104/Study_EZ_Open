@@ -119,6 +119,52 @@ def map_tree_front(packet, out, *, model=None, resume=None, run=None):
     return again
 
 
+def duplicates_front(packet, out):
+    """duplicates-only/1 (docs/changes/2026-11-12-dedupe-published): the published run this request replaces is
+    taken as it is. Its derived generation packet is re-derived from this request (the front stages do not run
+    again) and left where map_tree_front reads it; returns that run's generation folder."""
+    from studyez_contracts.roots import map_tree
+    previous = out.parent / packet['restartOf']
+    posted = json.loads((previous / 'published.json').read_text(encoding='utf-8'))
+    old = json.loads((previous / 'generation' / 'result.json').read_text(encoding='utf-8'))
+    if posted.get('status') != 'ready' or posted.get('revision') != old['document']['revision']:
+        raise ValueError('중복 재판정: 교체할 실행이 이 PC에서 게시된 결과가 아닙니다.')
+    derived = json.loads((previous / 'front' / 'derived-packet.json').read_text(encoding='utf-8'))
+    again = map_tree.derive_packet(packet, derived['conceptMap'], derived['points'], derived['frontStages'], derived.get('intakeBank'))
+    path = out / 'front' / 'derived-packet.json'
+    if path.exists():
+        if map_tree.public(json.loads(path.read_text(encoding='utf-8'))) != map_tree.public(again):
+            raise ValueError('중복 재판정: 기존 생성 입력이 다릅니다. 이력을 보존합니다.')
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(again, ensure_ascii=False, indent=2), encoding='utf-8')
+    return previous / 'generation'
+
+
+def reuse_evidence(client, subject, run_id, previous, out, payload):
+    """duplicates-only/1: the questions and sources are the previous revision's, so is its evidence; it is uploaded
+    again under the new revision. Without a stored one the evidence is built as after any publication."""
+    from .root_evidence import upload
+    try:
+        stored = json.loads((previous / 'evidence' / 'evidence.json').read_text(encoding='utf-8'))
+        old = json.loads((previous / 'result.json').read_text(encoding='utf-8'))['document']['revision']
+        if stored.get('revision') != old: raise ValueError('이전 근거가 이전 판의 것이 아닙니다.')
+    except (OSError, ValueError) as error:
+        print(f'Quiz Bank {run_id}: 이전 근거를 쓰지 못함({error}) — 새로 만든다', flush=True)
+        return False
+    revision = payload['document']['revision']
+    path = out / 'evidence' / f'{revision}.json'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({**stored, 'revision': revision}, ensure_ascii=False, indent=2), encoding='utf-8')
+    try:
+        upload(client, subject, run_id, path)
+    except Exception as error:  # noqa: BLE001 — 게시를 되돌리지 않는다
+        print(f'Quiz Bank {run_id}: 근거 보강 실패 — {error}', flush=True)
+        return True
+    print(f'Quiz Bank {run_id}: 이전 판 근거를 새 판으로 업로드 ({path.name})', flush=True)
+    return True
+
+
 def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=None, resume=None):
     """resume: the administrator's reason to continue a failed/held request (stage-resume/1, root_front --resume)."""
     if not re.fullmatch(r'[a-f0-9]{32}', generation_id): raise ValueError('잘못된 생성 작업 ID')
@@ -164,6 +210,7 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
 def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=None, resume=None):
     # map-tree/1 runs the front stages first; the generator then works in <run>/generation on the derived packet.
     gen_out, gen_packet, gen_packet_path = out, packet, packet_path
+    previous = duplicates_front(packet, out) if packet.get('duplicatesOnly') else None
     if packet.get('pipeline') is not None:
         gen_packet = map_tree_front(packet, out, model=model, resume=resume)
         if gen_packet is None: return 1
@@ -172,7 +219,10 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     args = [sys.executable, '-m', module, '--packet', str(gen_packet_path.resolve()), '--out', str(gen_out.resolve())]
     if model: args += ['--model', model]
     if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
-    if (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
+    if previous is not None:
+        args += ['--duplicates-of', str(previous.resolve())]
+        if resume and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
+    if previous is None and (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)
     else:
@@ -189,6 +239,7 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
         refresh(out,'published')
     print(f'Quiz Bank {run_id}: Concept map·포인트 → 뿌리 학습 게시 완료', flush=True)
     # Quiz Bank와 같은 핵심 근거·족보 지면(2026-11-08). 실패해도 게시 결과는 그대로다.
+    if previous is not None and reuse_evidence(client, subject, run_id, previous, gen_out, payload): return 0
     from .root_evidence import publish as publish_evidence
     publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
     return 0

@@ -110,6 +110,23 @@ with SessionLocal() as db:
 assert client.post(PUB, json={**RESTART, 'requestId': 'pub-done'}).status_code == 409
 r = client.post(PUB, json={**RESTART, 'requestId': 'pub-done', 'replacePublished': True}); assert r.status_code == 200, r.text
 assert r.json()['generation']['restartOf'] == replacing['id']
+# 「중복만 다시 판정」(docs/changes/2026-11-12-dedupe-published): only beside restart + replacePublished on map-tree/3.
+for bad in ({**NEW, 'duplicatesOnly': True}, {**RESTART, 'duplicatesOnly': True},
+            {**RESTART, 'replacePublished': True, 'duplicatesOnly': True, 'pipeline': map_tree.PIPELINE2}):
+    assert client.post(PUB, json={**bad, 'requestId': 'dup-bad'}).status_code == 422, bad
+with SessionLocal() as db:
+    plain = db.get(RootGeneration, r.json()['generation']['id']).packet
+    assert 'duplicatesOnly' not in plain  # a restart without the flag carries none (its fingerprint is as before)
+set_state(r.json()['generation']['jobId'], 'done')
+with SessionLocal() as db:
+    db.get(RootGeneration, r.json()['generation']['id']).result_digest = 'e' * 64; db.commit()
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-dup', 'replacePublished': True, 'duplicatesOnly': True}); assert r.status_code == 200, r.text
+dup = r.json()['generation']
+with SessionLocal() as db:
+    row = db.get(RootGeneration, dup['id'])
+    assert row.packet['duplicatesOnly'] is True and row.packet['replacePublished'] is True
+    assert row.packet['restartOf'] == r.json()['generation']['restartOf'] and packet_hash(row.packet) == row.packet['inputHash']
+    assert db.get(RootControl, ('test', 'pub')).revision == 'published-pub'  # the old revision stays until the new one publishes
 user('student')
 assert client.post(URL, json={**RESTART, 'requestId': 'student'}).status_code == 403
-print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused')
+print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only')

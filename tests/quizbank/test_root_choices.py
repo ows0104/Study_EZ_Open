@@ -122,7 +122,9 @@ def test_묶음_실패는_한_번_다시_부르고_그_묶음만_비운다(tmp_p
         return {"proposals": [{"question_id": q["question_id"], "wrong": _wrong(q["question_id"]), "skip_reason": ""} for q in rows]}
 
     asset = root_choices.build(document, tmp_path, "r", call=_fake(write, log=calls))
-    assert calls == ["batch-0", "batch-0", "batch-1", "batch-1/review"]
+    # 묶음은 함께 돈다: 묶음마다의 순서만 정해져 있다.
+    assert [c for c in calls if c.startswith("batch-0")] == ["batch-0", "batch-0"]
+    assert [c for c in calls if c.startswith("batch-1")] == ["batch-1", "batch-1/review"]
     assert sorted(asset["questions"]) == ["Q2", "Q3"] and asset["counts"]["failedBatches"] == 1
     assert asset["skipped"]["Q0"].startswith("묶음 호출 실패")
 
@@ -142,3 +144,19 @@ def test_대상이_없으면_호출하지_않는다(tmp_path):
     document = {"revision": "rev-1", "bank_snapshot": {"questions": [{**_q("QC"), "format": "cloze"}]}}
     asset = root_choices.build(document, tmp_path, "r", call=lambda *a: (_ for _ in ()).throw(AssertionError))
     assert asset["questions"] == {} and asset["counts"]["eligible"] == 0
+
+
+def test_묶음은_함께_돌고_결과는_묶음_순서로_모은다(tmp_path, monkeypatch):
+    import threading
+    monkeypatch.setattr(root_choices, "BATCH", 2)
+    document = _document(6)
+    together = threading.Barrier(3, timeout=5)
+
+    def write(rows, work):
+        together.wait()  # 세 묶음의 작성 호출이 모두 동시에 떠 있어야 지나간다
+        return {"proposals": [{"question_id": q["question_id"], "wrong": _wrong(q["question_id"]), "skip_reason": ""} for q in rows]}
+
+    asset = root_choices.build(document, tmp_path, "r", call=_fake(write))
+    assert list(asset["questions"]) == ["Q0", "Q1", "Q2", "Q3", "Q4", "Q5"]
+    stages = [json.loads(line)["stage"] for line in (tmp_path / "usage.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert stages == ["choices-0", "choices-review-0", "choices-1", "choices-review-1", "choices-2", "choices-review-2"]
