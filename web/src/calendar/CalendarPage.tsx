@@ -5,6 +5,7 @@ import { useBankLink } from "../bank/bankBridge";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
 import { previewProviders, type PreviewProvider } from "../types/lectures";
 import { CalendarGrid } from "./CalendarGrid";
+import { reviewFill } from "./ChipLearning";
 import { EventChip } from "./EventChip";
 import { displayInfo } from "./kinds";
 import { useCalendarTimetable } from "./useCalendarTimetable";
@@ -169,7 +170,7 @@ export function CalendarPage() {
           <span className="legend-sep" />
           <span><span className="readline"><i className="rl-pre is-on" /></span> 예습 퀴즈 완료</span>
           <span><span className="readline"><i className="rl-pre" /></span> 미완료</span>
-          <span className="legend-meter"><span className="meter"><span style={{ width: "25%", background: "color-mix(in srgb, var(--accent) 90%, var(--surface))" }} /></span> 복습 학습률</span>
+          <span className="legend-meter"><span className="meter"><span style={{ width: "25%", background: reviewFill(25) }} /></span> 복습 학습률</span>
         </div>
       </div>
 

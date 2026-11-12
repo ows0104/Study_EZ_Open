@@ -43,13 +43,19 @@ export function learningDescription(lecture: LectureRef) {
   return `${lecture.title}: ${preFor(lecture)}${readsFor(lecture)} · ${reviewFor(lecture).description}`;
 }
 
-/** 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (100 − 학습률×40)%만큼 섞는다(2026-11-12 진하게: ×62 → ×40). */
+/**
+ * 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (42 − 학습률×14)%만큼 섞는다 — 바탕(「오늘 복습」 박스 안 색, 9%)
+ * 보다 한 단계 진하고 박스 테두리(28%)까지. 2026-11-12 사용자 「바 색깔이 좀 진하다」로 100−×40에서 내렸다.
+ */
+export function reviewFill(score: number) {
+  return `color-mix(in srgb, var(--accent) ${Math.round(42 - (score / 100) * 14)}%, var(--surface))`;
+}
+
 export function ReviewMeter({ score, className = "" }: { score: number | null; className?: string }) {
   if (score === null) return <span className={`meter is-closed ${className}`} />;
-  const strength = Math.round(100 - (score / 100) * 40);
   return (
     <span className={`meter ${className}`}>
-      <span style={{ width: `${score}%`, background: `color-mix(in srgb, var(--accent) ${strength}%, var(--surface))` }} />
+      <span style={{ width: `${score}%`, background: reviewFill(score) }} />
     </span>
   );
 }

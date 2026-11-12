@@ -1,0 +1,102 @@
+{
+  "id": "2026-11-12-review-bar-light",
+  "title": "캘린더 복습 막대 색 옅게",
+  "area": "site",
+  "created_at": "2026-11-12T08:51:34.053412+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T08:51:49.148369+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '바 색깔이 좀 진하다. 차라리 캘린더 화면 오른쪽 위에 예습 박스, 복습 박스 안의 색 정도로 하자.' 이어서 '둘 다 테두리가 있지?' → '오케이 그럼 PR하자'",
+      "scope": "web/src/styles/calendar.css(.meter·.readline 예습 토막), web/src/calendar/ChipLearning.tsx(reviewFill), web/src/calendar/CalendarPage.tsx(범례 표본). 웹 표시만, DB·서버 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "9210505578278d64a16067f2f9173daa21134bb2fa006627f0fa16507d618dcc",
+      "plan_hash": "c4b8ae31fe7bb7c1f4b58653c6a955ceab12c8d508ab4cc604146ed51bf9edb5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "7a60c0f6da1cdad2c512128c7c971bc1efa99472b55124d2a1dbf32f524ac348"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T08:52:21.534852+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9210505578278d64a16067f2f9173daa21134bb2fa006627f0fa16507d618dcc",
+      "plan_hash": "c4b8ae31fe7bb7c1f4b58653c6a955ceab12c8d508ab4cc604146ed51bf9edb5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-review-bar-light/1794473532801872500-web.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-12T08:52:32.547318+00:00",
+    "summary": "색 토큰 3곳만 바뀜: .meter·예습 토막은 today-card와 같은 토큰, 채움은 reviewFill 하나로 범례·패널·칸이 공유. 막대 표시 조건·높이·회독 토막 불변. 남은 위험: 다크 모드는 토큰을 따르나 화면으로는 확인 안 함.",
+    "evidence_version": 2,
+    "source_hash": "9210505578278d64a16067f2f9173daa21134bb2fa006627f0fa16507d618dcc",
+    "plan_hash": "c4b8ae31fe7bb7c1f4b58653c6a955ceab12c8d508ab4cc604146ed51bf9edb5",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T08:52:32.706884+00:00"
+}
