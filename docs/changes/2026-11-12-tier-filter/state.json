@@ -195,6 +195,70 @@
       "log": "runs/_development/2026-11-12-tier-filter/1794421009108108600-web.log",
       "web_artifact": "65e4f9b5fa647265d8fa079eb0720c0d8af62c37265741e848b61db22f756df7",
       "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-12T02:13:57.233031+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([os.path.join(root,'server','.venv','Scripts','python.exe'),'-m','tests'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6a29cef447d920df3ad845e9b86df211caaf4870135c0101e47b5811395f2a9a",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794449267687556500-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-12T02:14:09.687752+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6a29cef447d920df3ad845e9b86df211caaf4870135c0101e47b5811395f2a9a",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794449637687527200-web.log",
+      "web_artifact": "18e0441f1a35de0a008e8dca02fac09e6ee110596d4f5e58b4072b4b21508e30",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
     }
   ],
   "review": null,
@@ -203,5 +267,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T18:17:20.599569+00:00"
+  "updated_at": "2026-11-12T02:14:12.660813+00:00"
 }
