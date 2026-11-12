@@ -63,6 +63,10 @@ class RequestIn(BaseModel):
     # that a published revision is replaced when the new one publishes. Learning records do not follow (a changed
     # question starts fresh); the old revision, its content and its events stay.
     replacePublished: bool = False
+    # 「중복만 다시 판정」(docs/changes/2026-11-12-dedupe-published): with restart + replacePublished, the runner takes the
+    # published run it replaces as it is and judges only its duplicate tasks again (duplicates-only/1). Questions,
+    # reviews and importance stay; the new revision differs only in which same-answer tasks are merged.
+    duplicatesOnly: bool = False
 
 
 def control_hash(db, subject, run_id):
@@ -94,7 +98,7 @@ def generation_input(packet):
     return {**{k: packet.get(k) for k in ('subject','runId','title','conceptMap','points','scope','examDate')},
         'inputMode':packet.get('inputMode','provided'),'authoring':packet.get('authoring','cli'),
         'parallelAuthoring':packet.get('parallelAuthoring',False),'pipeline':packet.get('pipeline'),
-        'restartOf':packet.get('restartOf'),
+        'restartOf':packet.get('restartOf'),'duplicatesOnly':packet.get('duplicatesOnly',False),
         'sources':[{k:v for k,v in s.items() if k!='snapshotKey'} for s in packet['sources']]}
 
 
@@ -294,6 +298,8 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(422,'원본 자동 준비는 웹 출제와 빈 지도·포인트 입력을 사용합니다.')
     if payload.replacePublished and not payload.restart:
         raise HTTPException(422, '공개된 판 교체는 이유를 적은 새로 출제 요청에서만 받습니다.')
+    if payload.duplicatesOnly and not (payload.restart and payload.replacePublished and payload.pipeline == map_tree.PIPELINE3):
+        raise HTTPException(422, '중복만 다시 판정은 공개된 새 구조 2(map-tree/3) 판을 교체하는 새로 출제 요청에서만 받습니다.')
     if payload.restart and (payload.resume or not payload.pipeline or not payload.resumeReason.strip()):
         raise HTTPException(422, '새로 출제는 이유를 적은 Main-Quiz 앞 단계(map-tree) 새 요청만 받습니다.')
     if payload.examDate:
@@ -319,6 +325,7 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         # Part of the input identity: the new request differs from the one it restarts, so it is not reused.
         raw.update(restartOf=restart_target(db, subject, run_id, user, payload.replacePublished).id, restartReason=payload.resumeReason.strip())
         if payload.replacePublished: raw['replacePublished'] = True
+        if payload.duplicatesOnly: raw['duplicatesOnly'] = True
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
         sources = assets_now(db, subject, run_id)

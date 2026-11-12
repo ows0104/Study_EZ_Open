@@ -206,7 +206,9 @@ def call_model(stage, context, material, model):
         return output, {k: result[k] for k in ('usage', 'cost_usd', 'duration_ms', 'models')}
 
 
-def run(packet, out, *, model=None, invoke=None, resume=None, rerun=()):
+def run(packet, out, *, model=None, invoke=None, resume=None, rerun=(), duplicates_of=None):
+    """`duplicates_of`: the generation folder of a published /4 run this request judges again for duplicates only
+    (duplicates-only/1, quizbank.connection_dedupe)."""
     from studyez_contracts.roots.parallel import SOURCE_FORMAT as PARALLEL_FORMAT,is_v2_source
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     if packet_hash(packet) != packet['inputHash']: raise ValueError('입력 지문이 다릅니다.')
@@ -222,6 +224,10 @@ def run(packet, out, *, model=None, invoke=None, resume=None, rerun=()):
             if rerun: raise ValueError('root-generation/3에는 --rerun이 없습니다. --resume <이유>로 이어 갑니다.')
             from .connection_generate_v3 import run as run3
             return run3(packet, out, model, invoke, resume=resume)
+        if duplicates_of is not None:
+            if packet.get('generationPolicy') != 'root-generation/4' or rerun: raise ValueError('중복 재판정은 root-generation/4 packet만 받습니다(--rerun 없음).')
+            from .connection_dedupe import run as run_duplicates
+            return run_duplicates(packet, out, model, invoke, duplicates_of, resume=resume)
         if packet.get('generationPolicy') == 'root-generation/4':
             # docs/changes/2026-11-10-importance-at-authoring: exam points are a coverage checklist.
             if rerun: raise ValueError('root-generation/4에는 --rerun이 없습니다. --resume <이유>로 이어 갑니다.')
@@ -367,9 +373,11 @@ def main():
     parser.add_argument('--model')
     parser.add_argument('--resume', metavar='REASON', help='keep revalidated completed stages and rerun only the rest (stage-resume/1)')
     parser.add_argument('--rerun', metavar='STAGE', action='append', default=[], help='with --resume: also run this completed stage again')
+    parser.add_argument('--duplicates-of', type=Path, metavar='GENERATION_DIR', help='judge this published /4 run again for duplicates only (duplicates-only/1)')
     args = parser.parse_args()
     if args.rerun and not args.resume: parser.error('--rerun needs --resume <reason>')
-    try: run(json.loads(args.packet.read_text(encoding='utf-8')), args.out, model=args.model, resume=args.resume, rerun=tuple(args.rerun))
+    try: run(json.loads(args.packet.read_text(encoding='utf-8')), args.out, model=args.model, resume=args.resume, rerun=tuple(args.rerun),
+            duplicates_of=args.duplicates_of)
     except Exception as error:
         print('연결 자동출제 보류: ' + str(error), flush=True)
         return 1
