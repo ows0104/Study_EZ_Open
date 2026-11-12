@@ -12,8 +12,9 @@ from datetime import timedelta
 from pathlib import Path
 from tests.root_support import setup, publish, start, view, action, POLICY, NOW, BASE, ADMIN
 client, user, SessionLocal = setup()
-from sqlalchemy import event
+from sqlalchemy import event, func
 from app.database import engine
+from app.models.root_learning import RootEvent
 from app.lecture_mastery import lecture_overviews
 from app.auth import CurrentUser
 from app.root_learning import light, planning, state
@@ -24,9 +25,11 @@ from studyez_contracts.roots import validate_document, document_hash, task_finge
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures/root_generation_v2_import.json').read_text(encoding='utf-8'))
 
 
-def v4_document(revision):
+def v4_document(revision, shape=None):
     doc = copy.deepcopy(FIXTURE['result']['document'])
     doc.update(generation_policy='root-generation/4', revision=revision)
+    if shape:
+        shape(doc)
     bank = doc['bank_snapshot']
     doc['review']['bank_sha256'] = document_hash(bank)
     by_id = {q['question_id']: q for q in bank['questions']}
@@ -92,12 +95,14 @@ try:
 finally:
     roots_pkg.task_fingerprints = state_fp
 
-# 3. The cache reads the full document once per revision; a new revision makes a new entry.
+# 3. The cache reads the stored light copy once per revision (never the original); a new revision makes a new entry.
 light.clear()
 publish(client, user, v4_document('C1'))
-reads = []
-listener = lambda conn, cur, stmt, params, ctx, many: reads.append(stmt) if 'root_content.document' in stmt else None
+reads, originals = [], []
+listener = lambda conn, cur, stmt, params, ctx, many: reads.append(stmt) if 'root_content.light' in stmt else None
+whole = lambda conn, cur, stmt, params, ctx, many: originals.append(stmt) if 'root_content.document' in stmt else None
 event.listen(engine, 'before_cursor_execute', listener)
+event.listen(engine, 'before_cursor_execute', whole)
 try:
     with SessionLocal() as db:
         first = light.current_rows(db, [('test', 'demo')])
@@ -105,13 +110,15 @@ try:
         again = light.current_rows(db, [('test', 'demo'), ('test', 'missing')])
     assert len(reads) == 1, reads                                                       # second call: digest only
     assert first[('test', 'demo')].document is again[('test', 'demo')].document and set(again) == {('test', 'demo')}
-    publish(client, user, v4_document('C2'))
-    reads.clear()
+    publish(client, user, v4_document('C2'))                                            # admin publish checks the original
+    reads.clear(); originals.clear()
     with SessionLocal() as db:
         newer = light.current_rows(db, [('test', 'demo')])
     assert newer[('test', 'demo')].revision == 'C2' and len(reads) == 1
+    assert originals == [], originals                                                   # the 6–12 MB original: never
 finally:
     event.remove(engine, 'before_cursor_execute', listener)
+    event.remove(engine, 'before_cursor_execute', whole)
 
 # 4. Calendar learning rate and the lecture list use the light rows and still answer.
 sid = start(client)
@@ -163,17 +170,115 @@ try:
 finally:
     event.remove(engine, 'before_cursor_execute', listener)
 # A lecture whose copy fails is skipped and logged; the rest are still built.
-real_lighten = light.lighten
-light.lighten = lambda doc: (_ for _ in ()).throw(ValueError('broken document'))
+real_from_stored = light.from_stored
+light.from_stored = lambda value: (_ for _ in ()).throw(ValueError('broken copy'))
 try:
     light.clear()
     with SessionLocal() as db:
         assert light.warm(db)[0] == 0
 finally:
-    light.lighten = real_lighten
+    light.from_stored = real_from_stored
 with SessionLocal() as db:
     assert light.warm(db)[0] == 1
 
-print('PASS: startup warm-up builds every enabled copy; concurrent cold requests read the original once; '
+# 8. Storage (2026-11-12): a new revision stores its light copy and its images by sha256. Every learner path
+#    reads the light copy only; the shown question gets its bytes back, equal to the original question.
+import base64, hashlib, struct, zlib
+from sqlalchemy import select as sql_select
+from app import bank_personal, cli
+from app.models.root_learning import RootContent, RootImage
+from app.routes import root_learning as routes
+
+
+def png(width, color):
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff)
+    raw = b'\x00' + color * width
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, 1, 8, 2, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
+
+
+RED, BLUE = png(2, b'\xff\x00\x00'), png(3, b'\x00\x00\xff')
+
+
+def pictures(doc):
+    source = doc['review']['sources'][0]
+    source['page_count'] = 3
+    def stim(body, width):
+        return {'source_id': source['source_id'], 'source_sha256': source['sha256'], 'page': 1, 'crop': [0, 0, 1, 1],
+                'sha256': hashlib.sha256(body).hexdigest(), 'width': width, 'height': 1,
+                'png_base64': base64.b64encode(body).decode()}
+    q1, q2 = doc['bank_snapshot']['questions'][:2]
+    q1['stimuli'] = [stim(RED, 2)]
+    q2['stimuli'] = [stim(RED, 2), stim(BLUE, 3)]                                       # RED twice: one image row
+
+
+light.clear()
+publish(client, user, v4_document('P1', pictures))
+with SessionLocal() as db:
+    stored_row = db.get(RootContent, ('test', 'demo', 'P1'))
+    original = copy.deepcopy(stored_row.document)
+    assert stored_row.light == light.stored(original)                                  # filled on insert
+    assert all('png_base64' not in s for q in stored_row.light['document']['bank_snapshot']['questions']
+               for s in q.get('stimuli', []))
+    assert stored_row.light['task_fingerprints'] == task_fingerprints(original)        # from the original (with bytes)
+    images = dict(db.execute(sql_select(RootImage.sha256, RootImage.png_base64)).all())
+assert images == light.images_of(original) and len(images) == 2
+by_id = {q['question_id']: q for q in original['bank_snapshot']['questions']}
+
+# Solving end to end reads no original document.
+originals.clear()
+event.listen(engine, 'before_cursor_execute', whole)
+try:
+    sid = start(client, 'p-start')
+    shown = view(client, sid)['task']
+    assert client.get('/api/root-learning/sessions/' + sid + '/prepare').status_code == 200
+    revealed = action(client, sid, 'p-r1', 'reveal', attempted=True, stimulusHashes=[i['sha256'] for i in shown['question']['stimuli']])
+    assert revealed.status_code == 200, revealed.text
+    assert action(client, sid, 'p-g1', 'rate', grade='independent').status_code == 200
+    personal = client.get(BASE + '/questions/Q2/personal').json()
+    assert client.get(BASE).status_code == 200
+    assert originals == [], originals
+finally:
+    event.remove(engine, 'before_cursor_execute', whole)
+want = by_id[shown['question']['question_id']]
+assert [i['url'] for i in shown['question']['stimuli']] == ['data:image/png;base64,' + s['png_base64'] for s in want['stimuli']]
+# Personal edits and reports compare the whole question: the same revision token as the original question.
+assert personal['revision'] == bank_personal.revision(by_id['Q2'])
+with SessionLocal() as db:
+    doc = light.revision_row(db, 'test', 'demo', 'P1')
+    assert routes.snapshot_question(db, doc, 'Q2') == by_id['Q2']
+    front = routes.learner_front(doc, dict(by_id['Q2']), db)
+    assert [i['sha256'] for i in front['stimuli']] == [s['sha256'] for s in by_id['Q2']['stimuli']]
+    # The rate event carries the original's fingerprint, not one computed from the light copy.
+    rated = db.scalars(sql_select(RootEvent).where(RootEvent.request_id == 'p-g1')).one()
+    assert rated.payload['question_sha256'] == task_fingerprints(original)[rated.payload['task_id']]
+    # Nothing a request did changed the shared cached copy.
+    assert dict(doc.document) == light.stored(original)['document']
+
+# A row stored before this change (no light copy, no image rows) still works from the original, and the
+# backfill command fills it exactly as an insert would. A second run has nothing to do.
+with SessionLocal() as db:
+    db.get(RootContent, ('test', 'demo', 'P1')).light = None
+    db.query(RootImage).delete()
+    db.commit()
+light.clear()
+with SessionLocal() as db:
+    doc = light.revision_row(db, 'test', 'demo', 'P1')
+    assert routes.snapshot_question(db, doc, 'Q2') == by_id['Q2']                      # bytes from the original
+cli.main_quiz_light(apply=False)
+with SessionLocal() as db:
+    assert db.get(RootContent, ('test', 'demo', 'P1')).light is None                   # dry run changes nothing
+cli.main_quiz_light(apply=True)
+with SessionLocal() as db:
+    refilled = db.get(RootContent, ('test', 'demo', 'P1'))
+    assert refilled.document == original, 'original changed'                         # original untouched
+    assert refilled.light == light.stored(original), (refilled.light is None, type(refilled.light), set(refilled.light or {}), refilled.light and refilled.light['task_fingerprints'] == light.stored(original)['task_fingerprints'])
+    assert dict(db.execute(sql_select(RootImage.sha256, RootImage.png_base64)).all()) == images
+    assert db.scalar(sql_select(func.count()).select_from(RootContent).where(RootContent.light.is_(None))) == 0
+
+print('PASS: stored light copy and images filled on insert; solving reads no original; shown question and personal '
+      'revision equal the original; fingerprints from the original; unfilled rows fall back; backfill fills exactly; '
+      'startup warm-up builds every enabled copy; concurrent cold requests read once; '
       'light documents drop only image bytes and keep original fingerprints; learner state equal; '
       'fingerprints only for earlier-revision events; one document read per revision; a failing lecture is skipped')

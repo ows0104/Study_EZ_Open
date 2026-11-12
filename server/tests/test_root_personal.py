@@ -79,6 +79,9 @@ with SessionLocal() as db:
 with SessionLocal() as db:
     row = db.get(RootContent, ('test', 'demo', 'v1'))
     doc = copy.deepcopy(row.document); doc['bank_source'] = 'quizbank'; row.document = doc
+    # 운영에서는 판을 고치지 않는다(넣기만). 시험이 원본을 바꾸므로 사본 칸도 같이 바꾸고 캐시를 비운다(2026-11-12 저장 방식).
+    from app.root_learning import light
+    row.light = light.stored(doc); light.clear()
     db.commit()
 linked = client.get(PERSONAL).json()
 assert linked['editable'] is False
