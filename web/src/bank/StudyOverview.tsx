@@ -257,10 +257,9 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
         <button type="button" aria-pressed={view === "type"} onClick={() => changeView("type")}>유형별</button>
         <button type="button" aria-pressed={view === "order"} onClick={() => changeView("order")}>순서대로</button>
       </div>
-      {hasMainQuiz ? <div className="list-view more-tabs list-optional">
-        <button type="button" aria-pressed={optional.exclude === true} disabled={optional.exclude === null || optional.saving}
-          onClick={() => void optional.change(!optional.exclude)}>Optional 제외</button>
-      </div> : null}
+      {hasMainQuiz ? <button type="button" role="switch" className="list-optional" aria-checked={optional.exclude === true}
+        disabled={optional.exclude === null || optional.saving}
+        onClick={() => void optional.change(!optional.exclude)}>Optional 제외<i aria-hidden="true" /></button> : null}
     </div>
 
     <div className="list-table" role="table" aria-label="강의 목록">
