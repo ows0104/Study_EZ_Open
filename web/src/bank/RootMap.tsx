@@ -58,7 +58,9 @@ function crossPath(a:Box,b:Box){
   return `M${x1} ${ay} C${x1+dx} ${ay} ${x2-dx} ${by} ${x2} ${by}`;
 }
 
-export function RootMap({map,summary,title='강의 전체',onBack}:{map:RootMapData;summary:RootSummary;title?:string;onBack?:()=>void}) {
+export function RootMap({map,summary,title='강의 전체',onBack,backTo='question'}:{map:RootMapData;summary:RootSummary;title?:string;onBack?:()=>void;
+  /** Opened from the start screen without a session (2026-11-12): back goes to 오늘 추천. */
+  backTo?:'question'|'today'}) {
   const tree=useMemo(()=>buildTree(map,summary,title),[map,summary,title]);
   const columns=useMemo(()=>lanes(tree),[tree]);
   const laneOf=useMemo(()=>{const m=new Map<string,number>();columns.forEach((l,i)=>{m.set(l.head,i);
@@ -316,7 +318,7 @@ export function RootMap({map,summary,title='강의 전체',onBack}:{map:RootMapD
           </div>
         </div>
         <div className="main-quiz-tree-tools" onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
-          {onBack&&<button className="mq-map-back" onClick={onBack} aria-label="문제로 돌아가기">← 문제</button>}
+          {onBack&&<button className="mq-map-back" onClick={onBack} aria-label={backTo==='today'?'오늘 추천으로 돌아가기':'문제로 돌아가기'}>{backTo==='today'?'← 오늘':'← 문제'}</button>}
           {!narrow&&<><button onClick={()=>zoomStep(1.25)} aria-label="확대">＋</button>
           <button onClick={()=>zoomStep(0.8)} aria-label="축소">－</button>
           <button onClick={()=>fitAll(undefined,true)}>전체</button></>}

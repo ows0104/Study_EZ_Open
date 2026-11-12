@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-12-map-without-session",
+  "title": "Main-Quiz 개념 지도 회차 분리",
+  "area": "site",
+  "created_at": "2026-11-12T10:44:59.074937+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T10:46:31.921110+00:00",
+      "evidence": "2026-11-12 채팅: 「네, 진행」(개념 지도 회차 분리 제안에 대해), 겹침 조정 「함수 달라서 병행」",
+      "scope": "server/app/routes/root_learning.py(map_payload·lecture_map·start), server/tests/test_root_lecture_map.py, web/src/bank/RootLearning.tsx; DB 스키마 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "1909e997928d023370bacb76a1abf8ea5448eda3eae20f109e16bc7b13aae49a",
+      "plan_hash": "6c40647c64ecb6f8290e8438b6c19289e01d3139929fccb3fcc0fddfafe69005",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "dea93c40592e9952130eb62eb7c3c07b1dd9b7544266a5d0a84891dff96075b6"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T10:46:41.479570+00:00"
+}

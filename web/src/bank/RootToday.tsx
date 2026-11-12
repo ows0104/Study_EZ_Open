@@ -44,8 +44,9 @@ function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;
   </div>;
 }
 
-export function RootToday({info,onStart,disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin,resumeCount,onBack}:{info:RootOverview;onStart:()=>void;disabled:boolean;
-  starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;
+export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin,resumeCount,onBack}:{info:RootOverview;onStart:()=>void;disabled:boolean;
+  /** 개념 지도는 회차가 없으면 쓰기 큐를 쓰지 않아, 보관된 충돌이 있어도 열린다(2026-11-12). */
+  mapDisabled?:boolean;starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;
   /** 진행 중 회차의 남은 문항 수. 읽는 동안은 undefined. */
   resumeCount?:number;onBack?:()=>void;
   /** 중요도 저장·재계획 응답 대기 중: 카드 수를 흐리게 둔다. */
@@ -59,7 +60,7 @@ export function RootToday({info,onStart,disabled,starting=false,onMap,onFocus,fo
         <p className="mq-kicker">{onBack&&<button type="button" className="quiz-back" onClick={onBack}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>뒤로</button>}<span className="mq-badge">Main-Quiz</span>{lectureLink&&<Link to={lectureLink}>강의 자료 보기</Link>}</p>
         <h1>{info.title}</h1>
       </div>
-      {onMap&&<button type="button" className="pill-button mq-map-button" disabled={disabled} onClick={onMap}>개념 지도</button>}
+      {onMap&&<button type="button" className="pill-button mq-map-button" disabled={mapDisabled} onClick={onMap}>개념 지도</button>}
     </header>
 
     {s&&<>

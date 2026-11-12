@@ -85,7 +85,10 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
    const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'map-first'}}),page=await context.newPage();
-   await context.route('**/api/root-learning/sessions/*/map',async route=>{
+   // From the start screen the map is read per lecture and no session is opened (2026-11-12).
+   let starts=0;
+   await context.route('**/api/root-learning/lectures/test/demo/sessions',route=>{if(route.request().method()==='POST')starts++;return route.continue();});
+   await context.route('**/api/root-learning/lectures/test/demo/map',async route=>{
      const response=await route.fetch(),map=await response.json();
      map.concepts.push(...Array.from({length:126},(_,i)=>({concept_id:'large-'+i,label:'Synthetic concept '+i,parent_ids:[]})));
      map.currentConceptIds=['A'];return route.fulfill({json:map});
@@ -107,8 +110,9 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
    assert.notEqual(await graph.getAttribute('style'),zoomed);
    assert.deepEqual(await page.locator('.main-quiz-tree-frame').evaluate(e=>{const f=e.getBoundingClientRect(),side=document.querySelector('.sidebar').getBoundingClientRect();
      return [Math.round(f.left-side.right),Math.round(innerWidth-f.right),Math.round(f.top),Math.round(innerHeight-f.bottom)];}),[0,0,0,0]);
-   assert.equal(await sawQuestion,false);
-   await page.getByRole('button',{name:'문제로 돌아가기',exact:true}).click();await enabled(page,'답 보기');await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
+   assert.equal(await sawQuestion,false);assert.equal(starts,0);
+   await page.getByRole('button',{name:'오늘 추천으로 돌아가기',exact:true}).click();
+   await page.getByRole('button',{name:/^오늘 학습 시작/}).click();await enabled(page,'답 보기');assert.equal(starts,1);await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
    await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).waitFor();await page.getByRole('button',{name:'two-pages.pdf · PDF 2쪽 크게 보기'}).click();
    await page.getByRole('dialog').waitFor();await page.keyboard.press('3');assert.match(await page.getByRole('heading',{name:/문항/}).innerText(),/1 \/ 3/);
    await page.keyboard.press('Escape');await page.getByRole('heading',{name:'문항 1 / 3'}).focus();await page.keyboard.press('4');await page.getByText('Synthetic question 2?',{exact:true}).waitFor();
@@ -117,6 +121,22 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
    const broken=await failure.newPage();await broken.goto(url);await broken.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(broken,'답 보기');await broken.getByRole('button',{name:/^답 보기/}).click();
    await broken.getByRole('alert').filter({hasText:'참고 슬라이드를 불러오지 못했습니다.'}).waitFor();await allRatings(broken);
    assert.match(await broken.getByRole('link',{name:'원본 열기',exact:true}).getAttribute('href'),/#page=2$/);await failure.close();
+ }finally{await browser.close();}
+});
+
+test('stored conflict from an earlier refused start does not keep the map closed (2026-11-12)',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
+ try{
+   const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'conflict-map'}});
+   const key='studyez:root-write:["","test","demo"]:old-start';
+   await context.addInitScript(key=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify({requestId:'old-start',
+     path:'/api/root-learning/lectures/test/demo/sessions',body:{requestId:'old-start'},conflict:true}));},key);
+   let starts=0;
+   await context.route('**/api/root-learning/lectures/test/demo/sessions',route=>{if(route.request().method()==='POST')starts++;return route.continue();});
+   const page=await context.newPage();await page.goto(url);
+   await page.getByRole('button',{name:'보관 응답 확인 후 서버 기록 불러오기'}).waitFor();
+   await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
+   assert.equal(starts,0);
  }finally{await browser.close();}
 });
 

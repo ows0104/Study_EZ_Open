@@ -249,6 +249,7 @@ GET /api/admin/root-learning/lectures/{subject}/{run_id}
 POST /api/admin/root-learning/lectures/{subject}/{run_id}
 PUT /api/admin/root-learning/lectures/{subject}/{run_id}/publication
 POST /api/root-learning/lectures/{subject}/{run_id}/sessions
+POST /api/root-learning/lectures/{subject}/{run_id}/map
 GET /api/root-learning/sessions/{session_id}
 GET /api/root-learning/sessions/{session_id}/prepare
 POST /api/root-learning/sessions/{session_id}/events
