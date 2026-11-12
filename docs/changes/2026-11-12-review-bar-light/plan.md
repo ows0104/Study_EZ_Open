@@ -7,7 +7,7 @@
 
 ## 검사 명령과 성공 조건
 - web: `tsc -b web --noEmit` 오류 없음, PR의 `Tests and build` 통과.
-- 화면: web/tests/calendar-learning.html 고정물에서 막대 바탕 투명·메인 색 테두리·메인 색 채움, 예습 토막 미완료 테두리/완료 채움.
+- 화면: web/tests/calendar-learning.html 고정물에서 막대 바탕 투명·회색 테두리·메인 색 채움, 예습 토막 미완료 회색 테두리/완료 채움.
 
 ## 위험·복원·승인할 범위
 표시만 바뀐다. 되돌리기는 git revert. 승인 범위는 위 세 파일과 이 기록.
