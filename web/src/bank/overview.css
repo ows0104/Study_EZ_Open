@@ -192,8 +192,10 @@
 .list-row.is-active { background: var(--hover); box-shadow: inset 3px 0 0 var(--accent); }
 .list-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* 유형별 · 순서대로 */
-.study-overview .list-view { align-self: flex-start; width: auto; margin-bottom: 6px; }
+/* 유형별 · 순서대로 | Optional 제외(맨 오른쪽) */
+.study-overview .list-view-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.study-overview .list-view { align-self: flex-start; width: auto; }
+.study-overview .list-optional button:disabled { cursor: default; }
 
 /* 학습률 오른쪽 복습 바로 풀기 */
 /* 학습률과 떨어뜨린다. */

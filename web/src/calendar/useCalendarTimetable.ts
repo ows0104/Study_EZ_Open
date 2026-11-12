@@ -3,6 +3,7 @@ import { NOTE_READS_EVENT, type NoteReadsChange } from "./ReadEditor";
 import { api } from "../api";
 import { takeTimetable } from "../firstScreen";
 import type { TimetableEvent } from "../types/lectures";
+import { useOptionalVersion } from "../bank/optionalExclusion";
 
 type Enriched = { events: TimetableEvent[] };
 const inFlight = new Map<string, Promise<Enriched>>();
@@ -36,6 +37,7 @@ export function useCalendarTimetable(start: string, end: string, showLearning: b
   // 지금 범위의 학습률 응답(목록보다 먼저 오면 목록이 올 때 덮는다).
   const enriched = useRef<Map<string, TimetableEvent> | null>(null);
   const reload = useCallback(() => setRefreshVersion(old => old + 1), []);
+  const optional = useOptionalVersion();  // Optional 계산 제외가 바뀌면 학습률을 다시 읽는다.
 
   useEffect(() => {
     let live = true;
@@ -72,7 +74,7 @@ export function useCalendarTimetable(start: string, end: string, showLearning: b
       }).catch((cause: Error) => { if (live) setLearningError(cause.message); })
       .finally(() => { if (live) setLearningLoading(false); });
     return () => { live = false; };
-  }, [start, end, showLearning, refreshVersion]);
+  }, [start, end, showLearning, refreshVersion, optional]);
 
   // 패널에서 회독을 더하거나 지우면 칸의 회독 줄도 바로 바꾼다.
   useEffect(() => {

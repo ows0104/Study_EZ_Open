@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { StudyPlan } from "../types/studyPlan";
 import { useStudyTarget } from "./useStudyTarget";
+import { useOptionalVersion } from "../bank/optionalExclusion";
 import "../styles/mastery.css";
 
 export function StudyPlanBoard() {
@@ -11,6 +12,7 @@ export function StudyPlanBoard() {
   const [unavailable, setUnavailable] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const reload = useCallback(() => setRefresh(v => v + 1), []);
+  const optional = useOptionalVersion();  // Optional 계산 제외가 바뀌면 진척을 다시 읽는다.
   useEffect(() => {
     let live = true;
     setData(null);
@@ -23,7 +25,7 @@ export function StudyPlanBoard() {
         else setError(cause.message);
       });
     return () => { live = false; };
-  }, [target, refresh]);
+  }, [target, refresh, optional]);
   useEffect(() => {
     const tick = () => { if (document.visibilityState === "visible") reload(); };
     window.addEventListener("focus", reload);

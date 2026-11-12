@@ -16,6 +16,7 @@ import { QuizPublicationCell } from "./QuizPublicationCell";
 import { currentStudyBlock, studyBlockKey, studyBlockNames, studyCourseOf } from "./studyBlocks";
 import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
+import { useOptionalExclusion } from "./optionalExclusion";
 import { rootRate, useRootSummaries } from "./useRootCatalog";
 import type { RootQuestionProgress } from "../types/rootLearning";
 
@@ -146,6 +147,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const entries = useMemo(() => toCalendarEntries(events), [events]);
   const infos = useMemo(() => displayInfo(events), [events]);
   const [view, changeView] = usePreference<ListView>(VIEW_KEY, "type", VIEWS);
+  // Optional 계산 제외(2026-11-13): 계정 단위, 사이트 전체의 학습률·카드 수에 적용(서버 계산).
+  const optional = useOptionalExclusion();
   const [opened, setOpened] = useState<string | null>(null);
   const closePanel = useCallback(() => setOpened(null), []);
   /** Main-Quiz 문항 단계와 학습률. Quiz Bank는 legacy라 세지 않는다. */
@@ -249,9 +252,15 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
       </div>
     </div>
 
-    <div className="list-view more-tabs" role="group" aria-label="보기">
-      <button type="button" aria-pressed={view === "type"} onClick={() => changeView("type")}>유형별</button>
-      <button type="button" aria-pressed={view === "order"} onClick={() => changeView("order")}>순서대로</button>
+    <div className="list-view-row">
+      <div className="list-view more-tabs" role="group" aria-label="보기">
+        <button type="button" aria-pressed={view === "type"} onClick={() => changeView("type")}>유형별</button>
+        <button type="button" aria-pressed={view === "order"} onClick={() => changeView("order")}>순서대로</button>
+      </div>
+      {hasMainQuiz ? <div className="list-view more-tabs list-optional">
+        <button type="button" aria-pressed={optional.exclude === true} disabled={optional.exclude === null || optional.saving}
+          onClick={() => void optional.change(!optional.exclude)}>Optional 제외</button>
+      </div> : null}
     </div>
 
     <div className="list-table" role="table" aria-label="강의 목록">

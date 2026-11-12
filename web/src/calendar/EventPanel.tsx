@@ -22,6 +22,7 @@ import { PreviewAction } from "./PreviewAction";
 import { ReviewAction } from "./ReviewAction";
 import { LectureMemo, ReadEditor } from "./ReadEditor";
 import { PreviewSourceNotice, ProfessorInfo, ProfTag, previewNotesLabel } from "./ProfessorInfo";
+import { useOptionalVersion } from "../bank/optionalExclusion";
 
 /**
  * 칸 하나를 눌렀을 때 옆에 서는 패널.
@@ -206,6 +207,7 @@ type Study = { mastery?: LectureDetail["mastery"]; cardProgress?: CardProgress |
 /** 패널의 카드 단계·오늘 복습 수. 강의 목록과 같은 `/api/timetable/study-progress`를 이 강의 하나로 부른다. */
 function useLectureStudy(lecture: LectureRef): Study | null {
   const [study, setStudy] = useState<Study | null>(lecture.cardProgress ? { mastery: lecture.mastery, cardProgress: lecture.cardProgress } : null);
+  const optional = useOptionalVersion();
   useEffect(() => {
     const controller = new AbortController();
     api<{ lectures: (Study & { subject: string; runId: string })[] }>("/api/timetable/study-progress", {
@@ -215,7 +217,7 @@ function useLectureStudy(lecture: LectureRef): Study | null {
       if (!controller.signal.aborted && data.lectures[0]) setStudy(data.lectures[0]);
     }).catch(() => {});
     return () => controller.abort();
-  }, [lecture.subject, lecture.runId]);
+  }, [lecture.subject, lecture.runId, optional]);
   return study;
 }
 

@@ -12,6 +12,44 @@ def direction_owners(doc):
     return {d['direction_id']: t['target_id'] for t in targets(doc) for d in t['directions']}
 
 
+# ── Optional 계산 제외 (2026-11-13) ─────────────────────────────────────────
+# 사용자가 켜면 Optional 문항을 학습률·카드 수·목표 요약에서 없는 것처럼 센다. 문항·기록·계획은 그대로다.
+# 목표·방향에는 tier가 없어 문항에서 유도한다: 문항이 모두 Optional인 방향은 빠지고, 남은 (필수) 방향이 없는
+# 목표도 빠진다. /4는 남은 방향 안에서도 Optional 문항만 뺀다(docs/changes/2026-11-13-exclude-optional).
+
+def optional_tasks(doc, events, now=None):
+    """Tasks whose tier as this learner sees it (「내 중요도」, else the revision's, else Core) is Optional."""
+    from .policy import canonical_tier
+    tiers = personal_tiers(doc, events, now)
+    questions = {q['question_id']: q for q in doc['bank_snapshot']['questions']}
+    return frozenset(t['task_id'] for t in doc['tasks']
+                     if (tiers[t['question_id']]['tier'] if t['question_id'] in tiers
+                         else canonical_tier(questions.get(t['question_id'], {})) or 'Core') == 'Optional')
+
+
+def dropped_directions(doc, exclude):
+    """Directions every task of which is excluded."""
+    if not exclude:
+        return frozenset()
+    by_direction = {}
+    for task in doc['tasks']:
+        by_direction.setdefault(task['direction_id'], []).append(task['task_id'] in exclude)
+    return frozenset(did for did, flags in by_direction.items() if all(flags))
+
+
+def counted_targets(doc, dropped=frozenset()):
+    """targets(doc) without dropped directions; a target whose (required) directions are all dropped goes too."""
+    if not dropped:
+        return targets(doc)
+    out = []
+    for target in targets(doc):
+        required = [d for d in target['directions'] if d['requirement'] == 'required']
+        if all(d['direction_id'] in dropped for d in (required or target['directions'])):
+            continue
+        out.append({**target, 'directions': [d for d in target['directions'] if d['direction_id'] not in dropped]})
+    return out
+
+
 def personal_tiers(doc, events, now=None):
     """This revision's 「내 중요도」: the last tier event per question (tier null = 원래대로).
 
@@ -60,11 +98,13 @@ def _rate(value, event, p, when, task_questions, questions, plans, tiers):
     value.clear(); value.update(updated)
 
 
-def replay(doc, events, now, policy):
+def replay(doc, events, now, policy, exclude=None):
+    """`exclude`: task IDs counted as if absent (Optional 계산 제외). Older documents drop only whole directions."""
     if per_task(doc):
-        rows, directions, _ = replay_tasks(doc, events, now, policy)
+        rows, directions, _ = replay_tasks(doc, events, now, policy, exclude)
         return rows, directions
-    owners = direction_owners(doc)
+    dropped = dropped_directions(doc, exclude)
+    owners = {d: t for d, t in direction_owners(doc).items() if d not in dropped}
     tiers = personal_tiers(doc, events, now)
     task_questions = {t['task_id']: t['question_id'] for t in doc['tasks']}
     questions = {q['question_id']: q for q in doc['bank_snapshot']['questions']}
@@ -90,7 +130,7 @@ def replay(doc, events, now, policy):
         value['effectiveDue'] = effective_due(value, now, policy, doc['exam_date'])
     today = study_day(now, policy)
     rows = []
-    for target in targets(doc):
+    for target in counted_targets(doc, dropped):
         required = [d['direction_id'] for d in target['directions'] if d['requirement'] == 'required']
         undecided = any(d['requirement'] == 'undecided' for d in target['directions'])
         values = [directions.get(d, {}) for d in required]
@@ -102,7 +142,7 @@ def replay(doc, events, now, policy):
     return rows, directions
 
 
-def replay_tasks(doc, events, now, policy):
+def replay_tasks(doc, events, now, policy, exclude=None):
     """root-generation/4: rating, due date, stage and learned replayed per task_id (spec R8, option B).
 
     Events are unchanged facts; they already name task_id and direction_id. This revision's events count
@@ -118,10 +158,14 @@ def replay_tasks(doc, events, now, policy):
     - recalled: every task of the direction is independently recalled and not yet due;
     - due / effectiveDue: the earliest among its rated tasks; lastAt / lastDay: the latest.
     Target learned/recalled (and summary's ready) read these direction values as before.
+    `exclude` task IDs are counted as if absent (Optional 계산 제외): their events, their directions when no
+    task is left, and targets with no (required) direction left.
     Returns (target rows, direction values, task values)."""
     from studyez_contracts.roots import task_fingerprints
     owners = direction_owners(doc)
     tiers = personal_tiers(doc, events, now)
+    exclude = exclude or frozenset()
+    dropped = dropped_directions(doc, exclude)
     current = {t['task_id']: t for t in doc['tasks'] if t['direction_id'] in owners}
     task_questions = {t['task_id']: t['question_id'] for t in doc['tasks']}
     questions = {q['question_id']: q for q in doc['bank_snapshot']['questions']}
@@ -148,7 +192,7 @@ def replay_tasks(doc, events, now, policy):
         else:
             did = aliases.get((event['revision'], p.get('direction_id')))
             task_id = carried(did, p['question_sha256']) if did and p.get('question_sha256') else None
-        if task_id not in current:
+        if task_id not in current or task_id in exclude:
             continue
         tid = owners[current[task_id]['direction_id']]
         when = instant(event['at'])
@@ -163,6 +207,8 @@ def replay_tasks(doc, events, now, policy):
     today = study_day(now, policy).isoformat()
     siblings = {}
     for task_id, task in current.items():
+        if task_id in exclude:
+            continue
         siblings.setdefault(task['direction_id'], []).append(task_id)
     directions = {}
     for did, ids in siblings.items():
@@ -180,7 +226,7 @@ def replay_tasks(doc, events, now, policy):
             'lastAt': max((v['lastAt'] for v in rated if v.get('lastAt')), default=None),
             'lastDay': max((v['lastDay'] for v in values if v.get('lastDay')), default=None)}
     rows = []
-    for target in targets(doc):
+    for target in counted_targets(doc, dropped):
         required = [d['direction_id'] for d in target['directions'] if d['requirement'] == 'required']
         undecided = any(d['requirement'] == 'undecided' for d in target['directions'])
         recalled = bool(required) and not undecided and all(directions.get(d, {}).get('recalled') for d in required)
@@ -191,8 +237,10 @@ def replay_tasks(doc, events, now, policy):
     return rows, directions, tasks
 
 
-def summary(doc, events, available, now, policy):
-    rows, directions = replay(doc, events, now, policy)
+def summary(doc, events, available, now, policy, skip_optional=False):
+    """`skip_optional`: Optional 계산 제외(2026-11-13). `available` itself is never narrowed."""
+    exclude = optional_tasks(doc, events, now) if skip_optional else None
+    rows, directions = replay(doc, events, now, policy, exclude)
     ready_directions = {t['direction_id'] for t in doc['tasks'] if t['task_id'] in available}
     for row in rows:
         row['ready'] = bool(row['required']) and not row['undecided'] and set(row['required']) <= ready_directions
@@ -200,8 +248,8 @@ def summary(doc, events, available, now, policy):
             row['recalled'] = False
         row['status'] = ('준비 전' if not row['ready'] else '회상 가능' if row['recalled'] else
                          '미학습' if not row['learned'] else '미평가' if not any(directions.get(d, {}).get('rating') for d in row['required']) else '보완 필요')
-    before, _ = replay(doc, events, day_start(now, policy) - timedelta(microseconds=1), policy)
-    carried, _ = replay(doc, [e for e in events if instant(e['at']) < day_start(now, policy)], now, policy)
+    before, _ = replay(doc, events, day_start(now, policy) - timedelta(microseconds=1), policy, exclude)
+    carried, _ = replay(doc, [e for e in events if instant(e['at']) < day_start(now, policy)], now, policy, exclude)
     ready_ids = {r['id'] for r in rows if r['ready']}
     for row in [*before, *carried]:
         if row['id'] not in ready_ids:
@@ -209,7 +257,7 @@ def summary(doc, events, available, now, policy):
     from .score import lecture_score  # score가 이 모듈을 쓰므로 여기서 부른다.
     return {'total': len(rows), 'learned': sum(r['learned'] for r in rows), 'recalled': sum(r['recalled'] for r in rows),
             # 사이트 학습률(2026-11-11): 목록·캘린더·패널·시험 계획과 같은 값.
-            'score': lecture_score(doc, events, policy, now)['score'],
+            'score': lecture_score(doc, events, policy, now, skip_optional=skip_optional)['score'],
             'unseen': sum(not r['learned'] for r in rows), 'unready': sum(not r['ready'] for r in rows),
             'importantUnseen': sum(r['important'] and not r['learned'] for r in rows),
             'newToday': sum(r['firstAt'] is not None and r['firstAt'] >= day_start(now, policy) for r in rows),
@@ -228,7 +276,7 @@ def _mastery_now(value, now):
     return value['mastery'] / (1 + elapsed / (9 * stability))
 
 
-def question_progress(doc, events, available, now, policy, planned=None):
+def question_progress(doc, events, available, now, policy, planned=None, skip_optional=False):
     """Per-question counts in the lecture list's card columns (Quiz Bank `card_progress` rules).
 
     A unit is a question the learner is actually given: every prepared task for root-generation/4, and
@@ -238,8 +286,12 @@ def question_progress(doc, events, available, now, policy, planned=None):
     - recognized: seen, last result not Good/Easy (independent), or not rated yet
     - retained: Good/Easy on two study days or more, and mastery now >= the rating's target retention
     - retrieving: last result Good/Easy, not retained
-    reviewDue counts today's plan tasks chosen as '복습 확인' (rated, due, not assessed today)."""
+    reviewDue counts today's plan tasks chosen as '복습 확인' (rated, due, not assessed today).
+    `skip_optional` (Optional 계산 제외) counts Optional tasks as if absent, reviewDue included."""
     owners = direction_owners(doc)
+    exclude = optional_tasks(doc, events, now) if skip_optional else frozenset()
+    if exclude:
+        available = {t for t in available if t not in exclude}
     if per_task(doc):
         _, _, values = replay_tasks(doc, events, now, policy)
         units = [values.get(t['task_id'], {}) for t in doc['tasks']
@@ -262,5 +314,6 @@ def question_progress(doc, events, available, now, policy, planned=None):
             counts['retained'] += 1
         else:
             counts['retrieving'] += 1
-    due = sum(t.get('reason') == '복습 확인' for t in (planned or {}).get('tasks', []))
+    due = sum(t.get('reason') == '복습 확인' and t.get('task_id') not in exclude
+              for t in (planned or {}).get('tasks', []))
     return {'total': len(units), **counts, 'reviewDue': due}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { RootOverview, RootQuestionProgress, RootSummary } from "../types/rootLearning";
+import { OPTIONAL_EVENT, useOptionalVersion } from "./optionalExclusion";
 
 type Catalog = { lectures: (RootOverview & { subject: string; runId: string })[] };
 export type RootCatalog = Map<string, RootSummary | null>;
@@ -17,6 +18,8 @@ export type RootSummaries = { rates: RootCatalog; progress: RootProgressCatalog;
  */
 let cached: { at: number; value: Promise<Catalog["lectures"]> } | null = null;
 const FRESH_MS = 60_000;
+// Optional 계산 제외가 바뀌면 캐시를 버린다(화면의 effect보다 먼저 등록돼 먼저 돈다).
+window.addEventListener(OPTIONAL_EVENT, () => { cached = null; });
 
 function fetchCatalog(): Promise<Catalog["lectures"]> {
   if (cached && Date.now() - cached.at < FRESH_MS) return cached.value;
@@ -43,6 +46,7 @@ const none: RootSummaries = { rates: new Map(), progress: new Map(), loaded: fal
 /** 학습률(`summary.score`)과 문항 단계 수를 한 요청으로. `loaded` 전에는 숫자 칸을 「…」로 둔다. */
 export function useRootSummaries(enabled = true): RootSummaries {
   const [value, setValue] = useState<RootSummaries>(none);
+  const optional = useOptionalVersion();
   useEffect(() => {
     if (!enabled) return;
     let live = true;
@@ -51,7 +55,7 @@ export function useRootSummaries(enabled = true): RootSummaries {
     // 풀이 창에서 돌아오면 새 기록으로 다시 읽는다(캐시가 지났을 때만 실제 요청). 다시 읽는 동안은 앞 값을 둔다.
     window.addEventListener("focus", refresh);
     return () => { live = false; window.removeEventListener("focus", refresh); };
-  }, [enabled]);
+  }, [enabled, optional]);
   return value;
 }
 

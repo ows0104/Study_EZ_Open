@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import type { RootOverview } from '../types/rootLearning';
+import { useOptionalVersion } from './optionalExclusion';
 
 type Entry = {mode:'legacy'} | {mode:'structured'; overview:RootOverview};
 export function useMainQuizEntry(subject:string,runId:string,enabled=true,version=0) {
   const {session}=useAuth();
-  const scope=JSON.stringify([session?.user.id??'',subject,runId,version]);
+  const optional=useOptionalVersion();  // Optional 계산 제외가 바뀌면 요약·카드 수를 다시 읽는다.
+  const scope=JSON.stringify([session?.user.id??'',subject,runId,version,optional]);
   const [state,setState]=useState<{scope:string;entry:Entry|null;error:string}|null>(null);
   useEffect(()=>{
     if(!enabled)return;

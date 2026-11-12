@@ -107,11 +107,13 @@ def overview_data(db, row, user, when):
                     and s.state.get('focus', list(policy.TIERS)) == chosen), None)
     focused = {t for t in available if tiers[t] in chosen} if narrowed else None
     planned = planning.plan(document, events, available, when, configured, focus=focused)
+    # Optional 계산 제외(2026-11-13): 집계만 거른다. available·계획은 그대로다(선행 문항 500 재발 방지).
+    skip = content.optional_excluded(db, user.id)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
-            'scope': content.learner_scope(row.document), 'summary': state.summary(document, events, available, when, configured),
+            'scope': content.learner_scope(row.document), 'summary': state.summary(document, events, available, when, configured, skip),
             'plan': planned,
             'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
-            'questionProgress': state.question_progress(document, events, available, when, configured, planned),
+            'questionProgress': state.question_progress(document, events, available, when, configured, planned, skip),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
 
@@ -339,7 +341,8 @@ def project_session(db, row, doc, user, when):
     out = {'sessionId': row.id, 'revision': row.revision, 'version': row.version, 'day': row.day, 'policy': row.policy,
            'position': index, 'count': len(row.tasks), 'finished': task is None, 'blocked': blocked,
            'canUndo': bool(undo_stack(row.state)) and not expired, 'mapSeen': row.state['mapSeen'], 'task': None,
-           'summary': state.summary(doc.document, events, available, when, row.policy)}
+           'summary': state.summary(doc.document, events, available, when, row.policy,
+                                    content.optional_excluded(db, user.id))}
     if task and task['task_id'] in available and not expired:
         q = content.question(doc.document, task)
         shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
@@ -524,6 +527,40 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
         db.rollback()
         raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
     return result
+
+
+# ── Optional 계산 제외 (2026-11-13) ──────────────────────────────────────────
+# 계정 단위 토글. 켜면 사이트 전체의 Main-Quiz 학습률·카드 수·목표 요약에서 Optional 문항을 없는 것처럼 센다.
+# 문항·풀이·기록·계획은 그대로다. append-only root_event(kind='optional', subject·run_id 빈 값, 표 추가 없음).
+
+class RootOptional(Start):
+    exclude: bool
+
+
+@router.get('/root-learning/optional')
+def read_optional(user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    return {'exclude': content.optional_excluded(db, user.id)}
+
+
+@router.put('/root-learning/optional')
+def save_optional(payload: RootOptional, user: CurrentUser = Depends(require_approved_user),
+                  db: Session = Depends(get_db)):
+    request = payload.model_dump()
+    previous = db.get(RootEvent, (user.id, payload.requestId))
+    if previous:
+        if previous.kind != 'optional' or previous.payload.get('_request') != request:
+            raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
+        return {'exclude': content.optional_excluded(db, user.id)}
+    seq = 1 + max((e.payload.get('seq', 0) for e in content.optional_events(db, user.id)), default=0)
+    db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject='', run_id='',
+                     revision='', kind='optional', payload={'_request': request, 'exclude': payload.exclude, 'seq': seq},
+                     result={'exclude': payload.exclude}, created_at=now()))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
+    return {'exclude': content.optional_excluded(db, user.id)}
 
 
 # ── 오늘 학습 중요도 필터 (2026-11-12) ─────────────────────────────────────────

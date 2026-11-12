@@ -12,7 +12,9 @@ from app.lecture_mastery import main_quiz_inputs
 from app.models import Lecture, TimetableEvent
 from app.naming import normalize_stem
 from app.root_learning.policy import configured_policy, instant
+from app.root_learning.content import optional_excluded
 from app.root_learning.score import lecture_score
+from app.root_learning.state import optional_tasks
 from app.study_engine import now_ms
 from app.study_engine.planning import KOREA, daily_plan, day_start
 
@@ -23,18 +25,22 @@ def _moment(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, UTC)
 
 
-def main_quiz_unit(source, policy, day_begin: int, now: int) -> dict:
-    """계획 한 칸. Main-Quiz가 없으면 progress=None(0으로 가정, 미준비로 센다)."""
+def main_quiz_unit(source, policy, day_begin: int, now: int, skip_optional: bool = False) -> dict:
+    """계획 한 칸. Main-Quiz가 없으면 progress=None(0으로 가정, 미준비로 센다).
+    `skip_optional`: Optional 계산 제외(2026-11-13) — 진척과 오늘 복습 수에서 Optional 문항을 뺀다."""
     if source is None:
         return {"progress": None, "reviewsToday": 0}
     doc, events = source
 
     def progress(until: int, at: int) -> float:
-        return lecture_score(doc, events, policy, _moment(at), until=_moment(until))["value"] or 0.0
+        score = lecture_score(doc, events, policy, _moment(at), until=_moment(until), skip_optional=skip_optional)
+        return score.get("value") or 0.0
 
     begin, end = _moment(day_begin), _moment(now)
+    skipped = optional_tasks(doc, events, end) if skip_optional else frozenset()
     return {"progress": progress,
-            "reviewsToday": sum(e["kind"] == "rate" and begin <= instant(e["at"]) <= end for e in events)}
+            "reviewsToday": sum(e["kind"] == "rate" and begin <= instant(e["at"]) <= end
+                                and e["payload"].get("task_id") not in skipped for e in events)}
 
 
 def exam_time(event: TimetableEvent) -> int:
@@ -84,6 +90,7 @@ def build_study_plan(target: int, subject: str | None, run_id: str | None,
     # 2026-11-11부터 계획의 강의 학습률은 Main-Quiz 하나다. Quiz Bank(legacy)는 세지 않는다.
     policy = configured_policy()
     inputs = main_quiz_inputs(db, keys, user) if keys and policy else {}
+    skip = optional_excluded(db, user.id) if inputs else False
     day_begin = day_start(now)
     plans = []
     focused_goal = None  # Quiz Bank 강의별 오늘 목표(legacy). Main-Quiz의 오늘 할 일은 RootToday가 보인다.
@@ -96,7 +103,7 @@ def build_study_plan(target: int, subject: str | None, run_id: str | None,
             attached = by_event.get(event.id) or [None]
             for lecture in attached:
                 key = (lecture.subject, lecture.run_id) if lecture else None
-                units.append({"date": event.date, **main_quiz_unit(inputs.get(key), policy, day_begin, now)})
+                units.append({"date": event.date, **main_quiz_unit(inputs.get(key), policy, day_begin, now, skip)})
         plans.append({"examId": exam.id, "title": exam.title, "examDate": exam.date.isoformat(),
                       "examTime": exam.start_time or "09:00", "lectureCount": len(units),
                       "newToday": sum(u["date"] == today for u in units),

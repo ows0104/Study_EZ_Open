@@ -8,7 +8,7 @@
 from math import sqrt
 
 from .policy import instant, target_parameters, target_retention
-from .state import personal_tiers, per_task, replay, replay_tasks, targets
+from .state import counted_targets, dropped_directions, optional_tasks, personal_tiers, per_task, replay, replay_tasks
 
 
 def current_mastery(value, at):
@@ -46,29 +46,36 @@ def _unit_score(value, target, at):
     return min(current_mastery(value, at) / (value.get('target') or target), 1.0)
 
 
-def lecture_score(doc, events, policy, at, *, until=None):
-    """`until`까지의 평가로 `at` 시점의 학습률. 지도 목표가 없으면 score=None."""
+def lecture_score(doc, events, policy, at, *, until=None, skip_optional=False):
+    """`until`까지의 평가로 `at` 시점의 학습률. 지도 목표가 없으면 score=None.
+
+    `skip_optional`(Optional 계산 제외, 2026-11-13): 그 시점 Optional 문항을 없는 것처럼 센다 — /4는 방향 평균에서
+    빼고, 문항이 모두 Optional인 방향과 남은 (필수) 방향이 없는 목표는 뺀다."""
     until = until or at
     tiers = personal_tiers(doc, events, until)
+    exclude = optional_tasks(doc, events, until) if skip_optional else frozenset()
+    dropped = dropped_directions(doc, exclude)
     params = target_parameters()
     task_targets, direction_targets = _targets_for(doc, tiers, params)
     if per_task(doc):
-        _, _, tasks = replay_tasks(doc, events, until, policy)
+        _, _, tasks = replay_tasks(doc, events, until, policy, exclude)
         siblings = {}
         for task in doc['tasks']:
+            if task['task_id'] in exclude:
+                continue
             siblings.setdefault(task['direction_id'], []).append(task['task_id'])
 
         def direction_score(did):
             ids = siblings.get(did) or []
             return sum(_unit_score(tasks.get(i), task_targets.get(i), at) for i in ids) / len(ids) if ids else 0.0
     else:
-        _, directions = replay(doc, events, until, policy)
+        _, directions = replay(doc, events, until, policy, exclude)
 
         def direction_score(did):
             return _unit_score(directions.get(did), direction_targets.get(did), at)
 
     scores, rated = [], 0
-    for target in targets(doc):
+    for target in counted_targets(doc, dropped):
         chosen = [d['direction_id'] for d in target['directions'] if d['requirement'] == 'required'] \
             or [d['direction_id'] for d in target['directions']]
         values = [direction_score(d) for d in chosen]
