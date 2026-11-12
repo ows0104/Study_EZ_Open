@@ -34,12 +34,168 @@
       "release_hash": "9db7b75ad23a1ba5656c6eec48c04ec8152b4e3078c2a744895f3bd00e48da00"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:24.323005+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_light"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476181605679300-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:27.475198+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_personal"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476184650479100-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:33.194711+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_learning"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476187827134000-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:51.987750+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "main_quiz"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476193567124700-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:57.621632+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "timetable"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476212367498200-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-12T09:33:07.123702+00:00"
+  "updated_at": "2026-11-12T09:36:57.622589+00:00"
 }
