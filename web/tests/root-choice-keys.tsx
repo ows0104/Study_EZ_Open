@@ -58,6 +58,25 @@ try {
   press("1"); await tick();
   check(picked().join() === "3", "multi_select: same number toggles off");
 
+  // 단답 「선지 보기」(#118): 펴기 전에는 1–4가 아무것도 고르지 않고, V로 편 뒤에는 그 선지 번호를 고른다.
+  const recallView = view("mcq");
+  recallView.task!.question = { ...question("mcq"), format: "basic", options: [],
+    recall_choices: [{ id: "A", text: "가" }, { id: "B", text: "나" }, { id: "C", text: "다" }] } as never;
+  render(recallView, "recall");
+  await tick();
+  press("2"); await tick();
+  check(!document.querySelector(".bank-option") && !picked().length, "recall choices: numbers do nothing while closed");
+  (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent("keydown", { key: "v", code: "KeyV", bubbles: true }));
+  await tick();
+  check(Array.from(document.querySelectorAll(".bank-option b")).map(b => b.textContent).join() === "1,2,3", "recall choices: V opens them numbered 1·2·3");
+  press("2"); await tick();
+  check(picked().join() === "2", "recall choices: key 2 picks the second");
+  press(" "); await tick();
+  check(actions.at(-1)?.kind === "reveal" && actions.at(-1)?.response === "선택: B" && actions.at(-1)?.choicesShown === true,
+    "recall choices: reveal sends the saved ID and that choices were shown");
+
+  render(view("multi_select"), "multi");
+  await tick();
   press("5"); await tick();
   check(actions.at(-1)?.kind === "exclude", "key 5 excludes the question");
   const menu = Array.from(document.querySelectorAll<HTMLButtonElement>(".mq-menu-pop button")).find(b => b.textContent?.startsWith("이 문제 제외"));

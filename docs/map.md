@@ -35,6 +35,7 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | Concept map·포인트 자동출제·게시 | [요청 화면](../web/src/bank/RootGenerationPanel.tsx), [전용 API](../server/app/routes/root_generation.py), [생성기](../quizbank/connection_generate.py), [구현·운영 조건](changes/2026-11-03-connection-generation-pipeline/implementation.md) |
 | 뿌리 생성의 큰 JSON·시간 초과·모델 제한 | [공통 파일 실행·실패 구분](../runner/root_native_json.py), [기존 실패의 명시적 재사용](../runner/root_transport_recovery.py), [실행·검증 기록](changes/2026-11-05-root-timeout-fix/live.md). 원래 수용·독립 검수·상한을 유지하며 공급자 콘텐츠 거절은 재호출·게시 보류 |
 | Main-Quiz 근거 쪽·인용 맞추기·게시 뒤 근거 | [검토 근거·인용 계약](../studyez_contracts/roots/generation_v4.py), [게시 뒤 근거](../quizbank/root_evidence.py), [재선택](../quizbank/slide_focus.py), [설계](changes/2026-11-11-evidence-from-citations/spec.md) |
+| Main-Quiz 단답·나열 「선지 보기」 | [선지 계약](../studyez_contracts/roots/choices.py), [선지 작성](../quizbank/root_choices.py), [수동 명령](../runner/root_choices.py), [서버 붙이기](../server/app/root_learning/choices.py), [풀이 화면](../web/src/bank/RootSolve.tsx) | `tests/contracts/test_root_choices_contract.py`, `tests/quizbank/test_root_choices.py`, `tests/runner/test_root_choices_publish.py`, 서버 `-m tests recall_choices` |
 | Main-Quiz 문항 배치(검토 관계·회상 단위) | [배치 규칙 계약](../studyez_contracts/roots/generation_v4.py), [검토 지시문](../content/prompts/learning-links/v4/item-review.md), [설계](changes/2026-11-11-place-by-review/spec.md) |
 | Quiz Bank API 책임·검사 지도 | [bank_api/CLAUDE.md](../server/app/routes/bank_api/CLAUDE.md) |
 | Quiz Bank 생성 프롬프트 | [bankPrompt.md](../content/prompts/bank/bankPrompt.md) |

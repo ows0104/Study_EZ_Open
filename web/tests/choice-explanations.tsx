@@ -46,8 +46,13 @@ try {
     await waitFor(() => document.querySelectorAll(".bank-option").length === 3 && !document.querySelector(".bank-choice-explanation"));
     check(!document.body.textContent?.includes("효소 억제"), `${format}: prepared explanations stay hidden before reveal`);
     // mcq는 키 1로, multi_select는 누름으로 첫 선지를 고른다(2026-11-12 번호 키).
-    if (format === "mcq") window.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
-    else document.querySelector<HTMLButtonElement>(".bank-option")!.click();
+    if (format === "mcq") {
+      // 키 처리기가 붙은 뒤에 눌러야 한다 — 고른 표시가 생길 때까지 다시 누른다.
+      await waitFor(() => {
+        if (!document.querySelector(".bank-option.is-picked")) window.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
+        return document.querySelector(".bank-option.is-picked");
+      });
+    } else document.querySelector<HTMLButtonElement>(".bank-option")!.click();
     await new Promise(resolve => setTimeout(resolve, 20));
     document.querySelector<HTMLButtonElement>(".quiz-submit")!.click();
     await waitFor(() => document.querySelectorAll(".bank-choice-explanation li").length === 3

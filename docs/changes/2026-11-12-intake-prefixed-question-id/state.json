@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-12-intake-prefixed-question-id",
+  "title": "Main-Quiz 접수: 접두어가 붙은 문항 번호의 오류도 그 문항에 귀속",
+  "area": "generation",
+  "created_at": "2026-11-11T23:59:02.979269+00:00",
+  "required_checks": [
+    "quizbank",
+    "runner"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T23:59:02.979348+00:00"
+}

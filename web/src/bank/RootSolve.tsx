@@ -33,7 +33,10 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const task=view.task;
   const key=`studyez:root-draft:${scope}:${JSON.stringify([view.revision,task?.id])}`;
   const [picked,setPicked]=useState<Set<string>>(new Set());
-  const [choices,setChoices]=useState(false);
+  // 「폈음」은 그 문항의 것일 때만 참이다 — 다음 문항이 그려지는 첫 순간에 앞 문항의 값으로 선지가 비치지 않게 한다.
+  const [choiceState,setChoiceState]=useState({key:'',shown:false});
+  const choices=choiceState.key===key&&choiceState.shown;
+  const setChoices=(shown:boolean)=>setChoiceState({key,shown});
   const [imageState,setImageState]=useState<{taskId:string;ready:boolean}|null>(null);
   const [editing,setEditing]=useState(false);
   const [editNote,setEditNote]=useState('');
@@ -43,10 +46,13 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const locked=disabled||advancing||!!view.blocked;
   const imagesReady=!task?.question.stimuli?.length||(imageState?.taskId===task.id&&imageState.ready);
   const hiddenChoices=task?.question.mcq_mode==='recall_first'&&!choices&&!task.answer;
+  // 단답·나열 「선지 보기」(2026-11-12): 문항의 options와 별개인 선지. 사용자가 펼 때만 보이고, 편 풀이는 도움받은 풀이로 남는다.
+  const recall=task&&!task.question.options.length&&task.question.recall_choices?.length?task.question.recall_choices:null;
+  const recallClosed=!!recall&&!choices&&!task?.answer;
   useEffect(()=>{
     try {
       const ids:unknown=JSON.parse(localStorage.getItem(key+':picks')??'[]');
-      const allowed=new Set(task?.question.options.map(o=>o.id)??[]);
+      const allowed=new Set([...(task?.question.options??[]),...(task?.question.recall_choices??[])].map(o=>o.id));
       if(!Array.isArray(ids)||!ids.every(id=>typeof id==='string'&&allowed.has(id)))throw Error('invalid saved choices');
       setPicked(new Set(ids));setChoices(localStorage.getItem(key+':choices')==='shown');
     }catch{setPicked(new Set());setChoices(false);onError('보관된 선지 선택을 읽지 못했습니다. 원본을 보존했습니다.');}
@@ -59,8 +65,9 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   }
   function pick(id:string){
     if(locked||task?.answer)return;
-    const next=new Set(task?.question.format==='mcq'?[]:picked);
-    if(picked.has(id)&&task?.question.format!=='mcq')next.delete(id);else next.add(id);
+    const single=task?.question.format==='mcq'||(!!recall&&task?.question.format==='basic');
+    const next=new Set(single?[]:picked);
+    if(picked.has(id)&&!single)next.delete(id);else next.add(id);
     if(save(':picks',JSON.stringify([...next])))setPicked(next);
     heading.current?.focus({preventScroll:true});
   }
@@ -70,7 +77,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     // Retired text drafts remain untouched in storage; no new text is required.
     const response=picked.size?`선택: ${[...picked].join(', ')}`:'';
     onAction({kind:'reveal',attempted,response,helped:view.mapSeen,
-      choicesShown:!!task.question.options.length&&!hiddenChoices,
+      choicesShown:recall?choices:!!task.question.options.length&&!hiddenChoices,
       ...(attempted&&task.question.stimuli?.length?{stimulusHashes:task.question.stimuli.map(s=>s.sha256)}:{})});
     heading.current?.focus({preventScroll:true});
   }
@@ -108,17 +115,19 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       const number=/^[1-4]$/.test(event.key);
       if(target.closest('a,summary')||target.closest('button')&&!number&&event.key!=='5')return;
       if((event.code==='Space'||event.key==='Enter')&&!task.answer){event.preventDefault();reveal();}
+      if(event.code==='KeyV'&&recallClosed){event.preventDefault();showChoices();}
       if(task.answer&&number){event.preventDefault();rate(RATINGS[Number(event.key)-1]);}
-      // 답 보기 전 1–4: 그 번호 선지를 고른다(선지 머리표가 화면 순서 번호다).
-      if(!task.answer&&number&&!hiddenChoices){
-        const option=task.question.options[Number(event.key)-1];
+      // 답 보기 전 1–4: 화면에 보이는 선지(객관식 선지, 또는 V로 편 단답·나열 선지)에서 그 번호를 고른다.
+      if(!task.answer&&number){
+        const shown=recall?(choices?recall:[]):hiddenChoices?[]:task.question.options;
+        const option=shown[Number(event.key)-1];
         if(option){event.preventDefault();pick(option.id);}
       }
       if(event.key==='5'){event.preventDefault();exclude();}
       if(event.key.toLowerCase()==='z'&&view.canUndo){event.preventDefault();onAction({kind:'undo'});}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
-  },[locked,task,picked,imagesReady,hiddenChoices,view.mapSeen,view.canUndo,timerOn,timer.togglePause]);
+  },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,choices,view.mapSeen,view.canUndo,timerOn,timer.togglePause]);
   const done=Math.min(view.position,view.count);
   const head=<header className="mq-solve-head">
     <p className="mq-kicker"><span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
@@ -175,7 +184,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
     {task&&<div className="quiz-card bank-card mq-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
-      showOptions={!hiddenChoices} showChoiceScore={false}/>
+      showOptions={recall?choices:!hiddenChoices} showChoiceScore={false} recallChoices={recall??undefined}/>
+      {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
       {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
         <AnswerSlides key={task.id} answer={task.answer}/>
