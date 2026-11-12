@@ -291,7 +291,9 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
         if not tasks:
             raise HTTPException(409, '오늘 추천할 준비된 과제가 없습니다. 남은 범위와 준비 상태를 확인하세요.')
         day = policy.study_day(when, info['policy']).isoformat()
-        fresh = {'index': 0, 'reveals': {}, 'mapSeen': False, 'undo': None, 'exposedRelations': []}
+        # A map opened earlier this study day without a session already showed answers (lecture_map).
+        seen = db.get(RootEvent, (user.id, map_view_id(subject, run_id, row.revision, day))) is not None
+        fresh = {'index': 0, 'reveals': {}, 'mapSeen': seen, 'undo': None, 'exposedRelations': []}
         key = [user.id, subject, run_id, row.revision, day, info['policy'], tasks]
         # Every tier chosen: the former state and session ID exactly. A narrowed choice is its own session.
         if len(info['focus']['tiers']) < len(policy.TIERS):
@@ -782,7 +784,40 @@ def read_map(session_id: str, user: CurrentUser = Depends(require_approved_user)
     task = row.tasks[row.state['index']] if row.state['index'] < len(row.tasks) else None
     current = next((t['concept_ids'] for t in state.targets(doc.document) if task and
                     any(d['direction_id'] == task['direction_id'] for d in t['directions'])), [])
+    return map_payload(doc, current)
+
+
+def map_payload(doc, current):
     return {'concepts': doc.document['review']['concepts'], 'relations': doc.document['review']['relations'], 'currentConceptIds': current,
             'targets': state.targets(doc.document), 'scope': content.learner_scope(doc.document),
             'readyDirectionIds':sorted({t['direction_id']for t in doc.document['tasks']}),
             'points': doc.document['review']['points'], 'coverage': doc.document['review']['coverage']}
+
+
+def map_view_id(subject, run_id, revision, day):
+    """One map-view record per learner, lecture, revision and study day; repeats reuse it."""
+    return 'map-view-' + document_hash([subject, run_id, revision, day])[:40]
+
+
+@router.post(BASE + '/map')
+def lecture_map(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends(require_approved_user),
+                db: Session = Depends(get_db)):
+    """개념 지도 without a session (2026-11-12, docs/changes/2026-11-12-map-without-session).
+
+    The map shows answers, so the view is recorded and a session started later that study day begins as mapSeen."""
+    doc = active(db, subject, run_id, user)
+    configured = policy.configured_policy()
+    if configured is None:
+        raise HTTPException(409, '초기 추천·복습 정책 선택 대기')
+    when = now()
+    day = policy.study_day(when, configured).isoformat()
+    request_id = map_view_id(subject, run_id, doc.revision, day)
+    if db.get(RootEvent, (user.id, request_id)) is None:
+        db.add(RootEvent(user_id=user.id, request_id=request_id, session_id='', subject=subject, run_id=run_id,
+                         revision=doc.revision, kind='map_view', payload={'_request': payload.model_dump(), 'day': day},
+                         result={}, created_at=when))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()  # A concurrent view stored the same record.
+    return map_payload(doc, [])

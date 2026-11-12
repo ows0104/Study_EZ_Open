@@ -45,7 +45,6 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const [error,setError]=useState('');
   const [tab,setTab]=useState<'learn'|'map'>('learn');
   const [advancing,setAdvancing]=useState(false);
-  const [mapRequested,setMapRequested]=useState(false);
   const viewRef=useRef(view);viewRef.current=view;
   // Views before each reveal/rating/skip of this session, so every Z draws at once (2026-11-11: unlimited, full undo).
   const undoSnapshots=useRef<RootView[]>([]);
@@ -146,13 +145,19 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     }catch(e){if(seq===focusSeq.current){setInfo(current);setError((e as Error).message);}}
     finally{if(seq===focusSeq.current)setFocusing(false);}
   }
-  // The map tab is chosen at once: from the start screen the session it needs is opened underneath,
-  // and the question screen is never drawn on the way (2026-11-09).
+  // The map tab is chosen at once (2026-11-09). Without a session the map is read per lecture and no
+  // session is opened: with nothing left today that start was refused and blocked every write (2026-11-12).
   async function showMap() {
     if(writes.blocked||advancing)return;
     setTab('map');
     const current=viewRef.current;
-    if(!current){setMapRequested(true);await begin();if(!viewRef.current){setMapRequested(false);setTab('learn');}return;}
+    if(!current){
+      setAdvancing(true);
+      try{setMap(await api<RootMapData>(base+'/map',{method:'POST',body:JSON.stringify({requestId:crypto.randomUUID()})}));}
+      catch(e){setError((e as Error).message);setTab('learn');}
+      finally{setAdvancing(false);}
+      return;
+    }
     const confirmed=writes.run(`/api/root-learning/sessions/${current.sessionId}/events`,{version:current.version,kind:'map'});
     if(!confirmed){setTab('learn');return;}
     setAdvancing(true);
@@ -164,7 +169,6 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     }catch(e){if(!(e instanceof ApiError&&e.status===409))setError((e as Error).message);}
     finally{setAdvancing(false);if(!shown)setTab('learn');}
   }
-  useEffect(()=>{if(mapRequested&&view&&!writes.blocked&&!advancing){setMapRequested(false);void showMap();}},[mapRequested,view,writes.blocked,advancing]);
   useEffect(()=>{document.title='Main-Quiz · Study_EZ';},[]);
   async function reload() {
     if(view)await loadSession(view.sessionId);
@@ -196,7 +200,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
       {versions.map(v=><p key={v.revision}>{v.title} · {v.revision} <button disabled={managing||writes.blocked||!reviewed} onClick={()=>void publish(v.revision,true)}>{privatePilot?'내 계정에 활성화':'승인된 학생에게 활성화'}</button> <button disabled={managing||writes.blocked} onClick={()=>void publish(v.revision,false)}>사용 중지</button></p>)}
     </details>
   </details>:null;
-  return <main className={`root-learning main-quiz-learning${view?'':' is-start'}`}>
+  return <main className={`root-learning main-quiz-learning${view||tab==='map'?'':' is-start'}`}>
     {(error||writes.error||writes.pending&&!writes.busy||writes.conflicts.some(r=>!r.acknowledged))&&<div role="alert" className="notice is-error">{error||writes.error||'이전에 저장 확인을 받지 못한 요청 또는 충돌 응답이 있습니다.'}
       {writes.pending&&<button disabled={writes.busy} onClick={()=>void retry()}>같은 요청 다시 저장</button>}
       {writes.conflicts.some(r=>!r.acknowledged)&&<button disabled={writes.busy} onClick={()=>void writes.acknowledge(reload)}>보관 응답 확인 후 서버 기록 불러오기</button>}
@@ -217,7 +221,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
             viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
-    </>:info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
+    </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo="today" onBack={()=>setTab('learn')}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
+    :info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
       onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
 }
