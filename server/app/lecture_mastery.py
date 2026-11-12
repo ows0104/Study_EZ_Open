@@ -54,10 +54,11 @@ def lecture_overviews(db: Session, user, keys: list[tuple[str, str]],
     if not keys or policy is None:
         return {}
     at = at or datetime.now(UTC)
+    skip = root_content.optional_excluded(db, user.id)  # Optional 계산 제외(2026-11-13)
     result = {}
     for key, (doc, events) in main_quiz_inputs(db, keys, user).items():
         try:
-            mastery = as_mastery(lecture_score(doc, events, policy, at))
+            mastery = as_mastery(lecture_score(doc, events, policy, at, skip_optional=skip))
         except Exception:  # 한 강의의 계산 실패가 시간표 전체를 깨지 않게 한다.
             log.exception("Main-Quiz 학습률 계산 실패 %s/%s", *key)
             mastery = None

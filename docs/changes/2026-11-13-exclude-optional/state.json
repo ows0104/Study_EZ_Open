@@ -1,0 +1,117 @@
+{
+  "id": "2026-11-13-exclude-optional",
+  "title": "Optional 문항 계산 제외 토글",
+  "area": "site",
+  "created_at": "2026-11-12T15:28:07.196831+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T16:18:34.726288+00:00",
+      "evidence": "사용자 채팅 2026-11-13: 「승인, 구현 시작」 (intent/spec/plan 제시 직후)",
+      "scope": "plan.md의 서버 저장·API·계산 제외, 서버 테스트, 웹 토글·캐시 무효화, 문서; 로컬 구현·검사·PR 생성까지. master 병합(배포) 제외",
+      "evidence_version": 2,
+      "source_hash": "fd74db623e97de47d078fc6eacc90178c17704081c0e9e5c337d4fe57f7de4a2",
+      "plan_hash": "64ba48c5b3ce5ef9121d1ae7e555a520a5954d088d12a6dba3b3d8944cb0d1ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "06671cb2cc17cf81e7c8d543d527e7c54d0b419233ff2d61fab012e7e1b9a88f"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T16:33:16.622931+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "570f9d52fc7988b68135ad4adf3d5af2c478cc02d46f0a632e512fdd830064d6",
+      "plan_hash": "64ba48c5b3ce5ef9121d1ae7e555a520a5954d088d12a6dba3b3d8944cb0d1ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-exclude-optional/1794501184627656900-web.log",
+      "web_artifact": "49b0d4a663487fbc9bc66d4458e4ed2fc1d331934db88e36d6dbab372080e03a",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-12T16:33:42.854211+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "570f9d52fc7988b68135ad4adf3d5af2c478cc02d46f0a632e512fdd830064d6",
+      "plan_hash": "64ba48c5b3ce5ef9121d1ae7e555a520a5954d088d12a6dba3b3d8944cb0d1ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-exclude-optional/1794501199876636800-web.log",
+      "web_artifact": "49b0d4a663487fbc9bc66d4458e4ed2fc1d331934db88e36d6dbab372080e03a",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T16:33:45.218402+00:00"
+}

@@ -225,6 +225,17 @@ def focus_events(db, subject, user_id):
                                               RootEvent.kind == 'focus')).all()
 
 
+def optional_events(db, user_id):
+    """Optional 계산 제외(2026-11-13): 계정 단위 선택. 강의에 묶이지 않아 subject·run_id가 빈 root_event다."""
+    return db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == '',
+                                              RootEvent.kind == 'optional')).all()
+
+
+def optional_excluded(db, user_id):
+    row = max(optional_events(db, user_id), key=lambda e: (e.payload.get('seq', 0), e.created_at), default=None)
+    return bool(row and row.payload.get('exclude'))
+
+
 def question(doc, task):
     return next(q for q in doc['bank_snapshot']['questions'] if q['question_id'] == task['question_id'])
 

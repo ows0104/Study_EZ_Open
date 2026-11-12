@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { ExamPlan, StudyPlan } from "../types/studyPlan";
 import { useStudyTarget } from "./useStudyTarget";
+import { useOptionalVersion } from "../bank/optionalExclusion";
 
 /**
  * 「오늘 복습」 칸의 분모(2026-11-11 사용자 지시): 시험까지 오늘의 학습 목표(`/api/study-plan`)에서
@@ -14,6 +15,7 @@ export function useTodayPlan(): { plan: ExamPlan | null; loading: boolean } {
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const reload = useCallback(() => setRefresh(v => v + 1), []);
+  const optional = useOptionalVersion();  // Optional 계산 제외가 바뀌면 진척을 다시 읽는다.
   useEffect(() => {
     let live = true;
     api<StudyPlan>(`/api/study-plan?target=${target}`)
@@ -21,7 +23,7 @@ export function useTodayPlan(): { plan: ExamPlan | null; loading: boolean } {
       .catch((cause: Error) => { if (live && !(cause instanceof ApiError && cause.status === 404)) setPlan(null); })
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, [target, refresh]);
+  }, [target, refresh, optional]);
   useEffect(() => {
     const tick = () => { if (document.visibilityState === "visible") reload(); };
     window.addEventListener("focus", reload);
