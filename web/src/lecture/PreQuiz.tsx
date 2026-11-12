@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./prequiz.css";
 import { api } from "../api";
 import { lectureHref } from "../links";
@@ -30,6 +31,9 @@ export function PreQuiz({ subject, runId, title, onDone }: {
   const [reviewIds, setReviewIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, RevealResult>>({});
   const isAdmin = Boolean(useMe()?.isAdmin);
+  const navigate = useNavigate();
+  // 기록은 「이해 확인」마다 저장된다. 들어온 화면으로 돌아가고, 바로 열린 창이면 홈으로 간다.
+  const leave = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"));
 
   useEffect(() => {
     let active = true;
@@ -146,6 +150,7 @@ export function PreQuiz({ subject, runId, title, onDone }: {
   const doneCount = round.filter((entry) => completed(entry.itemId)).length;
   const head = <header className="pq-head">
     <p className="pq-kicker">
+      <button type="button" className="quiz-back" disabled={busy} onClick={leave}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>뒤로</button>
       <span className="pq-badge">Pre-Quiz</span>
       <a className="pq-title" href={lectureHref({ subject, runId })}>{heading}</a>
     </p>

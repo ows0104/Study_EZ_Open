@@ -14,6 +14,12 @@
 .pq-title { min-width: 0; overflow: hidden; color: var(--ink); font-size: 15px; font-weight: 700; letter-spacing: -.01em;
   text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .pq-title:hover { text-decoration: underline; }
+.quiz-back { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px 0 8px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.quiz-back svg { width: 15px; height: 15px; }
+.quiz-back:hover:not(:disabled) { background: var(--hover); }
+.quiz-back:disabled { opacity: .45; cursor: default; }
 .pq-tools { display: flex; align-items: center; gap: 8px; }
 .prequiz-learning .pill-button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 13px;
   font-size: 13px; text-decoration: none; white-space: nowrap; }
