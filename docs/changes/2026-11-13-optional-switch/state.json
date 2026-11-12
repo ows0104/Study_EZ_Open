@@ -1,0 +1,81 @@
+{
+  "id": "2026-11-13-optional-switch",
+  "title": "Optional 제외 스위치 디자인",
+  "area": "site",
+  "created_at": "2026-11-12T16:57:51.150381+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T17:00:26.938127+00:00",
+      "evidence": "사용자 채팅 2026-11-13: 「체크된건지 아닌지 디자인이 너무 헷갈려. 제외/포함 등 토글이 되는 스위치나, 확실히 표시가 돼서 헷갈리지 않게 디자인을 바꿔줬으면 좋겠어」",
+      "scope": "web/src/bank/StudyOverview.tsx 토글 마크업, web/src/bank/overview.css 스위치 스타일; 구현·검사·PR 생성. 병합 제외",
+      "evidence_version": 2,
+      "source_hash": "294b819ed7decc3d07523413818d0e347f71e462500221dfb30f54a406a6b3b0",
+      "plan_hash": "8ec67861b828d9a2aa372ff38a94993968bcefd1b216d3cc455b58f227719299",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "fb5997b5f532cbfcc3bebb72242d1944efec5eb4ecfa2e082430fb241b553b26"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T17:00:50.393369+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "294b819ed7decc3d07523413818d0e347f71e462500221dfb30f54a406a6b3b0",
+      "plan_hash": "8ec67861b828d9a2aa372ff38a94993968bcefd1b216d3cc455b58f227719299",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-optional-switch/1794502837272712000-web.log",
+      "web_artifact": "3d95c4d3022998bb18a36b2ebf1a4bd87865e3dd67058c9c018fe37586488a6b",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T17:00:52.992245+00:00"
+}
