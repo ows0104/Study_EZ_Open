@@ -157,6 +157,42 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-12-dedupe-published/1794457003715439600-server.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T04:32:57.409072+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "fa34875fc1704600bea81f10d7adeb342c6f584fbb6479a1665a50adad9be7ff",
+      "plan_hash": "708266bb88d2105494e0a6870618dcb2d7d5d6e77ba41cff93e70b27b106cc22",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-12-dedupe-published/1794456808851880500-regression.log"
     }
   ],
   "review": null,
@@ -165,5 +201,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-12T04:16:49.740741+00:00"
+  "updated_at": "2026-11-12T04:32:57.410875+00:00"
 }
