@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-12-intake-by-bank-ids",
+  "title": "Main-Quiz 접수: 문항 오류 판별을 문제은행의 실제 문항 번호로",
+  "area": "generation",
+  "created_at": "2026-11-12T02:32:44.141652+00:00",
+  "required_checks": [
+    "quizbank",
+    "runner"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T02:32:44.141674+00:00"
+}

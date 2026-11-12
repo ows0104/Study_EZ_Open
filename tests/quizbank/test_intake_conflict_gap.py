@@ -48,3 +48,12 @@ def test_prefixed_question_id_is_a_question_error():
         {'question_id': 'ST-Q061', 'error': 'ST-Q061: integration의 기초 문항 필요'}]
     with pytest.raises(Exception):
         intake_rejections(['retrieval_plan: ID/값 중복'])
+
+
+def test_bank_ids_decide_which_error_is_a_question_error():
+    errors = ['R049: integration의 기초 문항 필요']
+    assert intake_rejections(errors, question_ids={'R049', 'R050'}) == [{'question_id': 'R049', 'error': errors[0]}]
+    with pytest.raises(Exception):
+        intake_rejections(errors)
+    with pytest.raises(Exception):
+        intake_rejections(['retrieval_plan: ID/값 중복'], question_ids={'R049'})

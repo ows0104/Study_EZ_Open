@@ -98,7 +98,7 @@ def _intake(packet, out):
     bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
-    rejected = intake_rejections(report['errors'])
+    rejected = intake_rejections(report['errors'], question_ids={q['question_id'] for q in bank['questions']})
     bad = {r['question_id'] for r in rejected}
     if bad:
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in bad]
