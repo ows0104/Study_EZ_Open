@@ -123,8 +123,10 @@ def availability(db, content, user_id):
     tasks = {t['task_id']: t for t in doc['tasks']}
     excluded = excluded_ids(events_for(db, content.subject, content.run_id, user_id), content.revision)
     if doc['bank_source'] == 'standalone':
-        return ({tid for tid, t in tasks.items() if t['question_id'] not in excluded},
-                {tid: '개인 제외' for tid, t in tasks.items() if t['question_id'] in excluded})
+        # Main-Quiz documents are standalone. They take the same prerequisite rule as a bank source
+        # (2026-11-12: an excluded prerequisite left its dependents available and order_plan raised 500).
+        return close_prerequisites(doc, {tid for tid, t in tasks.items() if t['question_id'] not in excluded},
+                                   {tid: '개인 제외' for tid, t in tasks.items() if t['question_id'] in excluded})
     row = db.get(QuizBank, (content.subject, content.run_id), options=[defer(c) for c in _UNUSED_BANK_COLUMNS])
     if not row or not row.open_to_students or row.status != 'ready':
         return set(), {tid: '원래 문제은행 공개/준비 상태 변경' for tid in tasks}
@@ -148,14 +150,22 @@ def availability(db, content, user_id):
             problems[tid] = '개인 수정본과 연결 목표의 일치 미확인'
         else:
             available.add(tid)
-    if doc.get('generation_policy')in('root-generation/2','root-generation/4'):
+    return close_prerequisites(doc, available, problems)
+
+
+def close_prerequisites(doc, available, problems):
+    """/2·/4: a task whose prerequisite task is not available is not available either (transitively).
+    `planning.order_plan` requires every unassessed prerequisite of a planned task to be available."""
+    if doc.get('generation_policy') in ('root-generation/2', 'root-generation/4'):
         from studyez_contracts.roots.generation_v2 import task_dependencies
-        deps=task_dependencies(doc)
+        deps = task_dependencies(doc)
         while True:
-            blocked={tid for tid in available if any(p not in available for p in deps[tid])}
-            if not blocked:break
-            for tid in blocked:problems[tid]='명시적 선행 문항이 준비되지 않음'
-            available-=blocked
+            blocked = {tid for tid in available if any(p not in available for p in deps[tid])}
+            if not blocked:
+                break
+            for tid in blocked:
+                problems[tid] = '명시적 선행 문항이 준비되지 않음'
+            available -= blocked
     return available, problems
 
 

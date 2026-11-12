@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-12-plan-prereq-closure",
+  "title": "Main-Quiz 오늘 계획: 선행 과제가 빠진 과제를 plan에 넘기지 않기",
+  "area": "site",
+  "created_at": "2026-11-12T06:42:59.209454+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T06:42:59.209476+00:00"
+}

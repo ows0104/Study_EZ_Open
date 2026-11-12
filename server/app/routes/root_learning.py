@@ -90,8 +90,8 @@ def overview_data(db, row, user, when):
     narrowed = len(chosen) < len(policy.TIERS)
     pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)
                     and s.state.get('focus', list(policy.TIERS)) == chosen), None)
-    focused = {t for t in available if tiers[t] in chosen} if narrowed else available
-    planned = planning.plan(row.document, events, focused, when, configured)
+    focused = {t for t in available if tiers[t] in chosen} if narrowed else None
+    planned = planning.plan(row.document, events, available, when, configured, focus=focused)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
             'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
             'plan': planned,
