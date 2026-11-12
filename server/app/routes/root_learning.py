@@ -78,6 +78,16 @@ def checked_session(db, session_id, user):
     return row, doc
 
 
+def current_exam_date(db, row):
+    """출제 때 문서에 시험일이 없으면 시간표의 현재 시험일로 보충한다. 문서·기록은 바꾸지 않는다."""
+    stored = row.document.get('exam_date')
+    if stored:
+        return stored
+    from app.routes.root_generation import registered_exam_date
+    lecture = db.get(Lecture, (row.subject, row.run_id))
+    return registered_exam_date(db, lecture) if lecture else None
+
+
 def overview_data(db, row, user, when):
     configured = policy.configured_policy()
     if configured is None:
@@ -89,18 +99,19 @@ def overview_data(db, row, user, when):
         RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
     # 오늘 학습 중요도 필터(2026-11-12): only today's plan is filtered; summary and progress keep every task.
+    document = {**row.document, 'exam_date': current_exam_date(db, row)}
     chosen = content.focus_for(db, row.subject, user.id)
     tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
     narrowed = len(chosen) < len(policy.TIERS)
     pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)
                     and s.state.get('focus', list(policy.TIERS)) == chosen), None)
     focused = {t for t in available if tiers[t] in chosen} if narrowed else None
-    planned = planning.plan(row.document, events, available, when, configured, focus=focused)
+    planned = planning.plan(document, events, available, when, configured, focus=focused)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
-            'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
+            'scope': content.learner_scope(row.document), 'summary': state.summary(document, events, available, when, configured),
             'plan': planned,
             'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
-            'questionProgress': state.question_progress(row.document, events, available, when, configured, planned),
+            'questionProgress': state.question_progress(document, events, available, when, configured, planned),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
 
@@ -685,7 +696,7 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     available, _ = content.availability(db, doc, user.id)
     excluded = content.excluded_ids(content.events_for(db, row.subject, row.run_id, user.id), row.revision)
     start_index = session_state['index']
-    data = {'_request': request, 'policy': row.policy, 'exam_date': doc.document['exam_date']}
+    data = {'_request': request, 'policy': row.policy, 'exam_date': current_exam_date(db, doc)}
     if payload.kind == 'map':
         session_state['mapSeen'] = True
     elif payload.kind == 'undo':
