@@ -1,0 +1,201 @@
+{
+  "id": "2026-11-12-main-quiz-light-storage",
+  "title": "Main-Quiz 저장 방식: 그림 뺀 사본 칸·그림 표",
+  "area": "site",
+  "created_at": "2026-11-12T09:32:20.007880+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T09:33:01.758939+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '잠만 근데 문제를 왜 읽지? 특히 그림. 메타데이터 같은 것만 읽으면 되는거 아니야?' → '어 그리고 저장 방식을 바꾸는게 좋으려나?' → (1단계 사본 칸·2단계 그림 표, 운영 DB 칸·표 추가와 23편 채우기 승인 필요라고 안내한 뒤) 'Both steps'",
+      "scope": "plan.md의 server 파일(모델·light·root_learning 라우트·cli·검사)과 운영 main-quiz-light --apply 한 번(root_image 표, root_content.light 칸, 34판 채우기). 원본·학습 기록 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "9db7b75ad23a1ba5656c6eec48c04ec8152b4e3078c2a744895f3bd00e48da00"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:24.323005+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_light"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476181605679300-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:27.475198+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_personal"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476184650479100-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:33.194711+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_learning"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476187827134000-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:51.987750+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "main_quiz"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476193567124700-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:36:57.621632+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "timetable"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2352b06ba7a3530346eb79cfbac2a107f96629013c3fc06eb617fb3f8cdff347",
+      "plan_hash": "b7269c20ecea69b8544a1ff3f3165f4845c5d9ea83c27a32e901a07a167bafdb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-main-quiz-light-storage/1794476212367498200-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T09:36:57.622589+00:00"
+}

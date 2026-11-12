@@ -139,6 +139,6 @@ __all__ = [
     "SpotterRecord", "SpotterReport", "SpotterThread", "SpotterWrong",
 ]
 
-from .root_learning import RootContent, RootControl, RootSession, RootEvent
+from .root_learning import RootContent, RootControl, RootImage, RootSession, RootEvent
 
 from .root_generation import RootGeneration

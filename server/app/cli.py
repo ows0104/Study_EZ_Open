@@ -5,6 +5,8 @@
     python -m app.cli seed-timetable <경로>       다른 것을 먹일 때
     python -m app.cli purge-artifacts            무엇이 지워질지만 본다
     python -m app.cli purge-artifacts --apply    정말 지운다
+    python -m app.cli main-quiz-light            Main-Quiz 사본 칸·그림 표: 무엇을 만들고 채울지만 본다
+    python -m app.cli main-quiz-light --apply    칸·표를 만들고 비어 있는 판을 채운다(원본은 그대로)
 
 마이그레이션 도구를 두지 않았다. 표가 열둘이고 고치는 사람이 한 명이라
 Alembic이 얹는 무게가 그것으로 막는 사고보다 크다. 스키마가 바뀌면 여기서
@@ -51,6 +53,8 @@ from app.storage import ObjectStorage, StorageNotConfigured
 # 마이그레이션 도구를 두지 않은 사정은 이 파일 첫머리에 있다. 그 대신 **붙인 칼럼을
 # 여기 한 줄로 남긴다** — 다음 사람이 운영 DB와 모델이 어디서 갈라졌는지 볼 자리다.
 ADDED_COLUMNS = (
+    # 2026-11-12 Main-Quiz 저장 방식: 그림 뺀 사본. 채우기는 `main-quiz-light --apply`.
+    ("root_content", "light", "JSON"),
     ("lecture", "preview_source", "JSON"),
     ("asset_grab", "request_stats", "JSON NOT NULL DEFAULT '{}'"),
     ("quiz_bank", "linked_at", "TIMESTAMP WITH TIME ZONE"),
@@ -361,6 +365,48 @@ def purge_artifacts(apply: bool = False) -> None:
             print(f"  {line}")
 
 
+def main_quiz_light(apply: bool) -> None:
+    """Main-Quiz 저장 방식(2026-11-12): `root_image` 표·`root_content.light` 칸을 만들고, 칸이 빈 판을 채운다.
+
+    이 둘만 만든다(init-db처럼 다른 표·칼럼을 건드리지 않는다). 판마다 한 트랜잭션 — 중간에 멈춰도 다시 부르면
+    남은 판만 채운다. 원본 `document`·digest·검토 표시·학습 기록은 읽기만 한다. 원본은 한 번에 하나만 메모리에 둔다."""
+    from sqlalchemy import update
+    from app.models.root_learning import RootContent, RootImage
+    from app.root_learning import light
+
+    inspector = inspect(engine)
+    has_table = "root_image" in inspector.get_table_names()
+    has_column = "light" in {c["name"] for c in inspector.get_columns("root_content")}
+    print(f"root_image 표: {'있음' if has_table else '없음 → 만든다'} · root_content.light 칸: {'있음' if has_column else '없음 → 붙인다'}")
+    table = RootContent.__table__
+    with engine.connect() as connection:
+        query = select(table.c.subject, table.c.run_id, table.c.revision, table.c.reviewed)
+        if has_column:
+            query = query.where(table.c.light.is_(None))
+        keys = connection.execute(query.order_by(table.c.subject, table.c.run_id, table.c.created_at)).all()
+    print(f"채울 판 {len(keys)}개 (검토된 판 {sum(1 for k in keys if k.reviewed)}개)")
+    if not apply:
+        print("바꾼 것 없음. 실제로 하려면 --apply")
+        return
+    RootImage.__table__.create(engine, checkfirst=True)
+    if not has_column:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE root_content ADD COLUMN light JSON"))
+    images = filled = 0
+    for subject, run_id, revision, _ in keys:
+        key = (table.c.subject == subject) & (table.c.run_id == run_id) & (table.c.revision == revision)
+        with engine.begin() as connection:
+            document = connection.execute(select(table.c.document).where(key)).scalar_one()
+            value = light.stored(document)
+            added = light.save_images(connection, light.images_of(document))
+            done = connection.execute(update(table).where(key & table.c.light.is_(None)).values(light=value)).rowcount
+            del document
+        images += added
+        filled += done
+        print(f"  {subject}/{run_id} {revision[:12]} 그림 +{added}{'' if done else ' (이미 채워짐)'}")
+    print(f"채운 판 {filled}개, 새 그림 {images}개")
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
@@ -371,6 +417,8 @@ def main() -> None:
         seed_timetable(Path(sys.argv[2]) if len(sys.argv) > 2 else latest_timetable())
     elif command == "purge-artifacts":
         purge_artifacts(apply="--apply" in sys.argv[2:])
+    elif command == "main-quiz-light":
+        main_quiz_light(apply="--apply" in sys.argv[2:])
     else:
         raise SystemExit(__doc__)
 

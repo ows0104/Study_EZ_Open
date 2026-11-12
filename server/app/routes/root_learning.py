@@ -60,8 +60,10 @@ def active(db, subject, run_id, user):
     if not content.allowed(db, subject, run_id, user):
         raise HTTPException(404, '공개된 Main Quiz 학습 범위가 없습니다.')
     control = db.get(RootControl, (subject, run_id))
-    row = db.get(RootContent, (subject, run_id, control.revision))
-    if not row or not row.reviewed:
+    # 그림 바이트를 뺀 사본(light.py, 2026-11-12 저장 방식). 원본 6–12 MB를 요청마다 읽지 않는다.
+    # 그림이 필요한 문항 하나는 learner_front·snapshot_question이 되붙인다.
+    row = light.revision_row(db, subject, run_id, control.revision)
+    if row is None:
         raise HTTPException(404, '검토된 Main Quiz 학습 자료가 없습니다.')
     return row
 
@@ -109,8 +111,8 @@ def main_quiz_entry(subject: str, run_id: str, user: CurrentUser = Depends(requi
         raise HTTPException(404, '강의가 없습니다.')
     if content.allowed(db, subject, run_id, user):
         control = db.get(RootControl, (subject, run_id))
-        row = db.get(RootContent, (subject, run_id, control.revision))
-        if row and row.reviewed:
+        row = light.revision_row(db, subject, run_id, control.revision)
+        if row is not None:
             return {'mode': 'structured', 'overview': overview_data(db, row, user, now())}
     return {'mode': 'legacy'}
 
@@ -364,7 +366,8 @@ def learner_front(doc, q, db=None):
     target = policy.target_retention(q, plans.get(q.get('concept_id')), policy.target_parameters(), personal)
     from app.root_learning import choices
     # 단답·나열 「선지 보기」(2026-11-12): 이 판·이 문항 글에 맞는 선지가 있을 때만 붙는다.
-    return choices.attach_front(db, doc, q, {**content.front(q), 'targetMastery': target})
+    shown = light.hydrate(db, doc, q) if db is not None else q
+    return choices.attach_front(db, doc, q, {**content.front(shown), 'targetMastery': target})
 
 
 def personal_editable(doc):
@@ -388,11 +391,12 @@ def feedback_build(doc):
     return ('root:' + doc.revision)[:64]
 
 
-def snapshot_question(doc, question_id):
+def snapshot_question(db, doc, question_id):
+    """원본 그대로의 문항(그림 포함). 개인 수정의 `revision`·`same_source`와 제보의 원문이 문항 전체로 비교·보관한다."""
     q = next((q for q in doc.document['bank_snapshot']['questions'] if q['question_id'] == question_id), None)
     if q is None:
         raise HTTPException(404, '문항을 찾을 수 없습니다.')
-    return q
+    return light.hydrate(db, doc, q)
 
 
 class RootPersonalEdit(Strict):
@@ -409,7 +413,7 @@ class RootPersonalEdit(Strict):
 def read_personal(subject: str, run_id: str, question_id: str, user: CurrentUser = Depends(require_approved_user),
                   db: Session = Depends(get_db)):
     doc = active(db, subject, run_id, user)
-    original = snapshot_question(doc, question_id)
+    original = snapshot_question(db, doc, question_id)
     edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id)) if personal_editable(doc) else None
     valid = edit is not None and bank_personal.same_source(edit.original, original)
     current = bank_personal.apply_edit(original, edit) if valid else original
@@ -426,7 +430,7 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
     if payload.category not in FEEDBACK_CATEGORIES:
         raise HTTPException(422, '제보 유형을 확인하세요.')
     doc = active(db, subject, run_id, user)
-    original = snapshot_question(doc, question_id)
+    original = snapshot_question(db, doc, question_id)
     if payload.revision != bank_personal.revision(original):
         raise HTTPException(409, '문항이 바뀌었습니다. 수정창을 다시 열어 주세요.')
     question, answer = payload.question.strip(), payload.answer.strip()
@@ -478,7 +482,7 @@ class RootTier(Start):
 def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
               user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     doc = active(db, subject, run_id, user)
-    original = snapshot_question(doc, question_id)
+    original = snapshot_question(db, doc, question_id)
     request = payload.model_dump()
     previous = db.get(RootEvent, (user.id, payload.requestId))
     if previous:
@@ -600,6 +604,9 @@ def task_fingerprint(doc, task):
     per unchanged question (state.replay_tasks). Older documents record nothing new."""
     if not state.per_task(doc):
         return {}
+    if isinstance(doc, light.LightDocument):
+        # 사본은 원본(그림 포함)으로 계산한 지문을 들고 다닌다. 사본으로 다시 계산하면 값이 달라진다.
+        return {'question_sha256': doc.task_fingerprints[task['task_id']]}
     from studyez_contracts.roots import task_fingerprints
     return {'question_sha256': task_fingerprints(doc)[task['task_id']]}
 
