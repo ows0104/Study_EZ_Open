@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-12-pw-start-button",
+  "title": "Main-Quiz Playwright 시작 버튼 찾기 수정",
+  "area": "site",
+  "created_at": "2026-11-12T11:03:00.833287+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T11:03:00.833316+00:00"
+}
