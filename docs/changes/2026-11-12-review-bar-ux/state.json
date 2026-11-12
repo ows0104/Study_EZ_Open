@@ -1,0 +1,102 @@
+{
+  "id": "2026-11-12-review-bar-ux",
+  "title": "복습바·로딩 속도·풀이 바·Ctrl+Z",
+  "area": "site",
+  "created_at": "2026-11-12T05:44:25.480946+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T06:35:47.827107+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '1. 복습바 테두리 더 진하게. 퀴즈가 만들어진 경우 색이 현재 너무 연함. 좀 더 진하게. TBL 같이 시험에 안나오는 경우는 복습바 없도록. 2. 강의목록 로딩이 너무 오래걸려. 캘린더에서도 복습퀴즈 학습률 등도 반응이 좀 느려. 3. 문제 풀때 스페이스를 누르면 아래 바 위치가 위아래로 움직임. 고정해줘. 4. 되돌리기할때 z 말고 ctrl+z해도 되돌아가게 해줘.' 이어서 '아 그리고 복습퀴즈가 안 나온 경우에는 그냥 바를 보여주지 말자.'",
+      "scope": "plan.md의 파일: server root_learning(state·light·lecture_mastery·catalog), web 캘린더 복습 막대·로딩, Main-Quiz 풀이 키·아래 바, 이용방법, 검사 고정물. DB 쓰기 없음.",
+      "evidence_version": 2,
+      "source_hash": "74e1f4e74117b9e0966fa0de5d648679188840665904f469b3f8f766d1087f0f",
+      "plan_hash": "2ba69891df6419cb536de9a93c4bb85fad43062272e099f20292ade98882a8ba",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "3817ebb790029c7e6c9d31d121b6b5c02134030ecab260a6471fd506b1a3616a"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T06:35:59.651680+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "74e1f4e74117b9e0966fa0de5d648679188840665904f469b3f8f766d1087f0f",
+      "plan_hash": "2ba69891df6419cb536de9a93c4bb85fad43062272e099f20292ade98882a8ba",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-review-bar-ux/1794465351872112100-web.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-12T06:36:30.923057+00:00",
+    "summary": "서버: 지문 지연 계산·가벼운 문서 캐시(digest 키, deepcopy, 그림 메타 보존)·목록 강의별 실패 격리. 실제 23편×7 결과 원본과 동일(161/161), CPU 12.2s→0.3s. 웹: 캘린더 동시 요청+진행 중 공유, 목록 묶음 3개 동시·포커스 60초, 복습 막대 진하게·Main-Quiz 없으면 숨김, 풀이 스페이스·Ctrl+Z·아래 바 고정(고물로 16px 확인). 남은 위험: 계획 계산 500의 근본 원인은 별도 작업, 인스턴스 메모리 관측.",
+    "evidence_version": 2,
+    "source_hash": "74e1f4e74117b9e0966fa0de5d648679188840665904f469b3f8f766d1087f0f",
+    "plan_hash": "2ba69891df6419cb536de9a93c4bb85fad43062272e099f20292ade98882a8ba",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T06:36:31.137223+00:00"
+}

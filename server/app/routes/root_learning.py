@@ -1,5 +1,6 @@
 """Root-learning product API. Legacy question and learner tables are read-only here."""
 import copy
+import logging
 import re
 from datetime import UTC, datetime
 from typing import Literal
@@ -16,8 +17,9 @@ from app.database import get_db
 from app import bank_personal
 from app.models import BankFeedback, BankPersonalEdit, Lecture
 from app.models.root_learning import RootContent, RootControl, RootSession, RootEvent
-from app.root_learning import content, policy, state, planning
+from app.root_learning import content, light, policy, state, planning
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 BASE = '/root-learning/lectures/{subject}/{run_id}'
 PREPARE_AHEAD = 4
@@ -117,12 +119,20 @@ def main_quiz_entry(subject: str, run_id: str, user: CurrentUser = Depends(requi
 def catalog(user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     rows = []
     if content.globally_enabled():
-        for control in db.scalars(select(RootControl).where(RootControl.enabled.is_(True))):
-            if not content.allowed(db, control.subject, control.run_id, user):
+        keys = [(c.subject, c.run_id) for c in db.scalars(select(RootControl).where(RootControl.enabled.is_(True)))
+                if content.allowed(db, c.subject, c.run_id, user)]
+        # 그림 바이트를 뺀 판별 사본(light.py). 요약·계획 계산은 그림을 읽지 않는다.
+        docs = light.current_rows(db, keys)
+        for key in keys:
+            row = docs.get(key)
+            if row is None:
                 continue
-            row = db.get(RootContent, (control.subject, control.run_id, control.revision))
-            if row and row.reviewed:
+            try:
                 rows.append({'subject': row.subject, 'runId': row.run_id, **overview_data(db, row, user, now())})
+            except Exception:
+                # 한 강의의 계획 계산 실패가 목록 전체를 500으로 만들었다(2026-11-12 운영). 그 강의만 뺀다 —
+                # 화면은 시간표의 학습률(mastery)로 그린다. 그 강의를 열면 원래 오류가 그대로 보인다.
+                log.exception('Main-Quiz 목록 요약 실패 %s/%s', *key)
     return {'lectures': rows, 'canManage': user.is_admin}
 
 

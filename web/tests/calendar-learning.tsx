@@ -17,7 +17,8 @@ function lecture(score: number | null | undefined, id: string): LectureRef {
     totalDirections: 16, weakest: [],
   };
   return { subject: "약리학", runId: id, title: `예시 강의 ${id}`, professors: [], mastery,
-    marks: { notesPrev: true, preview: true, prequiz: true, notesCurrent: true, quiz: true },
+    // Main-Quiz 없는 강의(score undefined)는 복습 막대가 없다(2026-11-12).
+    marks: { notesPrev: true, preview: true, prequiz: id !== "4", notesCurrent: true, quiz: true, mainQuiz: score !== undefined },
     grabbed: { pre: true, main: true }, prequizProgress: id === "4" ? null : { answered: [0, 2, 3, 6, 0, 1, 6, 0, 3, 7][Number(id)] ?? 3, total: 6 } };
 }
 
@@ -31,6 +32,9 @@ entries[6].lectures.push(lecture(100, "second"), lecture(null, "third"));
 entries[7].lectures = [];
 entries[7].category = "exam";
 entries[7].detail = "약리학 시험";
+// TBL·Main-Quiz 없음: 아래 줄 자체가 없다. TBL·Main-Quiz 있음: 막대가 있다.
+entries[4] = { ...entries[4], title: "약리학 TBL 1", detail: "약리학 TBL 1", lectures: [{ ...lecture(undefined, "4"), prequizProgress: null }] };
+entries[9] = { ...entries[9], title: "약리학 TBL 2", detail: "약리학 TBL 2" };
 
 function Harness() {
   const [mode, setMode] = useState<CalendarMode>("week");
