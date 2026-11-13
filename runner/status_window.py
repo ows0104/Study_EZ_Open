@@ -87,6 +87,7 @@ class StatusWindow:
         self.eta_label = tk.Label(summary, text='', bg=BG, fg=MUTED, font=(FONT, 10), anchor='e')
         self.eta_label.pack(side='right')
 
+        self.build_before_jobs(root)
         self.jobs_frame = tk.Frame(root, bg=BG)
         self.jobs_frame.pack(fill='x', padx=24)
         self.jobs_frame.bind('<Configure>', self.resize_cards)
@@ -134,8 +135,14 @@ class StatusWindow:
                          activebackground=parent.cget('bg'), activeforeground=TEXT, relief='flat',
                          borderwidth=0, padx=8, pady=2, font=(FONT, 9), cursor='hand2')
 
+    def build_before_jobs(self, root):
+        """Optional desktop sections above the running cards; the monitor has none."""
+
     def build_controls(self, root):
         """Optional desktop controls; the existing monitor stays read-only."""
+
+    def card_controls(self, top, job):
+        """Optional per-card controls; the monitor's cards stay read-only."""
 
     def toggle_details(self):
         if self.log_frame.winfo_manager():
@@ -219,11 +226,12 @@ class StatusWindow:
         if not jobs:
             tk.Label(self.jobs_frame, text='지금 실행 중인 작업이 없습니다.', bg=PANEL, fg=MUTED,
                      padx=18, pady=20, font=(FONT, 11), anchor='w').pack(fill='x')
-        for _ in jobs:
+        for job in jobs:
             card = tk.Frame(self.jobs_frame, bg=PANEL, padx=18, pady=14)
             card.pack(fill='x', pady=(0, 10))
             top = tk.Frame(card, bg=PANEL)
             top.pack(fill='x')
+            self.card_controls(top, job)
             elapsed = tk.Label(top, bg=PANEL, fg=MUTED, font=(FONT, 10))
             elapsed.pack(side='right')
             title = tk.Label(top, bg=PANEL, fg=TEXT, font=(FONT, 13, 'bold'), anchor='w', justify='left')
