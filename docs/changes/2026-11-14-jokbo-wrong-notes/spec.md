@@ -48,7 +48,8 @@ API(모두 본인 것만, 족보를 볼 수 있는 사람만 쓰기):
 
 ## 배포 순서
 
-운영 DB에 `init-db`로 `jokbo_mark` 표를 먼저 만든다(기존 표는 건드리지 않는다). 그다음 master 병합 → API → 웹.
+운영 DB에 `jokbo_mark` 표를 먼저 만든다 — `create_table.py`(이 표 하나만 create_all, RLS 확인). 운영 자격 정보는 사용자가 넣고 실행한다.
+표 없이 병합하면 오답노트·이용현황 API가 500이므로 표 확인 뒤에 master 병합 → API → 웹.
 
 ## 하지 않은 것
 
