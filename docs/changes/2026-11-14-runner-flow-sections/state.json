@@ -1,0 +1,151 @@
+{
+  "id": "2026-11-14-runner-flow-sections",
+  "title": "러너 창 흐름 순서",
+  "area": "integration",
+  "created_at": "2026-11-13T17:07:31.627372+00:00",
+  "required_checks": [
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-13T17:08:07.023779+00:00",
+      "evidence": "사용자 채팅 2026-11-14: 「지금 러너에서 선택 가능한 강의(접힌상태) -> 대기열 -> 현재 실행 중 -> 완료 혹은 실패(로그) 이런식으로 보이면 좋겠어.」 (작업 요청 발언 = 구현 승인)",
+      "scope": "runner/desktop.py·status_window.py(훅 하나), tests/runner/test_desktop_window.py, runner/CLAUDE.md 바탕화면 창 문단, 이 작업 폴더. 러너 실행·서버·DB 불변",
+      "evidence_version": 2,
+      "source_hash": "86f635c5c40a6321520e8956021fbf8e2c1985d3b66cf0b8d9c565a95bb609a4",
+      "plan_hash": "31b804ebfb7ec342bbd9b6304e3bcffc27979a7a981e52a72cec8c746548934c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "fcb506b29fad48cc77b93352389a74811762c379328c5d628ed37f36765aae3e"
+    }
+  },
+  "checks": [
+    {
+      "name": "runner",
+      "at": "2026-11-13T17:13:21.303129+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner",
+        "-q",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f647b20bd0bc9429c9ffd72e4f3ac07eb909f75cd7291ddea20235aba1d760cb",
+      "plan_hash": "31b804ebfb7ec342bbd9b6304e3bcffc27979a7a981e52a72cec8c746548934c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-runner-flow-sections/1794589857640920900-runner.log"
+    },
+    {
+      "name": "runner",
+      "at": "2026-11-13T17:17:15.695876+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner",
+        "-q",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e0a3e93e0be8a13318e094d5612dcc85fdb95f922fb8a06fb333d76bdb2dca28",
+      "plan_hash": "31b804ebfb7ec342bbd9b6304e3bcffc27979a7a981e52a72cec8c746548934c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-runner-flow-sections/1794590098176922500-runner.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-13T17:17:30.191589+00:00",
+    "summary": "표시 전용. 구역 분류·정렬·버튼 종류·단일 선택·로그 표시·카드 중지를 창 검사로, 실제 runs로 접힘/펼침·실패 먼저·로그 표시를 스크린샷으로 확인. 버튼 판정·서버 호출·desktop-control 형식 불변. 남은 위험: 같은 runId의 예습·복습이 동시에 실행되면 카드 버튼은 꺼진다(고를 행이 모호).",
+    "evidence_version": 2,
+    "source_hash": "e0a3e93e0be8a13318e094d5612dcc85fdb95f922fb8a06fb333d76bdb2dca28",
+    "plan_hash": "31b804ebfb7ec342bbd9b6304e3bcffc27979a7a981e52a72cec8c746548934c",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-13T17:17:30.313543+00:00"
+}
