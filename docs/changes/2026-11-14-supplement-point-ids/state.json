@@ -1,0 +1,78 @@
+{
+  "id": "2026-11-14-supplement-point-ids",
+  "title": "Main-Quiz 보충 포인트 ID 충돌 수정",
+  "area": "generation",
+  "created_at": "2026-11-13T16:35:27.620582+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-13T16:35:52.561347+00:00",
+      "evidence": "사용자 채팅 2026-11-14: 「여기서 고쳐줘」 (ID 충돌 원인과 양쪽 최댓값 다음 번호로 고치는 방향 보고 직후)",
+      "scope": "plan.md의 attach_points reserved 인자, v3·v4 오케스트레이터 호출, contracts 테스트; 로컬 구현·검사·Draft PR까지. master 병합·러너 재설치·재실행 제외",
+      "evidence_version": 2,
+      "source_hash": "22ae3bece419cb7fcffde25578b604a95137ed326001744fa422a59f3a08cde7",
+      "plan_hash": "0722ae4f83adc94c7b7240e01f76b84f4c242466f0b318d82f0b2d1fd1cf016a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "7352e9eabbb6a1324ff33d18bb7705faedc6aaadac63a7d7e9ea99ab51b9e025"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-13T16:40:09.644176+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "-q"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "33e93b143e06b9ee61fb7f05ec1e70e6e898bcdc616767a0c6d198010c60bee9",
+      "plan_hash": "0722ae4f83adc94c7b7240e01f76b84f4c242466f0b318d82f0b2d1fd1cf016a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-supplement-point-ids/1794587810112231400-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-13T16:40:09.644705+00:00"
+}
