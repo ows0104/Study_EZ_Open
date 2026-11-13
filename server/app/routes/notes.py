@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,9 @@ MAX_NOTES = 500
 MAX_TAGS = 30
 MAX_TAG_LEN = 40
 
-BlockType = Literal["text", "h1", "h2", "h3", "bullet", "number", "todo", "quote", "callout", "code", "divider"]
+BlockType = Literal["text", "h1", "h2", "h3", "bullet", "number", "todo", "quote", "callout", "code", "divider", "image"]
+# 사진 블록은 이 브라우저(IndexedDB)에 둔 사진의 id만 서버에 둔다. 사진 바이트는 서버로 오지 않는다(2026-11-13 사용자 지시).
+IMAGE_ID = r"^[a-z0-9]{8,40}$"
 
 
 class BlockIn(BaseModel):
@@ -30,6 +32,13 @@ class BlockIn(BaseModel):
     type: BlockType
     html: str = Field(default="", max_length=20_000)
     checked: bool = False
+    image: str | None = Field(default=None, pattern=IMAGE_ID)
+
+    @model_validator(mode="after")
+    def image_needs_id(self) -> "BlockIn":
+        if self.type == "image" and not self.image:
+            raise ValueError("사진 블록에는 사진 id가 필요합니다.")
+        return self
 
 
 class NoteIn(BaseModel):
@@ -72,7 +81,9 @@ def _full(note: UserNote) -> dict:
 def _blocks(payload: NoteIn) -> list[dict]:
     out = []
     for b in payload.blocks:
-        block = {"id": b.id, "type": b.type, "html": "" if b.type == "divider" else b.html}
+        block = {"id": b.id, "type": b.type, "html": "" if b.type in ("divider", "image") else b.html}
+        if b.type == "image":
+            block["image"] = b.image
         if b.type == "todo":
             block["checked"] = b.checked
         out.append(block)

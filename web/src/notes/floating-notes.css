@@ -1,0 +1,57 @@
+/* 우측 하단 자유 노트 버튼과 노트 창(2026-11-13). 창 안 편집기 모양은 notes.css(.notes-layout)를 그대로 쓴다. */
+
+.note-fab {
+  position: fixed; right: 20px; bottom: 20px; z-index: 60;
+  display: grid; place-items: center; width: 48px; height: 48px; min-height: 0; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink-2);
+  box-shadow: var(--shadow-3); cursor: pointer;
+}
+.note-fab:hover { color: var(--ink); background: var(--hover); }
+.note-fab.is-open { color: var(--accent-ink); border-color: var(--accent-line); }
+.note-fab svg { width: 20px; height: 20px; }
+
+.notes-layout.note-float {
+  position: fixed; right: 20px; bottom: 80px; z-index: 60;
+  width: min(440px, calc(100vw - 40px)); height: min(640px, calc(100dvh - 110px)); min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-3); overflow: hidden;
+}
+.notes-layout .note-float-head { flex: none; display: flex; align-items: center; gap: 2px; padding: 8px 8px 8px 10px; border-bottom: 1px solid var(--line); }
+.notes-layout .note-float-pick {
+  flex: 1; min-width: 0; height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--ink);
+  font-size: 14px; font-weight: 600; text-overflow: ellipsis; cursor: pointer;
+}
+.notes-layout .note-float-pick:hover { background: var(--hover); }
+.notes-layout .note-float-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 8px; color: var(--ink-2); }
+.notes-layout .note-float-icon:hover { background: var(--hover); color: var(--ink); }
+.notes-layout .note-float-icon svg { width: 17px; height: 17px; }
+.notes-layout button.note-float-lecture {
+  flex: none; display: flex; align-items: center; gap: 6px; margin: 8px 12px 0; padding: 0 10px; height: 30px; max-width: calc(100% - 24px);
+  border: 1px solid var(--accent-line); border-radius: 8px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 600;
+}
+.notes-layout button.note-float-lecture:hover { filter: brightness(0.97); }
+.notes-layout .note-float-lecture svg { width: 14px; height: 14px; flex: none; }
+.notes-layout .note-float-lecture span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-layout .note-float-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+
+/* 풀이 화면 아래의 답·평가 줄(.quiz-bar, .pq-dock, 화면 아래 16px)을 가리지 않게 그 위로 올린다. */
+body:has(.quiz-bar, .pq-dock) .note-fab { bottom: 104px; }
+body:has(.quiz-bar, .pq-dock) .notes-layout.note-float { bottom: 164px; height: min(640px, calc(100dvh - 194px)); }
+
+/* 창은 좁다: 편집기 여백과 제목 크기를 줄인다(블록 손잡이 자리 52px는 남긴다). */
+.notes-layout.note-float .nb-editor { padding: 18px 18px 120px 56px; }
+.notes-layout.note-float .nb-title { font-size: 24px; margin-bottom: 8px; }
+.notes-layout.note-float .nb-props { margin-bottom: 12px; padding-bottom: 8px; }
+.notes-layout.note-float .nb-props dt { width: 72px; }
+.notes-layout.note-float .notes-empty { height: 100%; }
+
+@media (max-width: 640px) {
+  .note-fab { right: 16px; bottom: 16px; width: 44px; height: 44px; }
+  .notes-layout.note-float { left: 0; right: 0; bottom: 0; width: auto; height: 75dvh; border-radius: 14px 14px 0 0; border-bottom: 0; }
+  body:has(.quiz-bar, .pq-dock) .notes-layout.note-float { bottom: 0; height: 75dvh; }
+  .notes-layout.note-float .nb-editor { padding: 14px 16px 120px 52px; }
+}
+@media (max-width: 640px) {
+  /* 휴대폰에서는 창이 아래를 덮으므로 창의 닫기만 쓴다. */
+  .note-fab.is-open { display: none; }
+}

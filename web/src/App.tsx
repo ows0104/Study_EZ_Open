@@ -8,6 +8,8 @@ import { seenNotice } from "./notices/seen";
 import { Sidebar } from "./shell/Sidebar";
 import { StudyNav } from "./StudyNav";
 import { StudyChrome, isMainQuizPath } from "./shell/studyChrome";
+import { FloatingNotes } from "./notes/FloatingNotes";
+import { NoteLecture } from "./notes/noteLecture";
 import type { Me } from "./types/account";
 import type { Notice } from "./types/notices";
 
@@ -48,6 +50,8 @@ function Shell() {
   const onNoticeSeen = useCallback(() => setUnseenNotice(false), []);
   // Main-Quiz 화면이 지금 문항을 푸는가. 시작 화면은 홈처럼 좌측 메뉴 안에 둔다.
   const [quizSolving, setQuizSolving] = useState(false);
+  // 퀴즈 화면이 알린 지금 강의명. 플로팅 노트의 「＋강의명」이 쓴다.
+  const [noteLecture, setNoteLecture] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -122,6 +126,7 @@ function Shell() {
         }`}
       >
         <StudyChrome.Provider value={setQuizSolving}>
+        <NoteLecture.Provider value={setNoteLecture}>
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/" element={<CalendarPage />} />
@@ -149,8 +154,10 @@ function Shell() {
             <Route path="*" element={<p className="notice">없는 화면입니다.</p>} />
           </Routes>
         </Suspense>
+        </NoteLecture.Provider>
         </StudyChrome.Provider>
         </main>
+        <FloatingNotes userId={me.id} lecture={noteLecture} />
       </div>
     </div>
   );

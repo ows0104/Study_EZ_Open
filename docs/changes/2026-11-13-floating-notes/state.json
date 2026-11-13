@@ -1,0 +1,147 @@
+{
+  "id": "2026-11-13-floating-notes",
+  "title": "자유 노트 플로팅·강의명·로컬 사진",
+  "area": "site",
+  "created_at": "2026-11-13T12:49:09.282166+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-13T13:29:11.714145+00:00",
+      "evidence": "2026-11-13 Claude Code 채팅 사용자 발언: 「승인, 강의명은 태그가 아니라 본문으로 넣을거야. 맨 앞을 기준으로 하지 말고 그냥 커서 위치에서, 버튼을 누르면 커서 위치에 들어갔으면 좋겠어」",
+      "scope": "plan.md 파일 범위의 로컬 구현·검사·PR 생성. 강의명은 본문 커서 위치. master 병합(운영 배포) 제외",
+      "evidence_version": 2,
+      "source_hash": "8a60ceee5f1074da6af0fe1891d873858ff34812999f61cf77f2e96760714005",
+      "plan_hash": "f65497c78a3841328e7dba997f4fd5c1107518fe14c33bbb34e1a86401d2dbdd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "2990c6d8bc86dc45408a5ad1df07e17a3dcb856ad9565eb06f333282b41a34a8"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-13T13:42:26.564077+00:00",
+      "command": [
+        "C:\\Program Files\\nodejsnpm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "db35486245eebb5ef33ea6c90992a0b6798b3d3bf425768a74b5e63192c6d73b",
+      "plan_hash": "f65497c78a3841328e7dba997f4fd5c1107518fe14c33bbb34e1a86401d2dbdd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-floating-notes/1794577346214395500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-13T13:42:50.279492+00:00",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "db35486245eebb5ef33ea6c90992a0b6798b3d3bf425768a74b5e63192c6d73b",
+      "plan_hash": "f65497c78a3841328e7dba997f4fd5c1107518fe14c33bbb34e1a86401d2dbdd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-floating-notes/1794577351056001600-web.log",
+      "web_artifact": "6c0b4030af77887bc45b0b9106d95ef059dcf2b8c7c26e878b59483aff51dfc4",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-13T13:43:06.507645+00:00",
+      "command": [
+        "C:\\Users\\erika\\Study_EZ_Open\\.claude\\worktrees\\free-notes\\server\\.venv\\Scripts\\python.exe",
+        "-m",
+        "tests",
+        "test_notes"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "db35486245eebb5ef33ea6c90992a0b6798b3d3bf425768a74b5e63192c6d73b",
+      "plan_hash": "f65497c78a3841328e7dba997f4fd5c1107518fe14c33bbb34e1a86401d2dbdd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-floating-notes/1794577380055911200-server.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-13T13:43:06.508407+00:00"
+}
