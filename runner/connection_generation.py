@@ -240,7 +240,11 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
         refresh(out,'published')
     print(f'Quiz Bank {run_id}: Concept map·포인트 → 뿌리 학습 게시 완료', flush=True)
     # Quiz Bank와 같은 핵심 근거·족보 지면(2026-11-08). 실패해도 게시 결과는 그대로다.
-    if previous is not None and reuse_evidence(client, subject, run_id, previous, gen_out, payload): return 0
-    from .root_evidence import publish as publish_evidence
-    publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
+    if previous is None or not reuse_evidence(client, subject, run_id, previous, gen_out, payload):
+        from .root_evidence import publish as publish_evidence
+        publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
+    # 단답·나열 「선지 보기」 선지도 게시 직후 기본으로 붙인다(2026-11-14 사용자 「기본으로 설정해줘」,
+    # docs/changes/2026-11-14-choices-by-default). 판 문서의 글만 보내며, 실패해도 게시 결과는 그대로다.
+    from .root_choices import publish as publish_choices
+    publish_choices(client, subject, run_id, out, payload, model=model, run=run_forwarded)
     return 0

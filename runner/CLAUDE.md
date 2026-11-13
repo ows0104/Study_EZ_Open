@@ -26,7 +26,8 @@
 
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
 명시적 Concept map 자동출제 일감만 `connection_generation.py`로 분기한다. 서명된 원본 사본을 별도 인증 헤더 없이 받아
-지문을 확인하고 생성기 하위 프로세스→결과 검증→조건부 게시를 수행한다. 작업 ID별 폴더와 수정 상한을 재사용한다.
+지문을 확인하고 생성기 하위 프로세스→결과 검증→조건부 게시를 수행한다.
+게시 뒤에는 근거 보강(`root_evidence.py`)과 단답·나열 선지(`root_choices.py`, 2026-11-14부터 기본)를 차례로 붙인다. 둘 다 실패해도 게시는 그대로다. 작업 ID별 폴더와 수정 상한을 재사용한다.
 명령은 [명령 안내](../docs/commands.md), 검사는 `python -m pytest tests/runner`다.
 `powershell -ExecutionPolicy Bypass -File scripts/agent.ps1`는 실행 창에 로그를 표시한다.
 이미 러너가 실행 중이면 새 일꾼을 만들지 않고 같은 창에서 현재 작업과 최근 로그를
