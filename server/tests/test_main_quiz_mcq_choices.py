@@ -1,4 +1,4 @@
-"""객관식 모드 선지: 판별 asset(root_mcq)이 있을 때만 mcq_choices가 붙고, 정답은 답을 편 뒤에만, 고른 풀이는 도움으로 남는다."""
+"""객관식 모드 선지: 판별 asset(root_mcq)이 있을 때만 mcq_choices가 붙고, 정답은 답을 편 뒤에만, 풀이 기록은 주관식과 같다."""
 import json
 import uuid
 from unittest.mock import patch
@@ -68,8 +68,9 @@ assert 'correct_ids' not in text and 'mcqCorrectIds' not in text and 'why_wrong'
 assert action(client, sid, 'open', 'reveal', attempted=True, choicesShown=True).status_code == 200
 after = view(client, sid)['task']
 right = after['answer']['mcqCorrectIds']
-assert after['helped'] and right
+# 객관식 모드 풀이는 주관식과 같게 센다(사용자 2026-11-14 「분리하지 말고」): 객관식 선지가 있어도 도움받은 풀이가 아니다.
+assert not after['helped'] and right
 assert sorted(c['text'] for c in front['mcq_choices'] if c['id'] in right) == sorted(contract.correct_texts(questions[qid]))
 assert action(client, sid, 'open-rate4', 'rate', grade='independent', selfRating='Good').status_code == 200
 patcher.stop()
-print('PASS: mcq choices attach by revision and question text, hide answers on the front, record help when chosen')
+print('PASS: mcq choices attach by revision and question text, hide answers on the front, count attempts the same as recall')

@@ -281,7 +281,7 @@
 .mq-timer-switch[aria-checked="true"] i{background:var(--accent)}
 .mq-timer-switch[aria-checked="true"] i::after{transform:translateX(10px)}
 /* 주관식/객관식 모드(2026-11-14) */
-.mq-mode{display:inline-flex;margin-top:10px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--surface);gap:2px}
+.mq-mode{display:inline-flex;width:max-content;align-self:flex-start;margin-top:10px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--surface);gap:2px}
 .mq-mode button{border:0;background:transparent;color:var(--ink-3);font:inherit;font-size:.85rem;min-height:34px;padding:4px 16px;border-radius:6px;cursor:pointer}
 .mq-mode button:hover{color:var(--ink)}
 .mq-mode button.is-on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}

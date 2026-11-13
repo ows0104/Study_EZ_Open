@@ -91,7 +91,9 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     // Retired text drafts remain untouched in storage; no new text is required.
     const response=picked.size?`선택: ${[...picked].join(', ')}`:'';
     onAction({kind:'reveal',attempted,response,helped:view.mapSeen,
-      choicesShown:mcq?true:recall?choicesSeen:!!task.question.options.length&&!hiddenChoices,
+      // 객관식 모드의 풀이는 주관식과 같은 풀이로 기록·평가한다(사용자 2026-11-14 「분리하지 말고」). 덧붙인 선지(객관식 모드·OX·선지 보기)는
+      // 도움받은 풀이로 세지 않고, 문항 자체 선지는 주관식 모드와 같게 센다.
+      choicesShown:mcq?!!task.question.options.length:recall?choicesSeen:!!task.question.options.length&&!hiddenChoices,
       ...(attempted&&task.question.stimuli?.length?{stimulusHashes:task.question.stimuli.map(s=>s.sha256)}:{})});
     heading.current?.focus({preventScroll:true});
   }

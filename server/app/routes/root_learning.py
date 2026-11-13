@@ -626,8 +626,8 @@ def revealed_answer(db, doc, q, generation=_UNSET):
 
 
 def recall_choice_entry(db, doc, q):
-    from app.root_learning import choices, mcq
-    return choices.entry(db, doc, q) or mcq.entry(db, doc, q)
+    from app.root_learning import choices
+    return choices.entry(db, doc, q)
 
 
 def prior_exposure(doc, task, q, session_state, choices_shown=None, recall_choices=False):
