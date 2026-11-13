@@ -49,6 +49,11 @@ export function JokboPage() {
   );
 }
 
+/** 시간표 제목 앞의 분야 머리(「미생물학) 」)를 뗀다 — 강의 패널 제목과 같게. */
+export function lectureTitle(doc: JokboDoc): string {
+  return doc.lecture.title.replace(/^[^)\s]{1,8}\)\s*/, "");
+}
+
 // ─────────────────────────────────────────────── 진입
 
 const STORE = "jokbo-scope:";
@@ -102,7 +107,7 @@ function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: ()
             <span className="mq-badge jokbo-badge">족보</span>
             {data.audience === "admin" ? <span className="jokbo-admin-tag">관리자만</span> : null}
           </p>
-          <h1>{doc.lecture.title}</h1>
+          <h1>{lectureTitle(doc)}</h1>
           {doc.lecture.currentProfessors.length ? <p className="jokbo-prof">{doc.lecture.currentProfessors.join(", ")}</p> : null}
         </div>
       </header>
@@ -205,7 +210,7 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
     const count = (v: Verdict) => results.filter(r => r.verdict === v).length;
     return (
       <section className="jokbo-done">
-        <h2>{doc.lecture.title}</h2>
+        <h2>{lectureTitle(doc)}</h2>
         <div className="mq-stats">
           <div className="is-recalled"><span>맞힘</span><b>{count("correct")}</b></div>
           <div className="is-wrong"><span>틀림</span><b>{count("wrong")}</b></div>
