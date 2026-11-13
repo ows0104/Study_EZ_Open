@@ -33,6 +33,7 @@
 
 | 아이디어 | 제안자 | 제안일 | 논의 내용·결정 |
 |---|---|---|---|
+| 캘린더 「오늘 복습」 하루 목표(%p)를 문제 수로 환산 — 방법 A(내 지난 기록 비율)·B(모의 평가)·C(모델 평균), /api/study-plan 응답 시간 영향 | HungryPotato01 | 2026-11-13 | 핸드오프 docs/changes/2026-11-13-daily-goal-questions/handoff.md (브랜치 claude/review-count-card). 환산 방법·기록 부족 표시·캐시 결정 필요 |
 | | | | |
 
 ---
