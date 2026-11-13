@@ -1,0 +1,53 @@
+/* 족보 퀴즈(2026-11-13). Main-Quiz 시작 화면의 머리·숫자 칸·칩·시작 버튼(main-quiz.css)을 그대로 쓰고
+   족보에만 필요한 것을 더한다. 갈래 색을 새로 만들지 않는다 — 강조색 둘은 예습·복습 것이다. */
+
+.jokbo-learning{max-width:860px;margin:0 auto;padding-bottom:96px}
+.jokbo-start{display:flex;flex-direction:column;gap:18px}
+.jokbo-badge{color:var(--ink);background:var(--surface-2);border-color:var(--line-strong)}
+.jokbo-admin-tag{font-size:11.5px;font-weight:600;font-style:normal;color:var(--warn);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:999px;padding:2px 9px}
+.jokbo-prof{margin:4px 0 0;font-size:14px;color:var(--ink-2)}
+
+/* 범위 고르기: 첫 줄 같은/다른 교수, 둘째 줄 전체 + 연도. */
+.jokbo-scope{align-items:flex-end}
+.jokbo-scope .mq-focus{margin-top:0}
+.jokbo-scope .jokbo-years{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.main-quiz-learning .jokbo-years button{height:30px;padding:0 12px;font-size:13px}
+@media (max-width:640px){.jokbo-scope{flex-direction:column;align-items:stretch}}
+
+/* 풀이 */
+.jokbo-solve{display:flex;flex-direction:column;gap:14px}
+.jokbo-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13.5px}
+.jokbo-progress{font-weight:700;font-variant-numeric:tabular-nums}
+.jokbo-meta{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.jokbo-who{padding:2px 10px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink-2);font-size:12.5px}
+.jokbo-who.is-same{border-color:var(--ink);color:var(--ink);font-weight:700}
+.jokbo-repeat{padding:2px 10px;border-radius:999px;background:var(--exam-soft);color:var(--exam-ink);font-size:12.5px;font-weight:600}
+
+.jokbo-card{display:flex;flex-direction:column;gap:12px}
+.jokbo-shared{margin:0;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:14.5px;white-space:pre-wrap}
+.jokbo-stem{margin:0;font-size:17px;line-height:1.6;white-space:pre-wrap}
+.jokbo-figures{display:flex;flex-wrap:wrap;gap:10px}
+.jokbo-figures img{max-width:100%;height:auto;max-height:420px;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#fff}
+.jokbo-options{margin:4px 0 0}
+.jokbo-choice-note{margin:4px 0 8px 34px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+
+.jokbo-answer{display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.jokbo-verdict{margin:0;display:flex;align-items:baseline;gap:12px;font-size:20px;font-weight:700}
+.jokbo-verdict span{font-size:14px;font-weight:600;color:var(--ink-2)}
+.jokbo-verdict.is-correct{color:var(--ok)}
+.jokbo-verdict.is-wrong{color:var(--exam-ink)}
+.jokbo-verdict.is-ungraded{color:var(--ink-2)}
+.jokbo-caution{margin:0;padding:10px 12px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn);font-size:14px;line-height:1.55}
+.jokbo-explain{margin:0;font-size:15px;line-height:1.7}
+.jokbo-correction{margin:0;font-size:13px;color:var(--ink-2)}
+.jokbo-basis{margin:0;font-size:12.5px;color:var(--ink-3)}
+
+.jokbo-done{display:flex;flex-direction:column;gap:18px;padding-top:12px}
+.jokbo-done h2{margin:0;font-size:22px}
+.jokbo-done .mq-stats .is-wrong b{color:var(--exam-ink)}
+.jokbo-done-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+/* 변형(2026-11-13): 앞서 푼 문제와 달라진 선지. 고르기 전에도 보인다 — 어디가 바뀌었는지 보는 것이 목적이다. */
+.jokbo-variant{padding:2px 10px;border-radius:999px;background:var(--accent2-soft);color:var(--accent2-ink);border:1px solid var(--accent2-line);font-size:12.5px;font-weight:600}
+.jokbo-options .bank-option.is-changed{box-shadow:inset 3px 0 0 var(--accent2)}
+.jokbo-options .bank-option.is-changed::after{content:"바뀜";float:right;padding-left:10px;font-size:11.5px;font-weight:700;color:var(--accent2-ink)}

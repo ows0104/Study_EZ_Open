@@ -137,3 +137,7 @@ app.include_router(root_learning.router, prefix="/api")
 
 from app.routes import root_generation
 app.include_router(root_generation.router, prefix="/api")
+
+from app.routes import jokbo
+app.include_router(jokbo.router, prefix="/api")
+app.include_router(jokbo.admin_router, prefix="/api/admin")

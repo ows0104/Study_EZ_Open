@@ -232,6 +232,12 @@ def current() -> list[str]:
 
 def main() -> None:
     check_bank_schema_identity()
+    # 2026-11-13: jokbo — 강의(시간표 칸)별 족보 풀이 읽기·러너 업로드(routes/jokbo.py, R2만, DB 표 없음).
+    jokbo_routes = """GET /api/jokbo/events/{event_id}
+GET /api/jokbo/events/{event_id}/summary
+PUT /api/admin/jokbo/events/{event_id}
+GET /api/admin/jokbo/figures/{name}
+PUT /api/admin/jokbo/figures/{name}"""
     # 2026-11-13: root-learning/optional — Optional 계산 제외(계정 단위, root_event kind='optional').
     # 2026-11-12: root-learning lectures/{subject}/{run_id}/focus — 오늘 학습 중요도 필터(root_event kind='focus').
     # 2026-11-09: root-learning questions/{question_id}/tier — 풀이 중 「내 중요도」(root_event kind='tier').
@@ -262,7 +268,7 @@ PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/tier
 PUT /api/root-learning/lectures/{subject}/{run_id}/focus
 GET /api/root-learning/optional
 PUT /api/root-learning/optional"""
-    want = sorted(line for line in (ROUTES + '\n' + connection_routes + '\n' + root_routes).strip().split("\n") if line)
+    want = sorted(line for line in (ROUTES + '\n' + connection_routes + '\n' + root_routes + '\n' + jokbo_routes).strip().split("\n") if line)
     got = current()
     missing = [r for r in want if r not in got]
     extra = [r for r in got if r not in want]

@@ -18,7 +18,15 @@
       "_note": "운영 웹 컴포넌트를 가짜 API로 띄우는 web/tests/*.html 고정물(2026-11 UI 개편 확인용). 서버·운영 DB를 부르지 않는다.",
       "name": "web-fixtures",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["web/node_modules/vite/bin/vite.js", "web", "--host", "127.0.0.1", "--port", "5198", "--strictPort"],
+      "runtimeArgs": [
+        "web/node_modules/vite/bin/vite.js",
+        "web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5198",
+        "--strictPort"
+      ],
       "port": 5198,
       "url": "http://127.0.0.1:5198"
     },
@@ -129,6 +137,26 @@
         "spotter-dist"
       ],
       "port": 8815
+    },
+    {
+      "_note": "족보 퀴즈 확인용 로컬 API(2026-11-13). 격리 DB·저장소(local_test_data/jokbo-*), 운영과 무관.",
+      "name": "api-jokbo-8020",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd server && set ENVIRONMENT=local-test&& set DATABASE_URL=sqlite:///local_test_data/jokbo-dev.db&& set STUDYEZ_LOCAL_STORAGE_DIR=local_test_data/jokbo-storage&& set PUBLIC_API_BASE_URL=http://localhost:8020&& set RUNNER_TOKEN=runner-token&& .venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8020"
+      ],
+      "port": 8020
+    },
+    {
+      "_note": "api-jokbo-8020 에 붙는 웹.",
+      "name": "web-jokbo-5180",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_DEV_API=http://localhost:8020&& set VITE_LOCAL_TEST_TOKEN=local-test-token&& npm run dev --prefix web -- --port 5180 --strictPort"
+      ],
+      "port": 5180
     }
   ]
 }

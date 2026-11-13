@@ -35,6 +35,7 @@ python -m runner match --all
 족보 컷은 `runs/_materials/<과목>/<판>/`에 저장된다.
 확인한 연도별 매칭은 `runs/_pairs/<과목>.json`, 시간표 원본은 `data/timetable/`에 있다.
 족보의 옛 판은 `jokbo --older`, 실습 원본은 `--practical`로 지정한다.
+강의별 족보 풀이 자료는 `python -m runner.jokbo_solve build`(설계: [jokbo-solve](changes/2026-11-13-jokbo-solve/spec.md)).
 
 ## 덱 만들기
 
