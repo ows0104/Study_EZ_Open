@@ -71,3 +71,16 @@ jokbo-solve/
 - 서버 `server/app/routes/jokbo.py`: R2 `jokbo-solve/<eventId>.json`·`jokbo-solve/figures/<이름>`. DB 표 없음.
   러너가 `python -m runner.jokbo_solve upload`로 올리고 서버가 계약·그림 존재를 다시 검사한다.
   기본 `--audience admin`(관리자에게만), 학생 공개는 `--audience all`로 다시 올린다.
+
+## 중복·변형 — 사용자 결정(2026-11-13)
+
+사용자 「둘 다 실행해줘」: 완전히 같은 문제는 합치고, 선지 한두 개만 바뀐 변형은 따로 두되 이어서 낸다.
+
+- 강의 한 편 안에서 판정한다(`runner.jokbo_solve.merge_duplicates`). 발문 유사도는 공백을 뺀 글자 비교다.
+  - **중복**: 유사도 ≥ 0.9, 선지 집합 같음(순서는 달라도 됨). 대표(답안지 답 있음 → 최신 연도) 하나만 남기고
+    `years`(나온 해 전부)·`mergedFrom`(사본의 연도·번호·대표 선지 번호로 옮긴 답)을 단다. 사본 답이 대표와 다르면 `keyConflict`.
+    같은 교수가 낸 해가 하나라도 있으면 같은 교수 구획에 둔다. 연도 버튼은 나온 해 어느 것을 골라도 들어간다.
+  - **변형**: 유사도 ≥ 0.9, 공통 선지 ≥ 3, 다른 선지 ≤ 4(양쪽 합). 같은 `variantGroup`. 풀이 순서에서 처음 나온 자리에 모아
+    이어서 내고, 둘째부터 앞 문제와 달라진 선지에 「바뀜」 표시.
+  - **애매**: 유사도 0.8~0.9 또는 그 밖의 비슷한 쌍 → `2026-1/review-duplicates.json`.
+- 사람·검토 세션의 쌍별 판정 `jokbo-solve/duplicates.json`(`duplicate`·`variant`·`distinct` + `note`)이 기계 판정보다 앞선다.

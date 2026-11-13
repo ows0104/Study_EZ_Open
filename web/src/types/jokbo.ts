@@ -35,6 +35,14 @@ export type JokboItem = {
   repeatYears?: string[];
   figures?: JokboFigure[];
   explanation: JokboExplanation | null;
+  /** 같은 문제가 나온 해 전부(합친 문제만). 대표 연도가 맨 앞. */
+  years?: string[];
+  /** 합친 다른 해 사본. answers는 이 문항의 선지 번호로 옮긴 것. */
+  mergedFrom?: { id: string; yearLabel: string; number: number; answers: number[]; professors?: string[] }[];
+  /** 해마다 답안지 답이 달랐다. */
+  keyConflict?: boolean;
+  /** 선지 한두 개만 다른 변형 묶음. 이어서 낸다. */
+  variantGroup?: string;
 };
 
 export type JokboSection = {

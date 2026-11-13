@@ -4,7 +4,7 @@ import { api, ApiError } from "../api";
 import { Icon } from "../shell/icons";
 import type { JokboDoc, JokboItem, JokboResponse } from "../types/jokbo";
 import {
-  defaultScope, grade, needed, otherYears, pickItems, professorsOf, sameItemIds,
+  changedChoices, defaultScope, grade, needed, otherYears, pickItems, professorsOf, sameItemIds, yearsOf,
   type JokboScope, type Verdict,
 } from "./selection";
 import "../bank/main-quiz.css";
@@ -229,6 +229,10 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
   }
 
   const who = professorsOf(doc, item.id);
+  const asked = yearsOf(item);
+  // 반복 표시: 합친 사본의 연도가 정본이고, 없으면 원천이 적어 둔 반복 연도(다른 강의로 간 사본 포함).
+  const repeat = asked.length > 1 ? asked : item.repeatYears?.length ? item.repeatYears : [];
+  const changed = new Set(changedChoices(item, items[index - 1]));
   const verdict = shown ? results[results.length - 1]?.verdict : undefined;
   const need = needed(item);
   const x = item.explanation;
@@ -241,7 +245,8 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
         <span className="jokbo-progress">{index + 1} / {items.length}</span>
         <span className="jokbo-meta">
           <span className={`jokbo-who is-${who.kind}`}>{item.yearLabel} {who.professors.join(", ") || "교수 미상"}</span>
-          {item.repeatYears?.length ? <span className="jokbo-repeat">반복 {item.repeatYears.join("·")}</span> : null}
+          {repeat.length > 1 ? <span className="jokbo-repeat">출제 {repeat.join("·")}</span> : null}
+          {changed.size ? <span className="jokbo-variant">변형 · 바뀐 선지 {changed.size}</span> : null}
         </span>
       </div>
 
@@ -264,7 +269,7 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
             const note = shown ? x?.choiceNotes?.[i] : undefined;
             return (
               <li key={n}>
-                <button type="button" className={`bank-option${cls}`} disabled={shown} aria-pressed={selected}
+                <button type="button" className={`bank-option${cls}${changed.has(i) ? " is-changed" : ""}`} disabled={shown} aria-pressed={selected}
                   aria-keyshortcuts={n <= 9 ? String(n) : undefined} onClick={() => pick(n)}>
                   <b>{n}</b> {choice}
                 </button>
@@ -286,13 +291,17 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
                     : `정답 ${item.answers.join(item.answerMode === "all_of" ? " + " : " 또는 ")}`}
               </span>
             </p>
+            {item.keyConflict && item.mergedFrom ? (
+              <p className="jokbo-caution">해마다 답안지 답이 다름: {item.yearLabel} {item.answers.join(",")}
+                {item.mergedFrom.map(m => ` · ${m.yearLabel} ${m.answers.join(",") || "–"}`).join("")}</p>
+            ) : null}
             {x?.caution ? <p className="jokbo-caution">{x.caution}</p> : null}
             {x ? <p className="jokbo-explain">{x.text}</p> : null}
             {item.correctionNote ? <p className="jokbo-correction">교정: {item.correctionNote}</p> : null}
             {x ? (
               <p className="jokbo-basis">
                 {x.basis.kind === "notes" ? `필기${x.basis.pages?.length ? ` p.${x.basis.pages.join(", ")}` : ""}` : "일반 지식"}
-                {" · "}{item.yearLabel} {item.number}번
+                {" · "}{[item, ...(item.mergedFrom ?? [])].map(c => `${c.yearLabel} ${c.number}번`).join(" · ")}
               </p>
             ) : null}
           </div>

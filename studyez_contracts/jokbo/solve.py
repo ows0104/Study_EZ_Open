@@ -117,6 +117,16 @@ def _validate_item(item: Any, where: str) -> None:
         _need(isinstance(f, dict) and isinstance(f.get("file"), str) and _FIGURE.match(f["file"]) is not None,
               f"{where}.figures[{i}]", "파일 이름")
     _need(item.get("repeatYears") is None or _str_list(item["repeatYears"]), where, "repeatYears")
+    # 중복 합치기(2026-11-13): 같은 문제의 다른 해 사본. 연도는 버리지 않는다.
+    merged = item.get("mergedFrom")
+    if merged is not None:
+        _need(isinstance(merged, list) and merged and all(
+            isinstance(m, dict) and isinstance(m.get("id"), str) and isinstance(m.get("yearLabel"), str)
+            and isinstance(m.get("answers"), list) for m in merged), where, "mergedFrom")
+        _need(_str_list(item.get("years")) and item["yearLabel"] in item["years"]
+              and all(m["yearLabel"] in item["years"] for m in merged), where, "years는 대표와 사본의 연도를 모두")
+    _need(item.get("variantGroup") is None or isinstance(item["variantGroup"], str), where, "variantGroup")
+    _need(item.get("keyConflict") in (None, True, False), where, "keyConflict")
     if item.get("explanation") is not None:
         validate_explain(item["explanation"], n, f"{where}.explanation")
         if status != "missing":

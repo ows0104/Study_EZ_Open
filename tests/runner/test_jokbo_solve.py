@@ -15,7 +15,7 @@ def _w(path: Path, data) -> None:
 
 def _item(iid, year, answers=(2,), **kw):
     return {"pastExamItemId": iid, "year": year, "number": 1, "stem": f"{iid} 발문",
-            "choices": ["가", "나", "다", "라", "마"], "answer": answers[0] if answers else None,
+            "choices": [f"{iid}-{c}" for c in "가나다라마"], "answer": answers[0] if answers else None,
             "answers": list(answers), "verification": "pending", **kw}
 
 
@@ -158,3 +158,36 @@ def test_fixes_correct_answer_choices_figures_and_move(env):
     assert "pe_2022_18_003" not in {it["id"] for it in doc18["items"]}
     moved = {it["id"]: it for it in _lecture(root, "ev25")["items"]}["pe_2022_18_003"]
     assert moved["movedFrom"] == "pes_b_18"
+
+
+def test_duplicates_merge_and_variants_group():
+    def it(i, year, stem, choices, answers=(1,), status="key"):
+        return {"id": i, "setId": "s", "yearLabel": year, "number": 1, "stem": stem, "choices": list(choices),
+                "answers": list(answers), "answerStatus": status}
+    base = ["가나다", "라마바", "사아자", "차카타", "파하"]
+    entries = [
+        (it("a25", "2025", "다음 중 옳은 것은?", base, (2,)), ["갑"]),
+        (it("a23", "2023", "다음 중  옳은 것은 ?", list(reversed(base)), (4,)), ["을"]),  # 같은 문제, 선지 순서만 다름
+        (it("a21", "2021", "다음 중 옳은 것은?", base[:4] + ["새 선지"], (2,)), ["을"]),   # 선지 하나만 바뀐 변형
+        (it("b", "2022", "전혀 다른 발문이다", base), ["을"]),
+    ]
+    out, review = js.merge_duplicates(entries, ["을"])
+    ids = [e[0]["id"] for e in out]
+    assert ids == ["a25", "a21", "b"]
+    merged = out[0][0]
+    assert merged["years"] == ["2025", "2023"] and merged["mergedFrom"][0]["answers"] == [2]
+    assert "keyConflict" not in merged
+    assert out[0][1] == ["을"]  # 같은 교수가 낸 해가 있으면 같은 교수 구획
+    assert merged["variantGroup"] == out[1][0]["variantGroup"]
+    assert "variantGroup" not in out[2][0]
+    # 사람이 「다른 문제」로 정하면 합치지 않는다
+    out2, _ = js.merge_duplicates(entries, ["을"], {frozenset(("a25", "a23")): "distinct"})
+    assert [e[0]["id"] for e in out2][:2] == ["a25", "a23"]
+
+
+def test_duplicate_key_conflict_is_flagged():
+    base = ["가나다", "라마바", "사아자", "차카타", "파하"]
+    a = {"id": "x1", "setId": "s", "yearLabel": "2025", "number": 1, "stem": "같은 발문", "choices": base, "answers": [1], "answerStatus": "key"}
+    b = {**a, "id": "x2", "yearLabel": "2023", "answers": [3]}
+    out, review = js.merge_duplicates([(a, ["갑"]), (b, ["갑"])], ["갑"])
+    assert out[0][0]["keyConflict"] is True and review[0]["kind"] == "key-conflict"

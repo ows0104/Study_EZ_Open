@@ -371,8 +371,9 @@ def build_sections(entries: list[tuple[dict, list[str]]], current: list[str]) ->
         sec = by_key.setdefault(key, {"kind": key[0], "professors": list(profs), "years": [], "itemIds": [],
                                       "setIds": []})
         sec["itemIds"].append(it["id"])
-        if it["yearLabel"] not in sec["years"]:
-            sec["years"].append(it["yearLabel"])
+        for y in it.get("years") or [it["yearLabel"]]:
+            if y not in sec["years"]:
+                sec["years"].append(y)
         if it["setId"] not in sec["setIds"]:
             sec["setIds"].append(it["setId"])
     order = {"same": 0, "other": 1, "unknown": 2}
@@ -383,6 +384,169 @@ def build_sections(entries: list[tuple[dict, list[str]]], current: list[str]) ->
         rank = {y: i for i, y in enumerate(sec["years"])}
         sec["itemIds"].sort(key=lambda i: (rank[year_of[i]], pos[i]))
     return sorted(by_key.values(), key=lambda x: (order[x["kind"]], [-int(y[:4]) for y in x["years"][:1]]))
+
+
+# ─────────────────────────────────────────────── 중복·변형 (2026-11-13 사용자 지시)
+#
+# 족보에는 해마다 같은 문제가 다시 나온다. 외우는 것이 목적이라 같은 문제를 여러 번 풀 이유가 없다.
+#   중복  발문이 거의 같고(유사도 ≥ DUP_STEM) 선지 집합이 같다 → 한 문제로 합치고 출제 연도를 모두 단다.
+#   변형  발문이 거의 같고 선지가 한두 개만 다르다 → 따로 두되 같은 `variantGroup`으로 묶어 이어서 낸다.
+#   애매  유사도가 REVIEW_STEM~DUP_STEM, 또는 합친 문제의 연도별 답안지 답이 다르다 → review-duplicates.json.
+# 반복 출제 자체가 중요도 신호라 연도는 버리지 않는다(`years`, `mergedFrom`).
+
+DUP_STEM = 0.9
+REVIEW_STEM = 0.8
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", "", text or "").lower()
+
+
+def _similar(a: dict, b: dict) -> float:
+    import difflib
+    x, y = _norm((a.get("sharedPrompt") or "") + a["stem"]), _norm((b.get("sharedPrompt") or "") + b["stem"])
+    return difflib.SequenceMatcher(None, x, y).ratio() if x and y else 0.0
+
+
+def _choice_set(it: dict) -> set[str]:
+    return {_norm(c) for c in it["choices"] if _norm(c)}
+
+
+def _primary_rank(it: dict) -> tuple:
+    # 답안지 답이 있는 쪽, 그다음 최신 연도가 대표가 된다(해설도 대표의 것).
+    return (it["answerStatus"] == "missing", -int(it["yearLabel"][:4]), it["yearLabel"], it["id"])
+
+
+def _mapped_answers(src: dict, dest: dict) -> list[int]:
+    """src 문항의 답을 dest의 선지 번호로 옮긴다. 선지 순서가 다르거나 괄호·오타만 다른 해가 있어
+    글자가 가장 비슷한 선지로 잇는다(유사도 0.6 미만이면 0 — 옮길 수 없음)."""
+    import difflib
+    dest_norm = [_norm(c) for c in dest["choices"]]
+    out = []
+    for a in src["answers"]:
+        if not 1 <= a <= len(src["choices"]):
+            continue
+        want = _norm(src["choices"][a - 1])
+        scores = [difflib.SequenceMatcher(None, want, d).ratio() for d in dest_norm]
+        best = max(range(len(scores)), key=scores.__getitem__) if scores else -1
+        out.append(best + 1 if best >= 0 and scores[best] >= 0.6 else 0)
+    return sorted(out)
+
+
+def load_dup_decisions(path: Path, problems: list[str]) -> dict[frozenset, str]:
+    """사람(또는 검토 세션)이 정한 쌍별 판정. `[{"ids": [a, b], "decision": "duplicate|variant|distinct", "note": …}]`.
+
+    기계 판정보다 앞선다. 애매한 쌍(review-duplicates.json)을 정하거나 기계가 잘못 합친 쌍을 떼는 데 쓴다.
+    """
+    if not path.exists():
+        return {}
+    out = {}
+    for row in read_json(path):
+        ids, decision = row.get("ids") or [], row.get("decision")
+        if len(ids) != 2 or decision not in ("duplicate", "variant", "distinct") or not row.get("note"):
+            problems.append(f"중복 판정 무시 {ids}: ids 둘·decision·note 필수")
+            continue
+        out[frozenset(ids)] = decision
+    return out
+
+
+def merge_duplicates(entries: list[tuple[dict, list[str]]], current: list[str],
+                     decisions: dict[frozenset, str] | None = None) -> tuple[list[tuple[dict, list[str]]], list[dict]]:
+    """강의 한 편 안에서 중복을 합치고 변형을 묶는다. (새 entries, 사람이 볼 애매한 쌍)."""
+    decisions = decisions or {}
+    n = len(entries)
+    parent = list(range(n))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    review: list[dict] = []
+    variant_pairs: list[tuple[int, int]] = []
+    for a in range(n):
+        for b in range(a + 1, n):
+            x, y = entries[a][0], entries[b][0]
+            decided = decisions.get(frozenset((x["id"], y["id"])))
+            if decided == "duplicate":
+                parent[find(b)] = find(a)
+                continue
+            if decided == "variant":
+                variant_pairs.append((a, b))
+                continue
+            if decided == "distinct" or not x["choices"] or not y["choices"]:
+                continue
+            r = _similar(x, y)
+            if r < REVIEW_STEM:
+                continue
+            sx, sy = _choice_set(x), _choice_set(y)
+            common = len(sx & sy)
+            if r >= DUP_STEM and sx == sy and len(x["choices"]) == len(y["choices"]):
+                parent[find(b)] = find(a)
+            elif r >= DUP_STEM and common >= 3 and len(sx ^ sy) <= 4:
+                variant_pairs.append((a, b))
+            elif common >= 3:
+                review.append({"kind": "similar", "stemSimilarity": round(r, 3), "ids": [x["id"], y["id"]],
+                               "commonChoices": common})
+
+    groups: dict[int, list[int]] = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(i)
+
+    out: list[tuple[dict, list[str]]] = []
+    new_index: dict[int, int] = {}
+    for members in sorted(groups.values(), key=lambda m: min(m)):
+        copies = sorted((entries[i] for i in members), key=lambda e: _primary_rank(e[0]))
+        primary, profs = copies[0]
+        for i in members:
+            new_index[i] = len(out)
+        if len(copies) == 1:
+            out.append((primary, profs))
+            continue
+        merged = dict(primary)
+        others = []
+        conflict = False
+        for it, its_profs in copies[1:]:
+            mapped = _mapped_answers(it, primary)
+            if it["answerStatus"] != "missing" and primary["answerStatus"] != "missing" and mapped != sorted(primary["answers"]):
+                conflict = True
+            others.append({"id": it["id"], "setId": it["setId"], "yearLabel": it["yearLabel"], "number": it["number"],
+                           "answers": mapped, "professors": its_profs})
+        merged["mergedFrom"] = others
+        merged["years"] = sorted({c[0]["yearLabel"] for c in copies}, reverse=True)
+        if conflict:
+            merged["keyConflict"] = True
+            review.append({"kind": "key-conflict", "ids": [c[0]["id"] for c in copies],
+                           "answers": {c[0]["id"]: c[0]["answers"] for c in copies}})
+        # 같은 교수가 낸 해가 하나라도 있으면 같은 교수 구획에 둔다.
+        same = next((p for _, p in copies if section_kind(p, current) == "same"), None)
+        out.append((merged, same if same is not None else profs))
+
+    # 변형 묶음: 합친 뒤의 번호로 다시 엮는다.
+    vparent = list(range(len(out)))
+
+    def vfind(i: int) -> int:
+        while vparent[i] != i:
+            vparent[i] = vparent[vparent[i]]
+            i = vparent[i]
+        return i
+
+    for a, b in variant_pairs:
+        ia, ib = new_index[a], new_index[b]
+        if ia != ib:
+            vparent[vfind(ib)] = vfind(ia)
+    vgroups: dict[int, list[int]] = {}
+    for i in range(len(out)):
+        vgroups.setdefault(vfind(i), []).append(i)
+    for members in vgroups.values():
+        if len(members) < 2:
+            continue
+        gid = "v-" + min(out[i][0]["id"] for i in members)
+        for i in members:
+            item, profs = out[i]
+            out[i] = ({**item, "variantGroup": gid}, profs)
+    return out, review
 
 
 # ─────────────────────────────────────────────── 빌드
@@ -442,8 +606,13 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
     (out / "lectures").mkdir(parents=True)
     used_figs: set[str] = set()
     index = []
+    dup_review: list[dict] = []
+    dup_decisions = load_dup_decisions(root / "duplicates.json", problems)
     for key, entries in sorted(per_lecture.items(), key=lambda kv: (not kv[0].isdigit(), int(kv[0]) if kv[0].isdigit() else 0, kv[0])):
         lec = lecture_info(key, events, notes, lecture_map)
+        entries, review = merge_duplicates(entries, lec["currentProfessors"], dup_decisions)
+        if review:
+            dup_review.append({"lecture": lec["number"], "eventId": lec["eventId"], "pairs": review})
         sections = build_sections(entries, lec["currentProfessors"])
         items_by_id = {it["id"]: it for it, _ in entries}
         ordered = [items_by_id[i] for sec in sections for i in sec["itemIds"]]
@@ -469,6 +638,8 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
             "file": f"lectures/{lec['eventId']}.json",
             "items": len(ordered), **{f"{k}Items": v for k, v in count.items()},
             "explained": sum(1 for it in ordered if it["explanation"]),
+            "merged": sum(len(it.get("mergedFrom", [])) for it in ordered),
+            "variants": sum(1 for it in ordered if it.get("variantGroup")),
             "missingAnswers": sum(1 for it in ordered if it["answerStatus"] == "missing"),
             "doubts": sum(1 for it in ordered if (it["explanation"] or {}).get("answerCheck") == "doubt"),
             "figures": sum(len(it.get("figures", [])) for it in ordered),
@@ -494,6 +665,7 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
         "problems": sorted(set(problems)),
     }
     write_json(out / "index.json", summary)
+    write_json(out / "review-duplicates.json", dup_review)
     return summary
 
 

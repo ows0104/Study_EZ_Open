@@ -63,3 +63,25 @@ test('채점: one_of·all_of·전원 정답·답 없음', () => {
   assert.equal(sel.grade(item('x', '2025', { answers: [], answerStatus: 'all-correct' }), [1]), 'correct');
   assert.equal(sel.grade(item('x', '2025', { answers: [], answerStatus: 'missing' }), [1]), 'ungraded');
 });
+
+test('합친 문제는 나온 해 어느 버튼에서든 한 번만, 변형은 이어서', () => {
+  const d = {
+    lecture: { eventId: 'e' },
+    sections: [{ kind: 'other', professors: ['김동현'], years: ['2022', '2021', '2020'], itemIds: ['m', 'v2', 'x', 'v1'] }],
+    items: [
+      item('m', '2022', { years: ['2022', '2020'] }),
+      { ...item('v2', '2021', { variantGroup: 'g' }), choices: ['a', 'b', 'c', 'd', 'NEW'] },
+      item('x', '2021'),
+      item('v1', '2020', { variantGroup: 'g' }),
+    ],
+  };
+  const ys = sel.otherYears(d);
+  assert.deepEqual(plain(ys.map(y => [y.label, y.itemIds])), [
+    ['2022 김동현', ['m']], ['2021 김동현', ['v2', 'x']], ['2020 김동현', ['m', 'v1']]]);
+  const all = sel.pickItems(d, 'more', new Set(ys.map(y => y.key)));
+  assert.deepEqual(plain(all.map(i => i.id)), ['m', 'v2', 'v1', 'x']);
+  assert.deepEqual(plain(sel.changedChoices(all[2], all[1])), [4]);
+  assert.deepEqual(plain(sel.changedChoices(all[3], all[2])), []);
+  // 2020 버튼만 골라도 합친 문제가 들어간다
+  assert.deepEqual(plain(sel.pickItems(d, 'more', new Set([ys[2].key])).map(i => i.id)), ['m', 'v1']);
+});
