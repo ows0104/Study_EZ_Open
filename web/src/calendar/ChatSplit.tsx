@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * 개인 대화 버튼(2026-11-07 사용자 선택 C안).
  *
  * 왼쪽 큰 칸은 원래 하던 일 그대로다 — 처음에는 새 대화 만들기(＋), 그 뒤에는 대화 열기(↗).
- * 오른쪽 ▾를 누르면 「새 대화 만들기」(대화가 있을 때)·「내 프롬프트 수정」이 펼쳐진다.
+ * 오른쪽 ▾를 누르면 「새 대화 만들기」(대화가 있을 때)·「내 프롬프트 수정」·「링크 수정」이 펼쳐진다.
  * 메뉴 밖을 누르거나 Esc면 닫는다.
  * 저장된 대화가 있으면(`linked`) 공통 대화처럼 갈래 색 바탕을 채운다(2026-11-10 사용자 지시).
  * 내 프롬프트를 고쳤다는 작은 점은 뜻이 안 읽혀 뺐다(2026-11-10 사용자 지시).
@@ -17,6 +17,8 @@ export function ChatSplit({
   onPrompt,
   promptOpen,
   linked,
+  onLink,
+  linkOpen,
 }: {
   tone: "pre" | "review";
   /** 왼쪽 칸. `className="chat-split-main"`인 a·button·span */
@@ -28,6 +30,9 @@ export function ChatSplit({
   promptOpen: boolean;
   /** 저장된 대화를 여는 칸이면 true */
   linked?: boolean;
+  /** 「링크 수정」 — 자동 연결이 안 됐을 때 개인 대화 주소를 손으로 넣는다(2026-11-13) */
+  onLink?: () => void;
+  linkOpen?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
@@ -74,6 +79,11 @@ export function ChatSplit({
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onPrompt(); }}>
             <span aria-hidden="true">✎</span>{promptOpen ? "내 프롬프트 접기" : "내 프롬프트 수정"}
           </button>
+          {onLink ? (
+            <button type="button" role="menuitem" onClick={() => { setOpen(false); onLink(); }}>
+              <span aria-hidden="true">🔗</span>{linkOpen ? "링크 접기" : "링크 수정"}
+            </button>
+          ) : null}
         </span>
       ) : null}
     </span>

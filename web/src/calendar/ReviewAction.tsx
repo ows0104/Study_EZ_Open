@@ -9,6 +9,7 @@ import { DEFAULT_REVIEW_PROMPT, REVIEW_PROMPT_TOKENS, renderReviewPrompt } from 
 import { usePersonalPrompt } from "../lecture/usePersonalPrompt";
 import type { PreviewProvider } from "../types/lectures";
 import { ActionCard, PanelGroup } from "./panelShared";
+import { MyLinkEditor } from "./MyLinkEditor";
 
 /** 올해 강의록으로 복습한다. 예습 대화와 문제은행에서 독립된 개인 대화다. */
 export function ReviewAction({ lecture, detail, base, onError, trailing, open }: {
@@ -23,6 +24,7 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
 }) {
   const [busy, setBusy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showLink, setShowLink] = useState(false);
   const [provider, setProvider] = useState<PreviewProvider>(detail.myReview?.provider ?? "chatgpt");
   const promptStore = usePersonalPrompt("review", DEFAULT_REVIEW_PROMPT);
   const notes = detail.files.find((file) => file.kind === "notes_current");
@@ -64,7 +66,8 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
           main={<a className="chat-split-main" href={saved.conversationUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span>개인 대화</a>}
           onRemake={notes && installed ? () => void start() : undefined}
           remakeDisabled={busy || !compatible || !promptStore.loaded}
-          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
+          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt}
+          onLink={() => setShowLink(open => !open)} linkOpen={showLink} />
       ) : notes && installed ? (
         <ChatSplit tone="review"
           main={
@@ -73,13 +76,15 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
               <span aria-hidden="true">＋</span>{busy ? "여는 중…" : "개인 대화"}
             </button>
           }
-          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
+          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt}
+          onLink={() => setShowLink(open => !open)} linkOpen={showLink} />
       ) : (
         <ActionCard shape="is-key is-faint is-empty"
           hit={<span className="panel-action-hit"><strong>개인 대화</strong>
             <small>{!notes ? "올해 강의록 대기" : extensionPossible() ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"}</small></span>} />
       )}
       {trailing}
+      {showLink ? <MyLinkEditor lecture={lecture} kind="review" current={saved} onDone={() => setShowLink(false)} /> : null}
       {promptStore.error && !showPrompt ? <p className="prompt-editor-error">{promptStore.error}</p> : null}
       {showPrompt ? <PromptEditor store={promptStore} detail={detail} provider={provider} onProvider={setProvider}
         kind="review" render={renderReviewPrompt} tokens={REVIEW_PROMPT_TOKENS} /> : null}
