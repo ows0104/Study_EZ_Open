@@ -145,8 +145,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       // 객관식 모드에서 답 보기 전에는 1–9로 그 번호 선지를 고른다(선지가 5개 이상일 수 있다).
       if(mcq&&!task.answer&&/^[1-9]$/.test(event.key)&&!target.closest('button')){
         const option=mcq.choices[Number(event.key)-1];
-        if(option){event.preventDefault();pick(option.id);}
-        return;
+        if(option){event.preventDefault();pick(option.id);return;}
       }
       if(target.closest('a,summary')||target.closest('button')&&!number&&event.key!=='5')return;
       if((event.code==='Space'||event.key==='Enter')&&!task.answer){event.preventDefault();reveal();}
