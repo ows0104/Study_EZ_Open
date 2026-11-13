@@ -216,7 +216,8 @@ def run(packet, out, model, invoke, resume=None):
         ctx = v3.supplement_input(bank, off_goal, points_doc, page_counts)
         state = {'points_doc': points_doc}
         value = st.run(X + 'supplement', ctx, lambda raw: check_stage('supplement', raw, ctx, state, None), state)
-        points_doc, supplement = v4.attach_points(points_doc, value, off_goal, page_counts)
+        points_doc, supplement = v4.attach_points(points_doc, value, off_goal, page_counts,
+                                                  [p['point_id'] for p in brief['points']])
         new_points = [p for p in points_doc['points'] if p['point_id'] in {d['point_id'] for d in supplement if d['decision'] == 'point'}]
         dup = [d for d in supplement if d['decision'] == 'duplicate_of']
         out_of_scope = [d for d in supplement if d['decision'] == 'out_of_scope']

@@ -283,6 +283,18 @@ def test_supplement_points_take_tiers_from_the_same_point_table(basis, tier):
     assert [d['decision'] for d in decisions] == ['point', 'out_of_scope', 'duplicate_of']
 
 
+def test_supplement_point_ids_skip_brief_only_points():
+    """261113_02: a brief fix added P088–P093 to the brief only; the supplement point took P088 and extend_brief stopped."""
+    rows = {'rows': [{'question_id': 'Q7', 'decision': 'point', 'point': supplement([]), 'duplicate_of': None, 'reason': 'Missed'}]}
+    doc, _, decisions = c.attach_points(points_doc(), rows, ['Q7'], {'S1': 10}, reserved=['P001', 'P002', 'P003', 'T9'])
+    assert [p['point_id'] for p in doc['points']] == ['P001', 'P004'] and decisions[0]['point_id'] == 'P004'
+    doc, _, _ = c.attach_points(points_doc(), rows, ['Q7'], {'S1': 10})
+    assert [p['point_id'] for p in doc['points']] == ['P001', 'P002']        # no reserved IDs: numbering as before
+    dup = {'rows': [{'question_id': 'Q7', 'decision': 'duplicate_of', 'point': None, 'duplicate_of': 'P003', 'reason': 'x'}]}
+    with pytest.raises(ValueError):                                            # a brief-only ID is no duplicate target
+        c.attach_points(points_doc(), dup, ['Q7'], {'S1': 10}, reserved=['P003'])
+
+
 def test_supplement_points_need_the_lecture_notes_and_valid_pages():
     rows = lambda p: {'rows': [{'question_id': 'Q7', 'decision': 'point', 'point': p, 'duplicate_of': None, 'reason': 'x'}]}
     jokbo = supplement([])

@@ -303,9 +303,10 @@ def check_supplement(value, ctx, state=None):
     return value
 
 
-def attach_points(points_doc, output, off_goal_ids, page_counts):
+def attach_points(points_doc, output, off_goal_ids, page_counts, reserved=()):
     """v3.attach_points for /4 points (no basis): returns (points_doc, decisions)."""
-    value, _, decisions = v3.attach_points(_as_v3_points(points_doc), _as_v3_points(output), off_goal_ids, page_counts)
+    value, _, decisions = v3.attach_points(_as_v3_points(points_doc), _as_v3_points(output), off_goal_ids, page_counts,
+                                           reserved)
     for p in value['points']:
         p.pop('importance_basis')
     return value, decisions

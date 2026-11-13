@@ -244,6 +244,8 @@ def test_supplement_points_have_no_basis():
     value, decisions = c.attach_points(doc, out, ['Q7'], {'S1': 5})
     assert [p['point_id'] for p in value['points']] == ['P001', 'P002'] and all('importance_basis' not in p for p in value['points'])
     assert decisions[0]['point_id'] == 'P002'
+    value, decisions = c.attach_points(doc, out, ['Q7'], {'S1': 5}, ['P001', 'P002'])   # P002 is a brief-only point
+    assert [p['point_id'] for p in value['points']] == ['P001', 'P003'] and decisions[0]['point_id'] == 'P003'
     out['rows'][0]['point']['importance_basis'] = []
     with pytest.raises(ValueError, match='no importance'):
         c.attach_points(doc, out, ['Q7'], {'S1': 5})

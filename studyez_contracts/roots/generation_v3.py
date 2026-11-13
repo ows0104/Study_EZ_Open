@@ -953,15 +953,17 @@ def _supplement_rows(output, off_goal_ids, existing, page_counts):
     return rows
 
 
-def attach_points(points_doc, output, off_goal_ids, page_counts):
+def attach_points(points_doc, output, off_goal_ids, page_counts, reserved=()):
     """New exam points (exam-point-extract/3 form) for off-goal questions; tiers by the same point table.
 
     Returns (points_doc, table, decisions). Existing points and their tiers stay unchanged.
+    `reserved`: point IDs already used elsewhere (the brief). New IDs skip past them as well: a brief fix may add
+    brief-only points (261113_02: P088–P093 after a 87-point doc), and extend_brief rejects a reused ID.
     SUPPLEMENT_OUTPUT is the model-facing JSON Schema (anyOf); this pure module checks the same shape by hand."""
     existing = {p['point_id'] for p in points_doc['points']}
     rows = _supplement_rows(output, off_goal_ids, existing, page_counts)
     before = imp.point_table(points_doc['points'], points_doc['notebook_profile'])
-    numbers = [int(m.group(1)) for p in points_doc['points'] for m in [re.fullmatch(r'P(\d+)', p['point_id'])] if m]
+    numbers = [int(m.group(1)) for pid in [*existing, *reserved] for m in [re.fullmatch(r'P(\d+)', pid)] if m]
     nxt = max(numbers, default=0) + 1
     value = copy.deepcopy(points_doc)
     decisions = []
