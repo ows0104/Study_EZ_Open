@@ -105,6 +105,12 @@ def _validate_item(item: Any, where: str) -> None:
     _need(status == answer_status(answers, mode, all_correct), where,
           f"answerStatus {status}가 answers·answerMode·allCorrect와 다름")
     _need(item.get("verification") in VERIFICATIONS, where, "verification")
+    if item.get("originalAnswers") is not None:
+        # 정답표를 고쳤으면 원래 답과 근거가 함께 남아야 한다.
+        _need(isinstance(item["originalAnswers"], list) and all(isinstance(a, int) for a in item["originalAnswers"]),
+              where, "originalAnswers")
+        _need(item["verification"] == "corrected" and bool(item.get("correctionNote"))
+              and bool(item.get("correctionEvidence")), where, "정답 교정에는 corrected·correctionNote·correctionEvidence")
     figs = item.get("figures", [])
     _need(isinstance(figs, list), where, "figures")
     for i, f in enumerate(figs):

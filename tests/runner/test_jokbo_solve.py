@@ -137,3 +137,24 @@ def test_check_reports_missing_and_unassigned(env):
     r = js.check(amgi, root, "pes_b_25-26")
     assert r["missingExplain"] == ["pe_2025_25_001", "pe_2025_25_002"]
     assert r["unassigned"] == ["pe_2025_25_001", "pe_2025_25_002"]
+
+
+def test_fixes_correct_answer_choices_figures_and_move(env):
+    amgi, root, tt, notes = env
+    _w(root / "fixes" / "pes_b_18.json", {
+        "pe_2025_18_001": {"note": "답안지 오기", "evidence": "족보 p.1", "answers": [3],
+                           "figures": [], "choices": ["가", "나", "다", "라"]},
+        "pe_2022_18_003": {"note": "다른 강의 문항", "evidence": "족보 p.2", "moveTo": ["25"]},
+        "pe_2022_18_002": {"note": "근거 없음"},  # evidence 없음 → 무시
+    })
+    summary = js.build(amgi, root, tt, notes)
+    assert any("교정 무시 pe_2022_18_002" in p for p in summary["problems"])
+    doc18 = _lecture(root, "ev18")
+    validate_lecture(doc18)
+    fixed = {it["id"]: it for it in doc18["items"]}["pe_2025_18_001"]
+    assert fixed["answers"] == [3] and fixed["originalAnswers"] == [2]
+    assert fixed["verification"] == "corrected" and fixed["correctionEvidence"] == "족보 p.1"
+    assert fixed["choices"] == ["가", "나", "다", "라"] and fixed["figures"] == []
+    assert "pe_2022_18_003" not in {it["id"] for it in doc18["items"]}
+    moved = {it["id"]: it for it in _lecture(root, "ev25")["items"]}["pe_2022_18_003"]
+    assert moved["movedFrom"] == "pes_b_18"

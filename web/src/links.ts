@@ -45,3 +45,8 @@ export function bankCatalogHref(lecture: { subject: string; runId: string }) {
 export function legacyMainHref(lecture: { subject: string; runId: string }) {
   return `/legacy-mainquiz/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
 }
+
+/** 강의(시간표 칸)별 족보 퀴즈. 강의가 아니라 칸에 붙는다 — 필기가 없는 칸에도 족보는 있다. */
+export function jokboHref(eventId: string) {
+  return `/jokbo/${encodeURIComponent(eventId)}`;
+}

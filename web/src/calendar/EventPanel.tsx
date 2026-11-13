@@ -20,6 +20,7 @@ import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 import { ReviewAction } from "./ReviewAction";
+import { JokboAction } from "./JokboAction";
 import { LectureMemo, ReadEditor } from "./ReadEditor";
 import { PreviewSourceNotice, ProfessorInfo, ProfTag, previewNotesLabel } from "./ProfessorInfo";
 import { useOptionalVersion } from "../bank/optionalExclusion";
@@ -126,6 +127,7 @@ export function EventPanel({
             <KeyActions
               lecture={lecture}
               detail={detail}
+              jokbo={<JokboAction eventId={entry.id} />}
             />
           ) : error ? null : (
             <p className="event-panel-loading">자료를 불러오는 중…</p>
@@ -133,10 +135,14 @@ export function EventPanel({
         ) : (
           /* 없다는 것을 말하는 자리다. 이것이 없으면 "아직 안 올라옴"과
              "눌러도 안 되는 화면"을 구분할 수 없다. */
-          <p className="event-panel-empty">
-            아직 올라온 자료가 없습니다.
-            <small>예습·퀴즈가 준비되면 이 칸에 점이 붙습니다.</small>
-          </p>
+          <>
+            <p className="event-panel-empty">
+              아직 올라온 자료가 없습니다.
+              <small>예습·퀴즈가 준비되면 이 칸에 점이 붙습니다.</small>
+            </p>
+            {/* 족보는 필기(강의 자료)보다 먼저 있다 — 자료가 없는 칸에도 선다. */}
+            <div className="event-panel-actions"><JokboAction eventId={entry.id} /></div>
+          </>
         )}
 
         {/* 관리자만: 예전 패널의 관리 도구·필기·강의 정보. 학생 화면에는 두지 않는다(2026-11 개편). */}
@@ -293,9 +299,12 @@ const emptyCards: CardProgress = { total: 0, seen: 0, unseen: 0, recognized: 0, 
 function KeyActions({
   lecture,
   detail,
+  jokbo,
 }: {
   lecture: LectureRef;
   detail: LectureDetail;
+  /** 복습 아래 「족보」 칸(2026-11-13). 시간표 칸에 붙으므로 바깥에서 만든다. */
+  jokbo?: React.ReactNode;
 }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [error, setError] = useState("");
@@ -351,6 +360,8 @@ function KeyActions({
           <span className="action-button is-quiz is-review is-disabled" aria-disabled="true">▶ 복습 퀴즈</span>
         )}
       />
+
+      {jokbo}
 
       <section className="panel-stats" aria-label="통계">
         <h3>통계</h3>

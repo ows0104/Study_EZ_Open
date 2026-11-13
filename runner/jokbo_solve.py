@@ -16,6 +16,7 @@ git 밖(`runs/_materials/<과목>/jokbo-solve/`)에만 쓴다.
     python -m runner.jokbo_solve status        # 해설이 빠진 문항 수
     python -m runner.jokbo_solve pack <setId>  # 해설 작성용 입력 한 세트
     python -m runner.jokbo_solve check <setId> # 그 세트의 해설·소속만 검사
+    python -m runner.jokbo_solve upload [--audience admin|all] [--only 18 "CBL 1"]
 """
 
 from __future__ import annotations
@@ -192,6 +193,43 @@ def load_assign(assign_dir: Path, s: dict, problems: list[str]) -> dict[str, lis
     return out
 
 
+FIX_KEYS = {"note", "evidence", "stemReplace", "choices", "answers", "answerMode", "allCorrect", "figures", "moveTo"}
+
+
+def load_fixes(fix_dir: Path, set_id: str, problems: list[str]) -> dict[str, dict]:
+    """원천의 오류 교정. 문항마다 무엇을(`note`) 무엇을 근거로(`evidence`, 원본 PDF 쪽) 고쳤는지 적는다.
+
+    amgi 원천 파일은 고치지 않는다 — 원천을 다시 만들어도 교정이 남도록 따로 두고 읽을 때 얹는다.
+    """
+    path = fix_dir / f"{set_id}.json"
+    if not path.exists():
+        return {}
+    out = {}
+    for item_id, f in read_json(path).items():
+        if item_id.startswith("_"):
+            continue
+        bad = set(f) - FIX_KEYS
+        if bad or not f.get("note") or not f.get("evidence"):
+            problems.append(f"교정 무시 {item_id}: note·evidence 필수, 모르는 키 {sorted(bad)}")
+            continue
+        out[item_id] = f
+    return out
+
+
+def figure_entry(name: str, figs_by_name: dict[str, dict], fix_fig_dir: Path) -> dict | None:
+    if name in figs_by_name:
+        return figs_by_name[name]
+    path = fix_fig_dir / name
+    if not path.exists():
+        return None
+    try:
+        import fitz  # PyMuPDF — 저장소가 이미 쓴다
+        pix = fitz.Pixmap(str(path))
+        return {"file": name, "w": pix.width, "h": pix.height}
+    except Exception:
+        return {"file": name}
+
+
 def from_amgi_explain(x: dict) -> dict:
     """amgi 해설(explanation·choiceNotes·caution)을 jokbo-explain/1 꼴로."""
     if "text" in x:
@@ -201,7 +239,49 @@ def from_amgi_explain(x: dict) -> dict:
             "answerCheck": "agree", "source": x.get("source", "amgi")}
 
 
-def convert_item(e: dict, set_id: str, figs: dict, explain: dict, problems: list[str]) -> dict:
+def apply_fix(e: dict, fix: dict | None, figs: dict, figs_by_name: dict, fix_fig_dir: Path,
+              problems: list[str]) -> tuple[dict, list[dict], dict]:
+    """교정을 얹은 원천 문항, 그림, 교정 기록."""
+    figures = list(figs.get(e["pastExamItemId"], []))
+    if not fix:
+        return e, figures, {}
+    e = dict(e)
+    record: dict[str, Any] = {"correctionNote": fix["note"], "correctionEvidence": fix["evidence"]}
+    for a, b in fix.get("stemReplace", []):
+        if a not in e["stem"] and a not in (e.get("sharedPrompt") or ""):
+            problems.append(f"교정 글자 없음 {e['pastExamItemId']}: «{a}»")
+        e["stem"] = e["stem"].replace(a, b)
+        if e.get("sharedPrompt"):
+            e["sharedPrompt"] = e["sharedPrompt"].replace(a, b)
+    if "choices" in fix:
+        e["choices"] = list(fix["choices"])
+        e.pop("choiceStyles", None)
+    if "answers" in fix or "allCorrect" in fix:
+        old = list(e.get("answers") or ([] if e.get("answer") is None else [e["answer"]]))
+        if "answers" in fix:
+            e["answers"] = list(fix["answers"])
+            e["answer"] = fix["answers"][0] if fix["answers"] else None
+            e.pop("answerText", None)
+        if "answerMode" in fix:
+            e["answerMode"] = fix["answerMode"]
+        if "allCorrect" in fix:
+            e["allCorrect"] = bool(fix["allCorrect"])
+        if old != e.get("answers"):
+            record["originalAnswers"] = old
+    if "figures" in fix:
+        figures = []
+        for name in fix["figures"]:
+            entry = figure_entry(name, figs_by_name, fix_fig_dir)
+            if entry is None:
+                problems.append(f"교정 그림 없음 {e['pastExamItemId']}: {name}")
+            else:
+                figures.append(entry)
+    return e, figures, record
+
+
+def convert_item(e: dict, set_id: str, figs: dict, explain: dict, problems: list[str],
+                 fix: dict | None = None, figs_by_name: dict | None = None, fix_fig_dir: Path | None = None) -> dict:
+    e, figures, record = apply_fix(e, fix, figs, figs_by_name or {}, fix_fig_dir or Path("."), problems)
     answers = list(e.get("answers") or ([] if e.get("answer") is None else [e["answer"]]))
     all_correct = bool(e.get("allCorrect")) or (e.get("answerText") or "").replace(" ", "") in ("전원정답", "모두정답")
     if all_correct:
@@ -231,10 +311,12 @@ def convert_item(e: dict, set_id: str, figs: dict, explain: dict, problems: list
         "answerStatus": answer_status(answers, mode, all_correct),
         "allCorrect": all_correct,
         "answerNote": note,
-        "verification": e.get("verification", "pending"),
-        "correctionNote": e.get("correctionNote"),
+        "verification": "corrected" if record else e.get("verification", "pending"),
+        "correctionNote": " ".join(x for x in [e.get("correctionNote"), record.get("correctionNote")] if x) or None,
+        "correctionEvidence": record.get("correctionEvidence"),
+        "originalAnswers": record.get("originalAnswers"),
         "repeatYears": e.get("repeatYears"),
-        "figures": figs.get(e["pastExamItemId"], []),
+        "figures": figures,
         "explanation": None,
     }
     x = explain.get(item["id"])
@@ -261,32 +343,46 @@ def section_kind(professors: list[str], current: list[str]) -> str:
     return "same" if set(professors) & set(current) else "other"
 
 
-def build_sections(parts: list[tuple[dict, list[dict]]], current: list[str]) -> list[dict]:
-    """parts = [(세트, 그 세트의 문항들)]. amgi 구획(교수별)을 올해 교수로 다시 판정한다."""
+def item_professors(s: dict, item_id: str) -> list[str]:
+    """원천 세트 안에서 그 문항이 속한 교수 구획의 교수."""
+    groups = s.get("groups") or [{"professors": s.get("professors") or [], "from": 0, "count": len(s["items"])}]
+    for g in groups:
+        if any(e["pastExamItemId"] == item_id for e in s["items"][g["from"]:g["from"] + g["count"]]):
+            return list(g.get("professors") or [])
+    return []
+
+
+def year_professors(sets: list[dict], year: str) -> list[str] | None:
+    """옮겨 온 문항의 출제 교수 — 옮겨 간 강의의 세트에서 같은 해 구획의 교수. 모르면 None."""
+    for s in sets:
+        for g in s.get("groups") or []:
+            if year in (g.get("years") or []):
+                return list(g.get("professors") or [])
+    return None
+
+
+def build_sections(entries: list[tuple[dict, list[str]]], current: list[str]) -> list[dict]:
+    """entries = [(문항, 그 해 출제 교수)]. 올해 교수로 다시 판정해 같은 교수 → 다른 교수 → 미상."""
     by_key: dict[tuple, dict] = {}
-    for s, items in parts:
-        groups = s.get("groups") or [{"professors": s.get("professors") or [], "years": s.get("years") or [],
-                                      "from": 0, "count": len(s["items"])}]
-        for g in groups:
-            members = {e["pastExamItemId"] for e in s["items"][g["from"]:g["from"] + g["count"]]}
-            chunk = [it for it in items if it["id"] in members]
-            if not chunk:
-                continue
-            profs = list(g.get("professors") or [])
-            key = (section_kind(profs, current), tuple(profs))
-            sec = by_key.setdefault(key, {"kind": key[0], "professors": profs, "years": [], "itemIds": [],
-                                          "_sets": []})
-            sec["itemIds"].extend(it["id"] for it in chunk)
-            sec["_sets"].append(s["id"])
-            for y in g.get("years") or []:
-                if y not in sec["years"]:
-                    sec["years"].append(y)
+    pos = {it["id"]: i for i, (it, _) in enumerate(entries)}
+    year_of = {it["id"]: it["yearLabel"] for it, _ in entries}
+    for it, profs in entries:
+        key = (section_kind(profs, current), tuple(profs))
+        sec = by_key.setdefault(key, {"kind": key[0], "professors": list(profs), "years": [], "itemIds": [],
+                                      "setIds": []})
+        sec["itemIds"].append(it["id"])
+        if it["yearLabel"] not in sec["years"]:
+            sec["years"].append(it["yearLabel"])
+        if it["setId"] not in sec["setIds"]:
+            sec["setIds"].append(it["setId"])
     order = {"same": 0, "other": 1, "unknown": 2}
-    secs = sorted(by_key.values(), key=lambda x: (order[x["kind"]], [-int(y[:4]) for y in sorted(x["years"], reverse=True)[:1]]))
-    for sec in secs:
+    for sec in by_key.values():
         sec["years"].sort(reverse=True)
-        sec["setIds"] = sorted(set(sec.pop("_sets")))
-    return secs
+        sec["setIds"].sort()
+        # 구획 안에서도 최신 연도부터. 같은 해는 원천 순서를 유지한다.
+        rank = {y: i for i, y in enumerate(sec["years"])}
+        sec["itemIds"].sort(key=lambda i: (rank[year_of[i]], pos[i]))
+    return sorted(by_key.values(), key=lambda x: (order[x["kind"]], [-int(y[:4]) for y in x["years"][:1]]))
 
 
 # ─────────────────────────────────────────────── 빌드
@@ -304,37 +400,61 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
 
     sets = [read_json(src / m["file"]) if (src / m["file"]).exists() else read_json(src / Path(m["file"]).name)
             for m in read_json(src / "index.json")["sets"]]
-    per_lecture: dict[str, list[tuple[dict, list[dict]]]] = {}
+    figs_by_name = {f["file"]: f for fl in figs.values() for f in fl}
+    fix_fig_dir = root / "fixes" / "figures"
+    targets_of = {s["id"]: set_targets(s, events) for s in sets}
+    sets_of_lecture: dict[str, list[dict]] = {}
+    for s in sets:
+        for key in targets_of[s["id"]]:
+            sets_of_lecture.setdefault(key, []).append(s)
+
+    per_lecture: dict[str, list[tuple[dict, list[str]]]] = {}
     unattached = []
     for s in sets:
         explain = load_explain(explain_dirs, s["id"])
-        items = [convert_item(e, s["id"], figs, explain, problems) for e in s["items"]]
-        targets = set_targets(s, events)
-        if not targets:
-            unattached.append({"setId": s["id"], "title": s.get("title"), "items": len(items)})
-            continue
+        fixes = load_fixes(root / "fixes", s["id"], problems)
+        targets = targets_of[s["id"]]
         assign = load_assign(root / "assign", s, problems)
-        for key in targets:
-            mine = [it for it in items if key in assign.get(it["id"], targets)]
-            if mine:
-                per_lecture.setdefault(key, []).append((s, mine))
+        placed = 0
+        for e in s["items"]:
+            fix = fixes.get(e["pastExamItemId"])
+            it = convert_item(e, s["id"], figs, explain, problems, fix, figs_by_name, fix_fig_dir)
+            if fix and fix.get("moveTo"):
+                dest = [str(k) for k in fix["moveTo"]]
+                if any(k not in events for k in dest):
+                    problems.append(f"교정 이동 대상 없음 {it['id']}: {dest}")
+                    dest = [k for k in dest if k in events]
+                it["movedFrom"] = s["id"]
+                for key in dest:
+                    profs = year_professors(sets_of_lecture.get(key, []), it["yearLabel"])
+                    per_lecture.setdefault(key, []).append((it, profs or []))
+                    placed += 1
+                continue
+            for key in targets:
+                if key in assign.get(it["id"], targets):
+                    per_lecture.setdefault(key, []).append((it, item_professors(s, it["id"])))
+                    placed += 1
+        if not placed:
+            unattached.append({"setId": s["id"], "title": s.get("title"), "items": len(s["items"])})
 
     if out.exists():
         shutil.rmtree(out)
     (out / "lectures").mkdir(parents=True)
     used_figs: set[str] = set()
     index = []
-    for key, parts in sorted(per_lecture.items(), key=lambda kv: (not kv[0].isdigit(), int(kv[0]) if kv[0].isdigit() else 0, kv[0])):
+    for key, entries in sorted(per_lecture.items(), key=lambda kv: (not kv[0].isdigit(), int(kv[0]) if kv[0].isdigit() else 0, kv[0])):
         lec = lecture_info(key, events, notes, lecture_map)
-        sections = build_sections(parts, lec["currentProfessors"])
-        items_by_id = {it["id"]: it for _, items in parts for it in items}
+        sections = build_sections(entries, lec["currentProfessors"])
+        items_by_id = {it["id"]: it for it, _ in entries}
         ordered = [items_by_id[i] for sec in sections for i in sec["itemIds"]]
-        shared = [s["id"] for s, _ in parts if len(s["lectures"]) > 1]
+        used = {it["setId"] for it in ordered}
+        src_sets = [s for s in sets if s["id"] in used]
+        shared = [s["id"] for s in src_sets if len(s["lectures"]) > 1]
         doc = {
             "schema": SCHEMA, "subject": SUBJECT, "block": BLOCK, "edition": EDITION,
             "lecture": lec,
             "sources": [{"setId": s["id"], "ref": s["ref"], "title": s.get("title"),
-                         "lectures": [str(n) for n in s["lectures"]]} for s, _ in parts],
+                         "lectures": [str(n) for n in s["lectures"]]} for s in src_sets],
             "sharedSets": shared,
             "sections": sections,
             "items": ordered,
@@ -357,7 +477,7 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
 
     (out / "figures").mkdir()
     for name in sorted(used_figs):
-        shutil.copy2(fig_src / name, out / "figures" / name)
+        shutil.copy2(fig_src / name if (fig_src / name).exists() else fix_fig_dir / name, out / "figures" / name)
 
     items_total = sum(len(s["items"]) for s in sets)
     summary = {
@@ -367,7 +487,8 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
         "unattachedSets": unattached,
         "totals": {
             "sets": len(sets), "items": items_total,
-            "explained": len({it["id"] for ps in per_lecture.values() for _, items in ps for it in items if it["explanation"]}),
+            "explained": len({it["id"] for es in per_lecture.values() for it, _ in es if it["explanation"]}),
+            "corrected": len({it["id"] for es in per_lecture.values() for it, _ in es if it["verification"] == "corrected"}),
             "figures": len(used_figs),
         },
         "problems": sorted(set(problems)),
@@ -388,27 +509,38 @@ def status(amgi: Path, root: Path) -> dict:
             "items": sum(r["items"] for r in rows)}
 
 
-def check(amgi: Path, root: Path, set_id: str) -> dict:
-    """한 세트의 해설·소속만 검사한다. 빌드 폴더를 건드리지 않아 여러 작성자가 동시에 돌려도 된다."""
-    src = amgi / "data" / "pastexam"
-    s = read_json(src / f"{set_id}.json")
-    problems: list[str] = []
-    explain = load_explain([(root / "explain", "studyez")], set_id)
-    items = [convert_item(e, set_id, {}, explain, problems) for e in s["items"]]
-    assign = load_assign(root / "assign", s, problems)
-    missing = [it["id"] for it in items if not it["explanation"]]
-    unknown = sorted(set(explain) - {it["id"] for it in items})
-    unassigned = [it["id"] for it in items if len(s["lectures"]) > 1 and it["id"] not in assign]
-    return {"setId": set_id, "items": len(items), "missingExplain": missing, "unknownIds": unknown,
-            "unassigned": unassigned, "problems": [x for x in problems if "선지 범위 밖" not in x],
-            "doubts": [it["id"] for it in items if (it["explanation"] or {}).get("answerCheck") == "doubt"]}
-
-
-def pack(amgi: Path, set_id: str) -> dict:
-    """해설 작성자에게 줄 한 세트: 문항·그림 경로·강의 필기 경로."""
+def _fixed_items(amgi: Path, root: Path, set_id: str, problems: list[str], with_explain: bool) -> tuple[dict, list[dict], dict]:
     src = amgi / "data" / "pastexam"
     s = read_json(src / f"{set_id}.json")
     figs = figures_index(amgi / "webapp" / "public" / "pastexam-figures")
+    figs_by_name = {f["file"]: f for fl in figs.values() for f in fl}
+    fixes = load_fixes(root / "fixes", set_id, problems)
+    explain = load_explain([(root / "explain", "studyez")], set_id) if with_explain else {}
+    items = [convert_item(e, set_id, figs, explain, problems, fixes.get(e["pastExamItemId"]), figs_by_name,
+                          root / "fixes" / "figures") for e in s["items"]]
+    return s, items, fixes
+
+
+def check(amgi: Path, root: Path, set_id: str) -> dict:
+    """한 세트의 해설·소속·교정만 검사한다. 빌드 폴더를 건드리지 않아 여러 작성자가 동시에 돌려도 된다."""
+    problems: list[str] = []
+    s, items, fixes = _fixed_items(amgi, root, set_id, problems, True)
+    explain = load_explain([(root / "explain", "studyez")], set_id)
+    assign = load_assign(root / "assign", s, problems)
+    missing = [it["id"] for it in items if not it["explanation"]]
+    unknown = sorted((set(explain) | set(fixes)) - {it["id"] for it in items})
+    unassigned = [it["id"] for it in items if len(s["lectures"]) > 1 and it["id"] not in assign
+                  and not (fixes.get(it["id"]) or {}).get("moveTo")]
+    return {"setId": set_id, "items": len(items), "missingExplain": missing, "unknownIds": unknown,
+            "unassigned": unassigned, "fixed": sorted(fixes), "problems": problems,
+            "doubts": [it["id"] for it in items if (it["explanation"] or {}).get("answerCheck") == "doubt"]}
+
+
+def pack(amgi: Path, root: Path, set_id: str) -> dict:
+    """해설 작성자에게 줄 한 세트: 교정을 얹은 문항·그림 경로·강의 필기 경로·이미 쓴 해설."""
+    problems: list[str] = []
+    s, items, _ = _fixed_items(amgi, root, set_id, problems, False)
+    explain = load_explain([(root / "explain", "studyez")], set_id)
     lecture_map = {l["id"]: l for l in read_json(amgi / "data" / "lecture-map.json")["lectures"]}
     notes = []
     for n in s["lectures"]:
@@ -416,36 +548,104 @@ def pack(amgi: Path, set_id: str) -> dict:
         bundle = lm.get("bundle") or lm.get("prevBundle")
         if bundle and (amgi / bundle).exists():
             notes.append(str(amgi / bundle))
-    fig_dir = amgi / "webapp" / "public" / "pastexam-figures"
+    fig_dirs = [amgi / "webapp" / "public" / "pastexam-figures", root / "fixes" / "figures"]
+
+    def fig_path(name: str) -> str:
+        for d in fig_dirs:
+            if (d / name).exists():
+                return str(d / name)
+        return name
+
+    keep = ("id", "year", "number", "sharedPrompt", "stem", "choices", "answers", "answerMode", "answerStatus",
+            "answerNote", "repeatYears", "correctionNote", "originalAnswers")
     return {
         "setId": s["id"], "title": s.get("title"), "lectures": s["lectures"], "notes": notes,
-        "items": [{**{k: e.get(k) for k in ("pastExamItemId", "year", "number", "sharedPrompt", "stem", "choices",
-                                            "answers", "answerMode", "answerText", "answerNote", "repeatYears")},
-                   "figures": [str(fig_dir / f["file"]) for f in figs.get(e["pastExamItemId"], [])]}
-                  for e in s["items"]],
+        "items": [{**{k: it.get(k) for k in keep},
+                   "figures": [fig_path(f["file"]) for f in it.get("figures", [])],
+                   "existingExplanation": explain.get(it["id"])} for it in items],
+        "problems": problems,
     }
+
+
+def upload(root: Path, base: str, token: str, audience: str, only: list[str] | None = None) -> dict:
+    """빌드 산출물을 서버에 올린다. 그림 먼저(크기가 같으면 건너뜀), 그다음 강의 문서.
+
+    서버가 jokbo-solve/1 계약과 그림 존재를 다시 검사한다. `audience=admin`이면 관리자에게만 보인다.
+    """
+    import urllib.parse
+    import urllib.request
+
+    from runner.transport import Client
+
+    out = root / EDITION
+    index = read_json(out / "index.json")
+    client = Client(base, token)
+    lectures = [l for l in index["lectures"] if not only or l["eventId"] in only or l["number"] in only]
+    names = sorted({f["file"] for l in lectures for it in read_json(out / l["file"])["items"]
+                    for f in it.get("figures", [])})
+    sent = skipped = 0
+    for name in names:
+        path = out / "figures" / name
+        q = urllib.parse.quote(name)
+        if client.call("GET", f"/api/admin/jokbo/figures/{q}").get("size") == path.stat().st_size:
+            skipped += 1
+            continue
+        req = urllib.request.Request(f"{client.base}/api/admin/jokbo/figures/{q}", data=path.read_bytes(), method="PUT",
+                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/octet-stream"})
+        client._open(req)
+        sent += 1
+    done = []
+    for l in lectures:
+        doc = read_json(out / l["file"])
+        r = client.call("PUT", f"/api/admin/jokbo/events/{urllib.parse.quote(l['eventId'])}?audience={audience}", doc)
+        done.append({"number": l["number"], "items": r["items"], "audience": r["audience"]})
+    return {"figuresSent": sent, "figuresSkipped": skipped, "lectures": done}
+
+
+def runner_token(cli: str | None) -> str:
+    import os
+    token = (cli or os.getenv("STUDYEZ_RUNNER_TOKEN", "")).strip()
+    env = REPO / "server" / ".env"
+    if not token and env.exists():
+        for line in env.read_text(encoding="utf-8").splitlines():
+            if line.startswith("RUNNER_TOKEN="):
+                token = line.split("=", 1)[1].strip().strip('"')
+    return token
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m runner.jokbo_solve")
-    p.add_argument("command", choices=["build", "status", "pack", "check"])
+    p.add_argument("command", choices=["build", "status", "pack", "check", "upload"])
     p.add_argument("set_id", nargs="?")
     p.add_argument("--amgi", type=Path, default=AMGI)
     p.add_argument("--root", type=Path, default=None)
     p.add_argument("--timetable", type=Path, default=TIMETABLE)
     p.add_argument("--notes", type=Path, default=NOTES, help="올해 필기 폴더(파일명으로 교수 확인)")
+    p.add_argument("--api", default=None, help="API 주소(기본: STUDYEZ_API_BASE_URL 또는 운영)")
+    p.add_argument("--token", default=None)
+    p.add_argument("--audience", choices=["admin", "all"], default="admin",
+                   help="admin: 관리자에게만(기본) · all: 학생에게도")
+    p.add_argument("--only", nargs="*", help="올릴 강의 번호(18, 'CBL 1') 또는 eventId")
     a = p.parse_args(argv)
     root = a.root or default_root()
     if a.command == "build":
         r = build(a.amgi, root, a.timetable, a.notes)
         print(json.dumps({"out": str(root / EDITION), "totals": r["totals"], "lectures": len(r["lectures"]),
                           "unattached": r["unattachedSets"], "problems": r["problems"]}, ensure_ascii=False, indent=1))
+    elif a.command == "upload":
+        import os
+        from runner.transport import DEFAULT_API_BASE
+        token = runner_token(a.token)
+        if not token:
+            p.error("러너 토큰이 없다: --token, STUDYEZ_RUNNER_TOKEN, 또는 server/.env의 RUNNER_TOKEN")
+        base = (a.api or os.getenv("STUDYEZ_API_BASE_URL") or DEFAULT_API_BASE).rstrip("/")
+        print(json.dumps(upload(root, base, token, a.audience, a.only), ensure_ascii=False, indent=1))
     elif a.command == "status":
         print(json.dumps(status(a.amgi, root), ensure_ascii=False, indent=1))
     else:
         if not a.set_id:
             p.error(f"{a.command} 에는 setId가 필요하다")
-        fn = pack(a.amgi, a.set_id) if a.command == "pack" else check(a.amgi, root, a.set_id)
+        fn = pack(a.amgi, root, a.set_id) if a.command == "pack" else check(a.amgi, root, a.set_id)
         print(json.dumps(fn, ensure_ascii=False, indent=1))
     return 0
 

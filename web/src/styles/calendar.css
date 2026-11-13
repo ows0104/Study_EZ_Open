@@ -2552,3 +2552,15 @@ button.event-panel-note:hover {
   background: var(--surface); color: var(--ink); font: inherit; font-size: 13.5px; line-height: 1.5; resize: none;
 }
 .lecture-memo textarea:focus { outline: none; border-color: var(--line-strong); }
+
+/* 강의 패널 「족보」 칸(2026-11-13). 갈래 색이 아니라 먹색이다 — 강조색 둘은 예습·복습 것이다. */
+.event-panel .panel-group.is-jokbo .panel-group-head { display: flex; align-items: center; gap: 8px; }
+.event-panel .panel-group.is-jokbo .panel-group-head::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; margin-right: -1px; border-radius: 50%; background: var(--ink-2);
+}
+.action-button.is-jokbo { color: var(--ink); background: var(--surface-2); border-color: var(--line-strong); }
+.action-button.is-jokbo:hover { background: var(--surface-3); }
+.jokbo-admin-tag { font-size: 11px; font-weight: 600; font-style: normal; color: var(--warn); background: var(--warn-soft);
+  border: 1px solid var(--warn-line); border-radius: 999px; padding: 1px 8px; }
+.jokbo-split { display: flex; gap: 14px; margin: 0 0 4px; font-size: 13px; color: var(--ink-3); }
+.jokbo-split b { margin-left: 4px; color: var(--ink); font-variant-numeric: tabular-nums; }
