@@ -71,9 +71,11 @@ def write_json(path: Path, data: Any) -> None:
 
 _EVENT = re.compile(r"^감염과 면역 (\d+|CBL \d+|TBL \d+|실습 \d+)$")
 _RUN_ID = re.compile(r"^\[(\d{6})_(\d{1,2})\]")
-# 강의 번호가 없는 세트(족보의 CBL·TBL·실습 단원). 세트 제목으로 대조한 뒤 붙인다.
+# 강의 번호가 없는 세트(족보의 CBL·TBL·실습 단원). (붙일 시간표 칸, 세트 제목에 있어야 할 글자).
+# 0g는 족보 제목이 「TBL2」지만 42문항 전부 위장관·피부연조직·요로감염·폐렴이다 — 올해 그 주제는
+# 「TBL 1」(11/3)이고 「TBL 2」는 심내막염·중추신경계감염이다. 제목이 아닌 내용으로 붙인다(2026-11-13 해설 작성 중 확인).
 _SPECIAL = {"0a": ("CBL 1", "CBL 1"), "0b": ("CBL 2", "CBL 2"), "0c": ("CBL 3", "CBL 3"),
-            "0e": ("실습 1", "실습"), "0g": ("TBL 2", "TBL2")}
+            "0e": ("실습 1", "실습"), "0g": ("TBL 1", "TBL2")}
 
 
 def timetable_events(path: Path) -> dict[str, dict]:
