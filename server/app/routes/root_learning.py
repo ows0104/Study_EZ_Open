@@ -380,10 +380,10 @@ def learner_front(doc, q, db=None):
     plans = {p['concept_id']: p for p in doc.document['bank_snapshot'].get('retrieval_plan', [])}
     personal = q['tier'] if q.get('personalTier') else None
     target = policy.target_retention(q, plans.get(q.get('concept_id')), policy.target_parameters(), personal)
-    from app.root_learning import choices
-    # 단답·나열 「선지 보기」(2026-11-12): 이 판·이 문항 글에 맞는 선지가 있을 때만 붙는다.
+    from app.root_learning import choices, mcq
+    # 단답·나열 「선지 보기」(2026-11-12)·객관식 모드(2026-11-14): 이 판·이 문항 글에 맞는 선지가 있을 때만 붙는다.
     shown = light.hydrate(db, doc, q) if db is not None else q
-    return choices.attach_front(db, doc, q, {**content.front(shown), 'targetMastery': target})
+    return mcq.attach_front(db, doc, q, choices.attach_front(db, doc, q, {**content.front(shown), 'targetMastery': target}))
 
 
 def personal_editable(doc):
@@ -619,14 +619,15 @@ def revealed_answer(db, doc, q, generation=_UNSET):
     answer['external'] = any(r.get('source_id') == 'EXT' for r in q.get('source_refs', []))
     from app.root_learning.evidence import attach_evidence
     attach_evidence(db, doc, q, generation, answer)
-    from app.root_learning import choices
+    from app.root_learning import choices, mcq
     choices.attach_answer(db, doc, q, answer)
+    mcq.attach_answer(db, doc, q, answer)
     return answer
 
 
 def recall_choice_entry(db, doc, q):
-    from app.root_learning import choices
-    return choices.entry(db, doc, q)
+    from app.root_learning import choices, mcq
+    return choices.entry(db, doc, q) or mcq.entry(db, doc, q)
 
 
 def prior_exposure(doc, task, q, session_state, choices_shown=None, recall_choices=False):

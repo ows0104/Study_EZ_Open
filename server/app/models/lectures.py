@@ -35,6 +35,7 @@ ASSET_KINDS = frozenset(
         "bank_media",  # Quiz Bank 가 인용한 필기 쪽 렌더
         "root_evidence",  # Main-Quiz 판별 근거 보강 JSON(`<revision>.json`, quizbank/root_evidence.py)
         "root_choices",  # Main-Quiz 단답·나열 「선지 보기」 JSON(`<revision>.json`, quizbank/root_choices.py)
+        "root_mcq",  # Main-Quiz 객관식 모드 선지 JSON(`<revision>.json`, quizbank/root_mcq.py)
     }
 )
 
