@@ -4,7 +4,7 @@ import type { BankAnswer, BankQuestion } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
 import { AnswerPoints, answerPoints } from "./AnswerPoints";
 import { BankStem } from "./BankStem";
-import { BankSourceNote } from "./BankSourceNote";
+import { BankSourceNote, SourceConflictBadge } from "./BankSourceNote";
 import { BankSlides } from "./BankSlides";
 import { BankJokboSlides } from "./BankJokboSlides";
 import { BankEvidenceNotice } from "./BankEvidenceNotice";
@@ -151,7 +151,8 @@ export function AnswerReviewItems({ answer }: { answer: BankAnswer }) {
   </>;
 }
 
-/** `reviewInline={false}`: 검토 기록을 그리지 않는다 — 호출한 화면이 참고 슬라이드 아래에 따로 둔다. */
+/** `reviewInline={false}`: 검토 기록을 그리지 않는다 — 호출한 화면이 참고 슬라이드 아래에 따로 둔다.
+ *  자료 충돌은 접힌 기록만으로는 놓치므로 답 위에 배지로 함께 보인다. */
 export function AnswerBody({ question: q, answer, preload, reviewInline = true }: {
   question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader; reviewInline?: boolean;
 }) {
@@ -182,6 +183,8 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
   const extraChoiceUnits = remainingPoints.filter(unit => !linkedUnits.has(unit));
   return (
     <>
+      {/* 검토 기록을 접어 따로 두는 화면(Main-Quiz)은 자료 충돌만 답 위에 배지로 띄운다(2026-11-13). */}
+      {reviewInline ? null : <SourceConflictBadge answer={answer} />}
       {/* 단답은 모든 tier에서 채점 항목 자체가 답이다. 부연설명은 필요할 때만 펼친다. */}
       {conciseAnswer ? (
         <>
