@@ -1,0 +1,104 @@
+{
+  "id": "2026-11-13-immunity-exam-titles",
+  "title": "감염과 면역 1·2차 시험 칸 이름",
+  "area": "site",
+  "created_at": "2026-11-12T16:38:54.400488+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T16:40:53.840645+00:00",
+      "evidence": "사용자 2026-11-13 채팅: '왜 메인 페이지에서 오늘 복습 카드 수가 안 보이지?…' → 원인(시험 칸 제목 「시험」) 보고 후 'Rename exam events' 선택 → plan 제시 후 'Approve plan'",
+      "scope": "data/timetable 시간표 JSON 11/20·11/27 시험 칸 title, scripts/immunity_exam_titles.py(신규), scripts/immunity_timetable_update.py(해시 검사), server/tests/test_immunity_exam_titles.py, docs/changes/2026-11-13-immunity-exam-titles. 운영 DB 쓰기는 미포함(별도 승인).",
+      "evidence_version": 2,
+      "source_hash": "fd74db623e97de47d078fc6eacc90178c17704081c0e9e5c337d4fe57f7de4a2",
+      "plan_hash": "d693f5f0a336774c417684c633d411a63b01f76e19e038c3e070fbbe3ed29506",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "05366c8bf8609cf1800f3b4a5780974a417dc52e08d9332f18edd51daca52d12"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-12T16:44:30.663570+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_exclude-optional/server/.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner",
+        "-q",
+        "-k",
+        "timetable or block"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c483983fbf947dfe4693cb7606eef34ea87d1ae4c4904868d56530169a5424e2",
+      "plan_hash": "d693f5f0a336774c417684c633d411a63b01f76e19e038c3e070fbbe3ed29506",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-immunity-exam-titles/1794501830461624200-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-12T16:44:30.946732+00:00",
+    "summary": "JSON 두 시험 칸 title만 변경(바이트 비교로 2행만 다름, before 해시=11-05 after). 서버 build_study_plan 1·2차 연결, 웹 studyBlockKey 1차/2차 블록 일치, 러너 base_name 동작 동일 확인. 운영 도구는 기본 검사·--apply(deploy 승인 게이트)·--reverse, 예상 밖 값이면 중단. 11-05 도구는 해시 연쇄로만 완화. server -m tests immunity·exam_titles·study_plan 통과. 남은 위험: 운영 DB 반영은 DATABASE_URL 보유자가 실행해야 함.",
+    "evidence_version": 2,
+    "source_hash": "c483983fbf947dfe4693cb7606eef34ea87d1ae4c4904868d56530169a5424e2",
+    "plan_hash": "d693f5f0a336774c417684c633d411a63b01f76e19e038c3e070fbbe3ed29506",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T16:44:31.166249+00:00"
+}

@@ -45,7 +45,13 @@ def inputs():
     for event_id, pair in moved.items():
         r = pair["before"]
         assert identities[event_id] == r["date"].replace("-", "")[2:] + f"_{int(r['startTime'][:2])-8:02d}"
-    assert read(CHANGE / "source.json")["after_sha256"] == hashlib.sha256(SOURCE.read_bytes()).hexdigest()
+    reviewed, current = read(CHANGE / "source.json")["after_sha256"], hashlib.sha256(SOURCE.read_bytes()).hexdigest()
+    if current != reviewed:
+        # 2026-11-13-immunity-exam-titles renamed two exam cells (outside this patch) from this after.
+        later = read(ROOT / "docs/changes/2026-11-13-immunity-exam-titles/source.json")
+        assert (later["before_sha256"], later["after_sha256"]) == (reviewed, current), "Timetable JSON differs from reviewed versions"
+        renamed = {p["after"]["id"] for p in later["changed"]}
+        assert all(by_id[i]["category"] == "exam" for i in renamed) and not renamed & {p["before"]["id"] for p in patch}
     return rows, patch, identities
 
 
