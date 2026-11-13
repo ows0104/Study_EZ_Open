@@ -24,6 +24,12 @@ window.fetch = async (input, init) => {
   else if (path.endsWith("/timetable")) payload = { events: [] };
   else if (path.includes("/files/")) payload = { url: `http://localhost:8000/api/local-storage/lectures/${path.split("/").at(-1)}` };
   else if (path.endsWith("/prequiz-job")) payload = { job: null, runner: null };
+  else if ((path.endsWith("/my-preview") || path.endsWith("/my-review")) && init?.method === "PUT") {
+    // 「링크 수정」이 보낸 것을 아래 #request 에 그대로 보인다.
+    payload = JSON.parse(String(init.body));
+    document.querySelector("#request")!.textContent = `PUT ${decodeURIComponent(path)}
+${JSON.stringify(payload, null, 2)}`;
+  }
   return new Response(JSON.stringify(payload), { status: 200 });
 };
 window.addEventListener("message", (event) => {

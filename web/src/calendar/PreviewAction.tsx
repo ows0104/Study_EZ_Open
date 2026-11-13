@@ -17,6 +17,7 @@ import {
   renderPreviewPrompt,
 } from "../lecture/previewPrompt";
 import { PromptEditor } from "./PromptEditor";
+import { MyLinkEditor } from "./MyLinkEditor";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
 import { readSharedPreviewPrompt, useSharedPreviewPrompt } from "../lecture/useSharedPreviewPrompt";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureRef, type PreviewProvider } from "../types/lectures";
@@ -66,6 +67,7 @@ export function PreviewAction({
   const [showPrompt, setShowPrompt] = useState(false);
   const [showSharedPrompt, setShowSharedPrompt] = useState(false);
   const [showLinks, setShowLinks] = useState(false);
+  const [showMyLink, setShowMyLink] = useState(false);
   const [saved, setSaved] = useState("");
   const [provider, setProvider] = useState<PreviewProvider>(() =>
     detail.myPreview?.provider || detail.preview?.provider || "chatgpt"
@@ -101,6 +103,10 @@ export function PreviewAction({
         })
       }
     />
+  ) : null;
+
+  const myLinkEditor = showMyLink ? (
+    <MyLinkEditor lecture={lecture} kind="preview" current={detail.myPreview} onDone={() => setShowMyLink(false)} />
   ) : null;
 
   const linkEditor =
@@ -195,7 +201,8 @@ export function PreviewAction({
           )}
           {detail.myPreview?.conversationUrl ? (
             <ChatSplit tone="pre" linked main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
-              onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
+              onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt}
+      onLink={() => setShowMyLink(open => !open)} linkOpen={showMyLink} />
           ) : (
             <Empty name="개인 대화" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
@@ -203,6 +210,7 @@ export function PreviewAction({
         </div>
         {linkTool || sharedPromptTool ? <div className="panel-aside">{linkTool}{sharedPromptTool}</div> : null}
         {sharedPromptEditor}
+        {myLinkEditor}
         {linkEditor}
         {savedNote}
         {canInstall ? (
@@ -273,7 +281,8 @@ export function PreviewAction({
   const personal = detail.myPreview?.conversationUrl ? (
     <ChatSplit tone="pre" linked main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
       onRemake={canMake ? () => void start("personal", false) : undefined} remakeDisabled={makeDisabled}
-      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
+      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt}
+      onLink={() => setShowMyLink(open => !open)} linkOpen={showMyLink} />
   ) : canMake ? (
     <ChatSplit tone="pre"
       main={
@@ -282,7 +291,8 @@ export function PreviewAction({
           <span aria-hidden="true">＋</span>{busy === "personal" ? "여는 중…" : "개인 대화"}
         </button>
       }
-      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
+      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt}
+      onLink={() => setShowMyLink(open => !open)} linkOpen={showMyLink} />
   ) : (
     <Empty name="개인 대화" note="예습 필기 대기" />
   );
@@ -298,6 +308,7 @@ export function PreviewAction({
         {linkTool}
         {sharedPromptTool}
       </div>
+      {myLinkEditor}
       {linkEditor}
       {savedNote}
       {sharedPromptEditor}
