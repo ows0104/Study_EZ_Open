@@ -2418,6 +2418,7 @@ button.event-panel-note:hover {
 .today-card-bar.is-split i { flex: 1; background: color-mix(in srgb, currentColor 16%, transparent); }
 .today-card-bar i.is-filled { background: currentColor; }
 .today-card-label { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.today-card-solved { display: block; font-size: 12px; font-weight: 500; opacity: .75; font-variant-numeric: tabular-nums; }
 .today-card b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .today-card b small { font-size: 13px; font-weight: 600; margin-left: 2px; }
 .today-card.is-pre { background: var(--accent2-soft); border-color: var(--accent2-line); color: var(--accent2-ink); }

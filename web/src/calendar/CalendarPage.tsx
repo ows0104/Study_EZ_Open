@@ -241,13 +241,15 @@ function PreCard({ loading, slots, remaining }: { loading: boolean; slots: boole
   );
 }
 
-/** 「오늘 복습」: 시험 대비 오늘 확보 목표(%p) 중 남은 양, 막대는 진행률. */
+/** 「오늘 복습」: 시험 대비 오늘 확보 목표(%p) 중 남은 양, 막대는 진행률.
+ *  푼 문제 = 그 시험 강의들의 오늘(새벽 4시 기준) Main-Quiz 평가 수 `reviewedToday`(2026-11-13 사용자 지시).
+ *  하루 목표를 문제 수로 환산하는 일은 docs/changes/2026-11-13-daily-goal-questions/handoff.md. */
 function ReviewCard({ loading, plan }: { loading: boolean; plan: ExamPlan | null }) {
   const done = Boolean(plan?.met);
   return (
     <span className={`today-card is-review ${done ? "is-done" : ""}`}>
       <span className="today-card-row">
-        <span className="today-card-label">오늘 복습</span>
+        <span className="today-card-label">오늘 복습{plan ? <small className="today-card-solved">푼 문제 {plan.reviewedToday.toLocaleString("ko-KR")}</small> : null}</span>
         <b>{loading && !plan ? "…" : !plan ? "–"
           : done ? <>✓ {plan.requiredGain.toFixed(1)}<small>%p</small></>
           : <>{plan.remainingGain.toFixed(1)}<small>%p</small></>}</b>
