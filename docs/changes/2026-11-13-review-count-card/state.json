@@ -1,0 +1,137 @@
+{
+  "id": "2026-11-13-review-count-card",
+  "title": "캘린더 오늘 복습을 남은 문제 수로",
+  "area": "site",
+  "created_at": "2026-11-12T17:13:30.371471+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-13T01:21:02.215428+00:00",
+      "evidence": "사용자 2026-11-13 채팅: '하루 목표 수를 문제 수로 바꾸는 것에 대해서 핸드오프 문서를 작성해줘. 우선 지금은 -로 안 뜨게 수정하고, 내가 푼 문제 수를 같이 표시해줘.'",
+      "scope": "web/src/calendar/CalendarPage.tsx ReviewCard, web/src/styles/calendar.css .today-card-solved, web/src/notices/GuidePage.tsx 66행, docs/changes/2026-11-13-daily-goal-questions/handoff.md. 서버·DB 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "60ca60802d3a3638510e69099d6c436d2637615d80fccdcfc68a6a437e8d70fe",
+      "plan_hash": "d8c5c6d573beddbbad421d4a83596cbad5e28204d8d3a4c0da0de026c2e884fb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "cb1adebc1eff3967231d3150d758f87078b93265134a7c625236efe264b8659c"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-13T01:24:11.308588+00:00",
+      "command": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "b559d40c41493f8e9729937638a8e5bc65fbe63e6972fca53fbf0e5b6ffb97c7",
+      "plan_hash": "d8c5c6d573beddbbad421d4a83596cbad5e28204d8d3a4c0da0de026c2e884fb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-review-count-card/1794533050689202500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-13T01:24:36.844707+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b559d40c41493f8e9729937638a8e5bc65fbe63e6972fca53fbf0e5b6ffb97c7",
+      "plan_hash": "d8c5c6d573beddbbad421d4a83596cbad5e28204d8d3a4c0da0de026c2e884fb",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-review-count-card/1794533062146463900-web.log",
+      "web_artifact": "70db12e0aa08fdc6a25a1e0e0201efa6f759f5a24cdd4c72ece95a8d299c1622",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-13T01:24:11.805951+00:00",
+    "summary": "ReviewCard에 reviewedToday 표시만 추가(서버 값 그대로). 계획 없음일 때 줄을 숨겨 「–」와 섞이지 않음. CSS 한 줄은 오늘 할 일 칸 블록(review-bar-soft-fill의 끝 막대 블록과 다른 자리), GuidePage는 66행만(choices-collapse와 다른 절). 환산은 handoff.md로 미룸.",
+    "evidence_version": 2,
+    "source_hash": "b559d40c41493f8e9729937638a8e5bc65fbe63e6972fca53fbf0e5b6ffb97c7",
+    "plan_hash": "d8c5c6d573beddbbad421d4a83596cbad5e28204d8d3a4c0da0de026c2e884fb",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-13T01:24:40.437517+00:00"
+}
