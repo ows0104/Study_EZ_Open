@@ -60,6 +60,7 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | 자료 탐색·연도 매칭 | [runner/watch.py](../runner/watch.py), [runner/filenames.py](../runner/filenames.py), [runner/matching.py](../runner/matching.py) |
 | 족보 정리·PDF 첨부 | [공통 형식 정책](policies/jokbo-attachments.md), [runner 안내](../runner/CLAUDE.md#족보) |
 | 강의별 족보 풀이 자료(같은/다른 교수 구획·해설) | [runner/jokbo_solve.py](../runner/jokbo_solve.py), [계약](../studyez_contracts/jokbo/solve.py), [설계](changes/2026-11-13-jokbo-solve/spec.md) |
+| 족보 오답노트(좌측 메뉴, 강의 구분 없이 한 화면·상중하 표시) | [web/src/jokbo/WrongNotePage.tsx](../web/src/jokbo/WrongNotePage.tsx), [server/app/routes/jokbo.py](../server/app/routes/jokbo.py), 표 `jokbo_mark`, [설계](changes/2026-11-14-jokbo-wrong-notes/spec.md) |
 | 자동 작업 실행·대기 | [runner/agent.py](../runner/agent.py), [runner/cycle.py](../runner/cycle.py) |
 | 상태 판정·재시도 기록 | [runner/agent_state.py](../runner/agent_state.py) |
 | 생성기 실행·계약 변환 | [runner/deck.py](../runner/deck.py), [은행 러너 지도](../runner/bank_flow/CLAUDE.md) |

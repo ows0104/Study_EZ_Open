@@ -51,3 +51,38 @@
 .jokbo-variant{padding:2px 10px;border-radius:999px;background:var(--accent2-soft);color:var(--accent2-ink);border:1px solid var(--accent2-line);font-size:12.5px;font-weight:600}
 .jokbo-options .bank-option.is-changed{box-shadow:inset 3px 0 0 var(--accent2)}
 .jokbo-options .bank-option.is-changed::after{content:"바뀜";float:right;padding-left:10px;font-size:11.5px;font-weight:700;color:var(--accent2-ink)}
+
+/* 오답노트(2026-11-14). 상이 가장 크게, 하가 가장 조용히 — 무게는 중요도를 따른다. */
+.jokbo-bands{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.jokbo-bands-label{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-right:2px}
+.jokbo-band{height:28px;padding:0 11px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);font-size:12.5px;font-weight:600;cursor:pointer}
+.jokbo-band:hover{border-color:var(--ink-2);color:var(--ink)}
+.jokbo-band.is-high[aria-pressed="true"]{background:var(--exam-ink);border-color:var(--exam-ink);color:#fff}
+.jokbo-band.is-mid[aria-pressed="true"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.jokbo-band.is-low[aria-pressed="true"]{background:var(--surface-2);border-color:var(--ink-2);color:var(--ink)}
+
+.jokbo-notes-count{font-variant-numeric:tabular-nums;color:var(--ink-3);font-weight:600}
+.jokbo-notes-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 16px}
+.jokbo-notes-bar .mq-focus{margin-top:0}
+.jokbo-notes-missing,.jokbo-notes-empty{margin:0 0 12px;font-size:13.5px;color:var(--ink-3)}
+.jokbo-notes-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.jokbo-note{padding:16px 18px;border:1px solid var(--line);border-left:4px solid var(--line-strong);border-radius:12px;background:var(--surface)}
+@media (max-width:640px){.jokbo-note{padding:12px 12px}}
+.jokbo-note.is-high{border-left-color:var(--exam-ink)}
+.jokbo-note.is-mid{border-left-color:var(--warn)}
+.jokbo-note.is-low{border-left-color:var(--line-strong)}
+.jokbo-note.is-cleared{border-left-color:var(--ok)}
+.jokbo-note-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.jokbo-note-index{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.jokbo-band-tag{padding:2px 9px;border-radius:999px;font-weight:700}
+.jokbo-band-tag.is-high{background:var(--exam-soft);color:var(--exam-ink)}
+.jokbo-band-tag.is-mid{background:var(--warn-soft);color:var(--warn)}
+.jokbo-band-tag.is-low{background:var(--surface-2);color:var(--ink-2)}
+.jokbo-note-cleared{padding:2px 9px;border-radius:999px;background:var(--ok-soft);color:var(--ok);font-weight:700}
+.jokbo-note-now{padding:2px 9px;border-radius:999px;border:1px solid var(--warn-line);color:var(--warn);font-weight:600}
+.jokbo-note-lecture{color:var(--ink);font-weight:600;text-decoration:none}
+.jokbo-note-lecture:hover{text-decoration:underline}
+.jokbo-note-wrong{color:var(--exam-ink);font-weight:600}
+.jokbo-note-actions{display:flex;gap:10px;align-items:center}
+.jokbo-note-actions .quiz-submit{min-height:34px}
+.jokbo-note .jokbo-bands{padding-top:10px;border-top:1px dashed var(--line)}

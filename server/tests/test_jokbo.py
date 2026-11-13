@@ -79,6 +79,42 @@ def main():
 
     # 학생은 올릴 수 없다
     assert client.put("/api/admin/jokbo/events/ev18", json=DOC).status_code in (401, 403)
+
+    # ── 오답노트(2026-11-14)
+    assert client.get("/api/jokbo/wrong-notes").json() == {"items": [], "missing": 0}
+    ans = lambda item, result: client.post(f"/api/jokbo/events/ev18/items/{item}/answer", json={"result": result})
+    mark = lambda item, band: client.put(f"/api/jokbo/events/ev18/items/{item}/mark", json={"band": band})
+    assert ans("zz", "wrong").status_code == 404  # 없는 문항
+    assert ans("a", "maybe").status_code == 422
+    # 맞히면 기록만, 표시는 안 붙는다
+    m = ans("a", "correct").json()
+    assert m["band"] is None and m["rightCount"] == 1 and m["lastResult"] == "correct", m
+    assert client.get("/api/jokbo/wrong-notes").json()["items"] == []
+    # 틀리면 「틀림」이 붙고, 다시 맞혀도 떼지 않는다
+    assert ans("b", "wrong").json()["band"] == "high"
+    m = ans("b", "correct").json()
+    assert m["band"] == "high" and m["wrongCount"] == 1 and m["rightCount"] == 1, m
+    # 손으로 표시: a를 「헷갈림」
+    assert mark("a", "low").json()["band"] == "low"
+    assert mark("a", "top").status_code == 422
+    notes = client.get("/api/jokbo/wrong-notes").json()
+    assert [e["item"]["id"] for e in notes["items"]] == ["b", "a"], notes  # 상 → 하
+    first = notes["items"][0]
+    assert first["kind"] == "other" and first["professors"] == ["을"] and first["lecture"]["eventId"] == "ev18"
+    assert notes["items"][1]["item"]["figures"][0]["url"]
+    # 떼면 빠지고, 푼 기록은 남는다
+    m = mark("b", None).json()
+    assert m["band"] is None and m["wrongCount"] == 1, m
+    assert [e["item"]["id"] for e in client.get("/api/jokbo/wrong-notes").json()["items"]] == ["a"]
+    assert len(client.get("/api/jokbo/marks?eventId=ev18").json()["marks"]) == 2
+    # 남의 기록은 안 보인다
+    login(admin=True)
+    assert client.get("/api/jokbo/marks").json()["marks"] == []
+    # 족보를 관리자 전용으로 되돌리면 학생 오답노트에서는 빠지고 missing으로 센다
+    assert client.put("/api/admin/jokbo/events/ev18", json=DOC, headers=RUNNER).status_code == 200
+    login()
+    assert client.get("/api/jokbo/wrong-notes").json() == {"items": [], "missing": 1}
+    assert ans("a", "wrong").status_code == 404
     print("jokbo: 모두 통과")
 
 
