@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from runner import connection_generation as worker
-from runner import root_evidence
+from runner import root_choices, root_evidence
 from studyez_contracts.roots import map_tree
 
 OLD, NEW = 'a' * 32, 'b' * 32
@@ -86,6 +86,8 @@ def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_r
     monkeypatch.setattr(worker, 'completed_result', lambda out_, packet: json.loads((out_ / 'result.json').read_text(encoding='utf-8')))
     monkeypatch.setattr(root_evidence, 'upload', lambda client, subject, run_id, path: uploads.append(path))
     monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: pytest.fail('the evidence is not built again'))
+    choices = []   # the new revision still gets its recall choices (2026-11-14 choices-by-default)
+    monkeypatch.setattr(root_choices, 'publish', lambda client, subject, run_id, folder, payload, **k: choices.append(payload['document']['revision']))
     client = SimpleNamespace(call=lambda method, path, payload=None: {'status': 'ready', 'revision': 'auto-' + NEW})
     packet = request()
     assert worker._generate(client, 'S', 'R', '/api/x', packet, out / 'packet.json', out) == 0
@@ -93,6 +95,7 @@ def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_r
     assert args[2] == 'runner.root_native_json'   # the native transport, whose main takes the flag
     assert Path(args[args.index('--duplicates-of') + 1]) == (root / 'generation').resolve() and '--resume' not in args
     assert [p.name for p in uploads] == ['auto-' + NEW + '.json']
+    assert choices == ['auto-' + NEW]
     assert json.loads(uploads[0].read_text(encoding='utf-8')) == {'schema': 'root-evidence/1', 'revision': 'auto-' + NEW, 'sources': {'S1': 'x'}}
     # The previous run is untouched.
     assert json.loads((root / 'generation' / 'evidence' / 'evidence.json').read_text(encoding='utf-8'))['revision'] == 'auto-' + OLD

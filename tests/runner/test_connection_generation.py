@@ -8,15 +8,17 @@ import pytest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'contracts'))
 import automation_fixture as f
 from runner import connection_generation as worker
-from runner import root_evidence
+from runner import root_choices, root_evidence
 from runner.bank_flow import execution
 
 
 @pytest.fixture(autouse=True)
 def no_evidence_model(monkeypatch):
-    """게시 뒤 근거 보강은 tests/runner/test_root_evidence_publish.py가 따로 본다. 여기서는 모델을 부르지 않는다."""
+    """게시 뒤 근거 보강·선지는 tests/runner/test_root_evidence_publish.py·test_root_choices_publish.py가 따로 본다.
+    여기서는 모델을 부르지 않는다."""
     calls=[]
     monkeypatch.setattr(root_evidence,'build',lambda *a,**k:calls.append(a) or None)
+    monkeypatch.setattr(root_choices,'build',lambda *a,**k:None)
     return calls
 
 

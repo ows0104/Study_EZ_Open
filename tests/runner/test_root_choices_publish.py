@@ -1,4 +1,4 @@
-"""게시 뒤 선지 작성: 실패해도 게시를 되돌리지 않고, 성공하면 root_choices/<revision>.json 하나를 올린다."""
+"""게시 뒤 선지 작성(2026-11-14부터 게시 직후 기본 실행): 실패해도 게시를 되돌리지 않고, 성공하면 root_choices/<revision>.json 하나를 올린다."""
 from runner import root_choices, transport
 
 
@@ -98,10 +98,72 @@ def test_no_upload는_만들기만_하고_서버를_부르지_않는다(tmp_path
     assert seen["out"] == folder / "choices" and "만들기만 함" in capsys.readouterr().out
 
 
-def test_게시_경로는_선지_단계를_부르지_않는다():
-    from pathlib import Path
-    source = (Path(root_choices.__file__).parent / "connection_generation.py").read_text(encoding="utf-8")
-    assert "root_choices" not in source
+def test_게시_직후_선지를_기본으로_붙이고_실패해도_게시는_성공이다(tmp_path, monkeypatch):
+    """2026-11-14 「기본으로 설정해줘」: 근거 보강 다음에 같은 실행 폴더의 choices/에 만들어 올린다."""
+    import json
+    from types import SimpleNamespace
+    from runner import connection_generation as worker, root_evidence
+    order = []
+    payload = {"document": {"revision": "auto-1", "bank_snapshot": {"questions": []}}, "manifest": {}}
+    out = tmp_path / "_root-generation" / ("a" * 32)
+    out.mkdir(parents=True)
+    (out / "result.json").write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(worker, "validate_result", lambda payload, packet: None)
+    monkeypatch.setattr(worker, "validate_continuations", lambda out_, payload: None)
+    monkeypatch.setattr(worker, "completed_result", lambda out_, packet: payload)
+    monkeypatch.setattr(root_evidence, "publish", lambda *a, **k: order.append("evidence"))
+
+    def choices(client, subject, run_id, folder, got, *, model=None, run=None):
+        order.append(("choices", subject, run_id, folder, got["document"]["revision"], model))
+        return False   # 실패해도 게시 결과는 그대로다
+
+    monkeypatch.setattr(root_choices, "publish", choices)
+    client = SimpleNamespace(call=lambda method, path, body=None: {"status": "ready", "revision": "auto-1"})
+    packet = {"sources": []}
+    assert worker._generate(client, "감염과 면역", "261113_02", "/api/x", packet, out / "packet.json", out, model="m") == 0
+    assert order == ["evidence", ("choices", "감염과 면역", "261113_02", out, "auto-1", "m")]
+    assert json.loads((out / "published.json").read_text(encoding="utf-8"))["status"] == "ready"
+
+
+def test_업로드가_끝나면_판을_기록하고_missing은_그_강의를_건너뛴다(tmp_path, monkeypatch, capsys):
+    import json
+    done = _run(tmp_path, "a" * 32, "261102_02", "rev-a")
+    _run(tmp_path, "b" * 32, "261113_02", "rev-b")
+
+    def build(document, out, run_id, *, model=None, run=None):
+        out.mkdir(parents=True, exist_ok=True)
+        path = out / f"{document['revision']}.json"; path.write_text("{}", encoding="utf-8")
+        return path
+
+    monkeypatch.setattr(root_choices, "build", build)
+    monkeypatch.setattr(root_choices, "upload", lambda *a: None)
+    assert root_choices.publish(Client(), "감염과 면역", "261102_02", done, {"document": {"revision": "rev-a"}}) is True
+    assert json.loads((done / "choices" / "uploaded.json").read_text(encoding="utf-8"))["revision"] == "rev-a"
+    built = []
+    monkeypatch.setattr(root_choices, "build", lambda document, out, run_id, **k: built.append(run_id) or out / "x.json")
+    code = root_choices.main(["--all-published", "--subject", "감염과 면역", "--missing", "--runs", str(tmp_path), "--no-upload"])
+    assert code == 0 and built == ["261113_02"]
+    assert "성공 1 · 실패 0 · 이미 있음 1" in capsys.readouterr().out
+    built.clear()   # --missing 없이는 다시 만든다
+    assert root_choices.main(["--all-published", "--subject", "감염과 면역", "--runs", str(tmp_path), "--no-upload"]) == 0
+    assert sorted(built) == ["261102_02", "261113_02"]
+
+
+def test_올린_기록은_현재_판에만_맞고_표시_전의_파일은_11월_12일_일괄분만_인정한다(tmp_path):
+    import json
+    import os
+    folder = tmp_path / "run"
+    (folder / "choices").mkdir(parents=True)
+    assert root_choices.uploaded(folder, "rev-1") is False
+    legacy = folder / "choices" / "rev-1.json"
+    legacy.write_text("{}", encoding="utf-8")
+    assert root_choices.uploaded(folder, "rev-1") is False   # 표시가 생긴 뒤 --no-upload로 만든 파일
+    os.utime(legacy, (root_choices.MARKER_SINCE - 86400,) * 2)
+    assert root_choices.uploaded(folder, "rev-1") is True    # 2026-11-12 일괄 업로드
+    (folder / "choices" / "uploaded.json").write_text(json.dumps({"revision": "rev-0"}), encoding="utf-8")
+    assert root_choices.uploaded(folder, "rev-1") is False   # 표시가 있으면 표시만 본다
+    (folder / "choices" / "uploaded.json").write_text(json.dumps({"revision": "rev-1"}), encoding="utf-8")
+    assert root_choices.uploaded(folder, "rev-1") is True
 
 
 def test_여러_강의를_함께_돌리고_한_강의의_실패가_나머지를_막지_않는다(tmp_path, monkeypatch, capsys):

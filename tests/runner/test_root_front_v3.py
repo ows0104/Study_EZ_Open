@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'contracts'))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'quizbank'))
 from runner import root_front as rf
 from runner import connection_generation as worker
-from runner import root_evidence
+from runner import root_choices, root_evidence
 from studyez_contracts.roots import map_tree, document_hash
 from studyez_contracts.roots.automation import packet_hash, validate_result
 from map_tree_fixture import TITLE, pdf, fake_codex
@@ -139,6 +139,7 @@ def test_runner_runs_front_then_v3_and_the_server_can_re_derive_and_check(tmp_pa
     (tmp_path / 'src').mkdir(); p = server_packet(tmp_path / 'src')
     client = Client(p); commands = []; front_calls = []
     monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: None)
+    monkeypatch.setattr(root_choices, 'build', lambda *a, **k: None)
     monkeypatch.setattr(worker.urllib.request, 'urlopen', lambda req, **k: io.BytesIO(client.bodies[req.full_url.rsplit('/', 1)[1]]))
 
     def child(args, **kwargs):
@@ -172,6 +173,7 @@ def test_a_resume_sets_aside_a_stored_result_the_current_checks_refuse(tmp_path,
     (tmp_path / 'src').mkdir(); p = server_packet(tmp_path / 'src')
     client = Client(p); commands = []
     monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: None)
+    monkeypatch.setattr(root_choices, 'build', lambda *a, **k: None)
     monkeypatch.setattr(worker.urllib.request, 'urlopen', lambda req, **k: io.BytesIO(client.bodies[req.full_url.rsplit('/', 1)[1]]))
 
     def child(args, **kwargs):

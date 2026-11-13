@@ -1,7 +1,8 @@
-"""이미 게시된 Main-Quiz 판에 단답·나열 문항의 「선지 보기」용 선지를 만들어 붙인다(2026-11-12).
+"""Main-Quiz 판에 단답·나열 문항의 「선지 보기」용 선지를 만들어 붙인다(2026-11-12).
 
-출제 파이프라인과 따로 도는 수동 명령이다(사용자 2026-11-12 「파이프라인에 영향을 안 주고」). 러너의 게시 경로는
-이 모듈을 부르지 않는다. 강의 하나를 지정하면 그 강의의 게시된 실행(`runs/_root-generation/<gid>/`)에서
+2026-11-14부터 러너가 판을 게시한 직후 `publish`를 기본으로 부른다(사용자 「기본으로 설정해줘」,
+`runner/connection_generation.py`, docs/changes/2026-11-14-choices-by-default). 실패해도 게시는 그대로다.
+아래 수동 명령은 이미 게시된 판에 다시 붙이거나 빠진 강의를 채울 때 쓴다. 강의 하나를 지정하면 그 강의의 게시된 실행(`runs/_root-generation/<gid>/`)에서
 판 문서를 읽고, 생성기(`quizbank.root_choices`)를 하위 프로세스로 돌려 결과 JSON 하나를 asset 종류
 `root_choices`(`<revision>.json`)로 기존 업로드 경로에 올린다. 문항·판·검수 상한·학습 기록을 바꾸지 않는다.
 서버는 선지가 없으면 지금처럼 문제만 보여 준다.
@@ -10,9 +11,13 @@
     python -m runner.root_choices --run-id 261110_03               # 만들어 올리기
     python -m runner.root_choices --run-id 261102_02 --run-id 261102_03 --workers 2   # 여러 강의를 함께
     python -m runner.root_choices --all-published --subject 감염과 면역                # 이 PC에서 게시한 그 과목 강의 전부
+    python -m runner.root_choices --all-published --subject 감염과 면역 --missing      # 그중 현재 판에 선지를 올린 기록이 없는 강의만
 
 여러 강의는 `--workers`개씩 함께 돌고(2026-11-12 사용자 「묶음 병렬식 처리로 시간 단축」), 강의 안의 묶음도
 생성기에서 함께 돈다(`quizbank.root_choices.WORKERS`). 한 강의의 실패는 다른 강의를 멈추지 않는다.
+
+업로드가 끝나면 `<실행>/choices/uploaded.json`에 판을 적는다. `--missing`은 그 판이 현재 게시 판과 같으면 건너뛴다.
+이 표시가 생기기 전(2026-11-14 이전)에 만든 `choices/<revision>.json`은 2026-11-12 일괄 업로드의 것이므로 올린 것으로 본다.
 """
 from __future__ import annotations
 
@@ -20,12 +25,16 @@ import json
 import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 
 from . import transport
 from .subprocesses import run_forwarded
 
 KIND = "root_choices"
+MARKER = "uploaded.json"
+# 업로드 표시가 생긴 시각. 이보다 먼저 만든 `<revision>.json`은 2026-11-12 일괄 업로드 때의 것이다.
+MARKER_SINCE = datetime(2026, 11, 13, 15, 0, tzinfo=UTC).timestamp()   # 2026-11-14 00:00 KST
 
 
 def upload(client: transport.Client, subject: str, run_id: str, path: Path) -> None:
@@ -66,6 +75,8 @@ def publish(client: transport.Client, subject: str, run_id: str, out: Path, payl
             print(f"Quiz Bank {run_id}: 선지 작성 실패 — 판은 게시됨, 선지 없이 표시", flush=True)
             return False
         upload(client, subject, run_id, path)
+        (path.parent / MARKER).write_text(json.dumps(
+            {"revision": document["revision"], "uploadedAt": datetime.now(UTC).isoformat()}), encoding="utf-8")
         print(f"Quiz Bank {run_id}: 선지 업로드 완료 ({path.name})", flush=True)
         return True
     except Exception as error:  # noqa: BLE001 — 게시를 되돌리지 않는다
@@ -106,24 +117,38 @@ def published_run_ids(runs: Path, subject: str) -> list[str]:
     return sorted({row[2]["runId"] for row in _published(runs, subject) if row[2].get("runId")})
 
 
-def one(run_id: str, args, client) -> bool:
-    """강의 하나. 실패는 False로 돌려주고 다른 강의를 멈추지 않는다."""
+def uploaded(folder: Path, revision: str) -> bool:
+    """이 실행 폴더에서 이 판의 선지를 올린 기록이 있나."""
+    marker = folder / "choices" / MARKER
+    try:
+        return json.loads(marker.read_text(encoding="utf-8")).get("revision") == revision
+    except (OSError, ValueError, AttributeError):
+        pass
+    legacy = folder / "choices" / f"{revision}.json"
+    return not marker.exists() and legacy.exists() and legacy.stat().st_mtime < MARKER_SINCE
+
+
+def one(run_id: str, args, client) -> str:
+    """강의 하나: "done"·"skipped"·"failed". 실패는 다른 강의를 멈추지 않는다."""
     try:
         folder, packet, payload = published_run(args.runs, run_id, args.subject, args.generation)
     except SystemExit as missing:
         print(missing, flush=True)
-        return False
+        return "failed"
     document = payload["document"]
+    if args.missing and uploaded(folder, document["revision"]):
+        print(f"Main-Quiz {run_id}: 판 {document['revision']} 선지 이미 올림 — 건너뜀", flush=True)
+        return "skipped"
     print(f"Main-Quiz {run_id}: 판 {document['revision']} ({folder.name}) 선지 작성", flush=True)
     if client is None:
         try:
             path = build(document, folder / "choices", run_id, model=args.model)
         except Exception as error:  # noqa: BLE001 — 한 강의의 실패가 다른 강의를 멈추지 않는다
             print(f"{run_id} 선지 작성 실패 — {error}", flush=True)
-            return False
+            return "failed"
         print(f"{run_id} 만들기만 함: {path}" if path else f"{run_id} 선지 작성 실패", flush=True)
-        return path is not None
-    return publish(client, packet["subject"], run_id, folder, payload, model=args.model)
+        return "done" if path is not None else "failed"
+    return "done" if publish(client, packet["subject"], run_id, folder, payload, model=args.model) else "failed"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -137,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--workers", type=int, default=2, help="함께 도는 강의 수")
     ap.add_argument("--model")
     ap.add_argument("--no-upload", action="store_true", help="만들기만 하고 올리지 않는다")
+    ap.add_argument("--missing", action="store_true", help="현재 판에 선지를 올린 기록이 있는 강의는 건너뛴다")
     ap.add_argument("--api")
     ap.add_argument("--token")
     args = ap.parse_args(argv)
@@ -160,8 +186,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"선지 작성 {len(run_ids)}강의 · 함께 {max(1, args.workers)}: {', '.join(run_ids)}", flush=True)
     with ThreadPoolExecutor(max_workers=max(1, min(args.workers, len(run_ids)))) as pool:
         done = list(pool.map(lambda run_id: one(run_id, args, client), run_ids))
-    failed = [r for r, ok in zip(run_ids, done) if not ok]
-    print(f"선지 작성 끝: 성공 {len(run_ids) - len(failed)} · 실패 {len(failed)}" + (f" ({', '.join(failed)})" if failed else ""), flush=True)
+    failed = [r for r, state in zip(run_ids, done) if state == "failed"]
+    skipped = done.count("skipped")
+    print(f"선지 작성 끝: 성공 {done.count('done')} · 실패 {len(failed)}" + (f" ({', '.join(failed)})" if failed else "")
+          + (f" · 이미 있음 {skipped}" if skipped else ""), flush=True)
     return 1 if failed else 0
 
 
