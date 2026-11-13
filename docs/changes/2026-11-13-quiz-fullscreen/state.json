@@ -1,0 +1,137 @@
+{
+  "id": "2026-11-13-quiz-fullscreen",
+  "title": "퀴즈 전체 화면 버튼",
+  "area": "site",
+  "created_at": "2026-11-13T13:49:40.356495+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-13T17:50:23.784363+00:00",
+      "evidence": "사용자 채팅 2026-11-14: 「승인, 구현해」 (plan.md 제시 직후)",
+      "scope": "web/src/FullscreenButton.tsx 신규, web/src/StudyNav.tsx, web/src/styles/base.css, 작업 폴더; 로컬 구현·검사·PR 생성까지. 예습 퀴즈(QuizPage) 제외, master 병합 별도",
+      "evidence_version": 2,
+      "source_hash": "8a60ceee5f1074da6af0fe1891d873858ff34812999f61cf77f2e96760714005",
+      "plan_hash": "716e03c56003d33764eef81707f069b2ad529c80d077e9693ae39e140d0538b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "0034384aa9b5dfe2288d9885a5c2d76cb2b435aed8817b75cc4c9ead0816dfa2"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-13T17:51:38.871757+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4539461b7659112b12805bf8153a49076a6dd7269b76fc775875bb95cfb4fa2c",
+      "plan_hash": "716e03c56003d33764eef81707f069b2ad529c80d077e9693ae39e140d0538b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-quiz-fullscreen/1794592286072445100-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-13T17:54:18.390990+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0508e8f69835a391b3bca23908420ef036407c7aff4f5fab58ab8a0b96fcacf8",
+      "plan_hash": "716e03c56003d33764eef81707f069b2ad529c80d077e9693ae39e140d0538b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-13-quiz-fullscreen/1794592442474794600-web.log",
+      "web_artifact": "62beaf60faea05162a72fe68ac8c5e35782e93172ff0dda082a0216aefc7dc32",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-13T17:53:53.100890+00:00",
+    "summary": "StudyNav에 FullscreenButton 추가만. 상태는 document.fullscreenElement에서만 읽어 Esc 등 외부 해제와 어긋나지 않음. 언마운트 시 이 버튼이 켠 경우만 해제. 거절은 무시(상태 불변). 단축키 없음 → 풀이 키 충돌 없음. 서버·DB·기록 변경 없음. 남은 위험: 실제 로그인 화면 미확인, 예습 퀴즈 미포함.",
+    "evidence_version": 2,
+    "source_hash": "0508e8f69835a391b3bca23908420ef036407c7aff4f5fab58ab8a0b96fcacf8",
+    "plan_hash": "716e03c56003d33764eef81707f069b2ad529c80d077e9693ae39e140d0538b2",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-13T17:54:22.613193+00:00"
+}

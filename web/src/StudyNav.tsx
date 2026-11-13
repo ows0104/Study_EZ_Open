@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FeedbackButton } from "./feedback/FeedbackButton";
+import { FullscreenButton } from "./FullscreenButton";
 
 /** 학습 화면에서도 같은 탭의 방문 기록과 캘린더를 자유롭게 오간다. */
 export function StudyNav() {
@@ -11,6 +12,9 @@ export function StudyNav() {
       <Link to="/">캘린더</Link>
       <Link to="/study">강의 목록</Link>
     </nav>
-    <FeedbackButton />
+    <div className="study-nav-tools">
+      <FullscreenButton />
+      <FeedbackButton />
+    </div>
   </header>;
 }
