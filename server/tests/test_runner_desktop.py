@@ -14,7 +14,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from app.auth import require_runner
 from app.database import Base, SessionLocal, engine
-from app.models import Asset, Lecture, Preview, PrequizJob, QuizBank
+from app.models import JOB_AUTO_DAILY_CAP, Asset, Lecture, Preview, PrequizJob, QuizBank
 from runner import desktop_control as control
 from scripts.runner_desktop_jobs import tasks, operate
 from scripts import runner_desktop_jobs as service
@@ -104,7 +104,7 @@ def main():
         assert db.query(PrequizJob).filter_by(run_id='261102_04').count() == 1
         assert db.query(PrequizJob).filter_by(run_id='261102_05').count() == 1
         auto = db.scalars(select(PrequizJob).where(PrequizJob.origin == 'auto')).all()
-        assert len([j for j in auto if j.state == 'queued']) <= 6
+        assert len([j for j in auto if j.state == 'queued']) <= JOB_AUTO_DAILY_CAP
         command(db, user, 'pause')
         pre.state, pre.stage = 'held', control.GLOBAL_STAGE
         db.commit()
