@@ -59,7 +59,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices, choiceCorrectIds, choiceHint = true }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -72,10 +72,14 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   onStimuliReady?:(ready:boolean)=>void;
   /** 단답·나열에 덧붙인 선지(Main-Quiz 「선지 보기」). 주면 q.options 대신 그리고, 답을 본 뒤 선지마다 결과를 표시한다. */
   recallChoices?: { id: string; text: string }[];
+  /** recallChoices의 정답 ID를 직접 줄 때(객관식 모드). 없으면 answer.recallCorrectIds. */
+  choiceCorrectIds?: string[];
+  /** 「하나를/모두 고르세요」 안내. 객관식 모드는 정답 개수를 알리지 않으려고 끈다. */
+  choiceHint?: boolean;
 }) {
   const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
   const options = recallChoices ?? q.options;
-  const expected = recallChoices ? answer?.recallCorrectIds : answer?.correctOptionIds;
+  const expected = recallChoices ? (choiceCorrectIds ?? answer?.recallCorrectIds) : answer?.correctOptionIds;
   const marked = recallChoices ? Boolean(answer && expected?.length) : Boolean(score);
   return (
     <>
@@ -83,7 +87,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
       {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady}/>}
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
-      {recallChoices && showOptions && !answer ? <p className="bank-note">{q.format === "list" ? "해당하는 것을 모두 고르세요." : "하나를 고르세요."}</p> : null}
+      {recallChoices && choiceHint && showOptions && !answer ? <p className="bank-note">{q.format === "list" ? "해당하는 것을 모두 고르세요." : "하나를 고르세요."}</p> : null}
       {options.length && showOptions ? (
         <ul className="bank-options">
           {options.map((option, index) => {
@@ -96,7 +100,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
             return (
               <li key={option.id}>
                 <button type="button" className={`bank-option${cls}`} disabled={disabled || Boolean(answer)}
-                  aria-pressed={selected} aria-keyshortcuts={index < 4 ? String(index + 1) : undefined} onClick={() => onPick(option.id)}>
+                  aria-pressed={selected} aria-keyshortcuts={index < 9 ? String(index + 1) : undefined} onClick={() => onPick(option.id)}>
                   <b>{index + 1}</b> {option.text}
                   {label ? <span className="bank-option-result">{label}</span> : null}
                 </button>

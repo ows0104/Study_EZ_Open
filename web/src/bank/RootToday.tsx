@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ROOT_TIERS } from '../types/rootLearning';
 import type { RootFocus, RootOverview, RootSummary, RootPolicy, RootTierName } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
+import { readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
 
 export function RootPolicyNotice({policy}:{policy?:RootPolicy}) {
   if(!policy)return null;
@@ -54,6 +55,9 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
   const p=info.plan,s=info.summary;
   const count=info.sessionId?resumeCount:p?.tasks.length;
   const learned=s&&s.total?s.learned/s.total*100:0,recalled=s&&s.total?s.recalled/s.total*100:0;
+  // 주관식/객관식 모드(2026-11-14). 풀이 화면이 같은 저장값을 읽는다.
+  const [mode,setMode]=useState<QuizMode>(readQuizMode);
+  const choose=(next:QuizMode)=>{saveQuizMode(next);setMode(next);};
   return <section className="mq-start">
     <header className="page-head mq-head">
       <div>
@@ -81,6 +85,11 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
           <p>{p.tasks.length?<>새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
           <small>{p.deadline?`첫 학습 목표일 ${p.deadline}${p.days!==null&&p.days<=0?' · 목표일 지남':''}`:'시험일 미정 · 준비된 새 범위와 필요한 복습을 추천합니다.'}</small>
           {info.focus&&onFocus&&<FocusChips focus={info.focus} disabled={disabled||starting} onChange={onFocus}/>}
+          <div className="mq-mode" role="radiogroup" aria-label="풀이 모드">
+            {([['recall','주관식'],['mcq','객관식']] as [QuizMode,string][]).map(([value,label])=>
+              <button key={value} type="button" role="radio" aria-checked={mode===value} className={mode===value?'is-on':''}
+                disabled={starting} onClick={()=>choose(value)}>{label}</button>)}
+          </div>
         </div>
         <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart} aria-busy={starting}>
           <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}

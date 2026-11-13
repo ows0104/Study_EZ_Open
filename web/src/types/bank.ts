@@ -81,6 +81,8 @@ export type BankQuestion = {
   mcq_mode?: "recall_first" | "comparison" | "none";
   /** Main-Quiz 단답·나열 「선지 보기」(2026-11-12). 문항의 options와 별개이며 사용자가 펼 때만 보인다. */
   recall_choices?: { id: string; text: string }[];
+  /** Main-Quiz 객관식 모드 선지(2026-11-14). 객관식 모드에서만 보인다. */
+  mcq_choices?: { id: string; text: string }[];
   personalEdited?: boolean;
   question_id: string;
   personalTier?: boolean;
@@ -117,6 +119,8 @@ export type BankAnswer = {
   correctOptionIds: string[];
   /** recall_choices의 정답 ID. 답을 편 응답에만 온다. */
   recallCorrectIds?: string[];
+  /** mcq_choices의 정답 ID. 답을 편 응답에만 온다. */
+  mcqCorrectIds?: string[];
   answerPairs: { left: string; right: string }[];
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */

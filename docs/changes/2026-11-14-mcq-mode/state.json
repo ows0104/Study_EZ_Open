@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-14-mcq-mode",
+  "title": "복습 퀴즈 객관식 모드",
+  "area": "site",
+  "created_at": "2026-11-13T18:37:40.275101+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-13T18:37:40.275124+00:00"
+}
