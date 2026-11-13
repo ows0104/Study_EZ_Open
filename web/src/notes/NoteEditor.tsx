@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { Icon } from '../shell/icons';
 import type { NoteBlock, NoteBlockType } from '../types/notes';
+import { imageFiles, readImage, saveImage } from './localImages';
 import { sanitizeNoteHtml } from './sanitize';
 
 /**
@@ -9,11 +10,15 @@ import { sanitizeNoteHtml } from './sanitize';
  *
  * 블록마다 contentEditable 하나. React는 블록 목록·종류만 그리고 글 내용(DOM)은 건드리지 않는다.
  * 코드가 내용을 바꿔야 할 때(합치기·종류 전환)만 rev를 올려 블록을 다시 만든다.
+ *
+ * 2026-11-13: 사진 블록(`image`)은 이 브라우저에만 둔 사진을 id로 가리킨다(`localImages`).
+ * `handle.insertText`는 마지막 커서 위치에 글을 넣는다(플로팅 노트의 「강의명」 버튼).
  */
 
 type BlockType = NoteBlockType;
 export type Block = NoteBlock & { rev: number };
 export type EditNote = { id: string; title: string; tags: string[]; blocks: Block[]; updatedAt: string };
+export type NoteEditorHandle = { insertText: (text: string) => void };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 export const mk = (type: BlockType, html = '', extra: Partial<Block> = {}): Block => ({ id: uid(), type, html, rev: 0, ...extra });
@@ -35,7 +40,12 @@ const TYPES: { type: BlockType; label: string; hint: string; keys: string; md?: 
   { type: 'callout', label: '콜아웃', hint: '눈에 띄는 상자', keys: 'callout 콜아웃 강조 상자', glyph: '💡' },
   { type: 'code', label: '코드', hint: '고정폭 글꼴', keys: 'code 코드', md: '```', glyph: '</>' },
   { type: 'divider', label: '구분선', hint: '가로줄', keys: 'divider hr 구분선 줄', md: '---', glyph: '—' },
+  { type: 'image', label: '사진', hint: '이 기기에만 저장', keys: 'image photo picture img 사진 이미지 그림', glyph: '▣' },
 ];
+/** 다른 블록으로 바꿀 수 있는 종류(사진은 내용이 글이 아니다). */
+const TURN_TYPES = TYPES.filter((t) => t.type !== 'image');
+
+const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** 글자색·배경색. 흰 바탕에서 읽히도록 채도를 낮춘 열 가지. */
 const COLORS = [
@@ -164,13 +174,14 @@ const INLINE_MD: [RegExp, string][] = [
 
 /* ───────── 편집 칸 하나 ───────── */
 
-function Editable({ block, className, placeholder, register, onInput, onKeyDown }: {
+function Editable({ block, className, placeholder, register, onInput, onKeyDown, onPaste }: {
   block: Block;
   className: string;
   placeholder: string;
   register: (id: string, el: HTMLDivElement | null) => void;
   onInput: (block: Block, el: HTMLDivElement, composing: boolean) => void;
   onKeyDown: (block: Block, el: HTMLDivElement, ev: ReactKeyboardEvent<HTMLDivElement>) => void;
+  onPaste: (block: Block, ev: ReactClipboardEvent<HTMLDivElement>) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -191,9 +202,37 @@ function Editable({ block, className, placeholder, register, onInput, onKeyDown 
       data-placeholder={placeholder}
       onInput={(ev) => onInput(block, ev.currentTarget, (ev.nativeEvent as InputEvent).isComposing)}
       onKeyDown={(ev) => onKeyDown(block, ev.currentTarget, ev)}
-      onPaste={pastePlain}
+      onPaste={(ev) => onPaste(block, ev)}
     />
   );
+}
+
+/* ───────── 사진(이 기기에만) ───────── */
+
+function LocalImage({ id, userId }: { id: string; userId: string }) {
+  const [shown, setShown] = useState<{ url: string; w: number; h: number } | 'missing' | null>(null);
+  useEffect(() => {
+    let alive = true;
+    let url = '';
+    readImage(id, userId)
+      .then((img) => {
+        if (!alive) return;
+        if (!img) {
+          setShown('missing');
+          return;
+        }
+        url = URL.createObjectURL(img.blob);
+        setShown({ url, w: img.w, h: img.h });
+      })
+      .catch(() => alive && setShown('missing'));
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [id, userId]);
+  if (shown === 'missing') return <div className="nb-image is-missing">이 기기에 없는 사진</div>;
+  if (!shown) return <div className="nb-image is-loading" />;
+  return <div className="nb-image"><img src={shown.url} width={shown.w} height={shown.h} alt="" draggable={false} /></div>;
 }
 
 /* ───────── 편집기 ───────── */
@@ -202,7 +241,12 @@ type Slash = { blockId: string; node: Text; start: number; query: string; x: num
 type Bar = { x: number; y: number; bottom: number; states: Record<string, boolean>; blockId: string };
 type FocusReq = { id: string; at: number | 'end' };
 
-export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: EditNote) => EditNote) => void }) {
+export function NoteEditor({ note, update, userId, handle }: {
+  note: EditNote;
+  update: (fn: (n: EditNote) => EditNote) => void;
+  userId: string;
+  handle?: MutableRefObject<NoteEditorHandle | null>;
+}) {
   const els = useRef(new Map<string, HTMLDivElement>());
   const focusReq = useRef<FocusReq | null>(null);
   const titleRef = useRef<HTMLDivElement>(null);
@@ -213,6 +257,11 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
   const [turnOpen, setTurnOpen] = useState(false);
   const [blockMenu, setBlockMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [drag, setDrag] = useState<{ id: string; over?: string; after?: boolean } | null>(null);
+  const [imageError, setImageError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pickAfter = useRef<string | null>(null);
+  /** 편집기 글 칸 안의 마지막 커서(선택). 「강의명」처럼 바깥 버튼이 글을 넣을 자리다. */
+  const lastRange = useRef<Range | null>(null);
   const blocks = note.blocks;
 
   const register = (id: string, el: HTMLDivElement | null) => {
@@ -256,6 +305,78 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
     patch(block.id, { type, html: html ?? els.current.get(block.id)?.innerHTML ?? block.html, checked: false }, true);
     focusReq.current = { id: block.id, at: 'end' };
   };
+
+  /* 사진: 고른 블록 다음에 넣는다. 고른 블록이 빈 글 칸이면 그 앞에 넣어 이어 쓸 칸을 남긴다. */
+  const addImages = async (afterId: string | null, files: File[]) => {
+    setImageError('');
+    const made: Block[] = [];
+    for (const file of files) {
+      try {
+        made.push(mk('image', '', { image: await saveImage(file, userId, note.id) }));
+      } catch (e) {
+        setImageError((e as Error).message || '사진을 넣지 못했습니다.');
+      }
+    }
+    if (!made.length) return;
+    setBlocks((bs) => {
+      let i = afterId ? bs.findIndex((b) => b.id === afterId) : bs.length - 1;
+      if (i < 0) i = bs.length - 1;
+      const at = bs[i];
+      const atEl = at && els.current.get(at.id);
+      if (at && at.type === 'text' && atEl && plain(atEl) === '') return [...bs.slice(0, i), ...made, ...bs.slice(i)];
+      const next = [...bs.slice(0, i + 1), ...made, ...bs.slice(i + 1)];
+      return next[next.length - 1].type === 'image' ? [...next, mk('text')] : next;
+    });
+  };
+
+  const onPaste = (block: Block, ev: ReactClipboardEvent<HTMLDivElement>) => {
+    // 글이 함께 오면 글을 넣는다(오피스 등은 글 복사에도 그림을 같이 싣는다).
+    const files = imageFiles(ev.clipboardData);
+    if (files.length && !ev.clipboardData.getData('text/plain')) {
+      ev.preventDefault();
+      void addImages(block.id, files);
+      return;
+    }
+    pastePlain(ev);
+  };
+
+  const dropsFiles = (ev: ReactDragEvent) => !drag && Array.from(ev.dataTransfer.types).includes('Files');
+
+  /** 커서가 편집기 글 칸 안이면 기억한다. selectionchange 외에 키·마우스·입력·떠날 때도 부른다(이벤트가 빠지는 환경 대비). */
+  const remember = () => {
+    const sel = getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const at = sel.getRangeAt(0);
+    const n = at.startContainer;
+    const inText = (n.nodeType === Node.TEXT_NODE ? n.parentElement : (n as HTMLElement))?.closest('.nb-text');
+    if (inText && editorRef.current?.contains(inText)) lastRange.current = at.cloneRange();
+  };
+
+  /* 바깥 버튼이 마지막 커서 자리에 글을 넣는다. 커서가 없었으면 마지막 글 칸 끝, 그것도 없으면 새 글 칸. */
+  const insertText = (text: string) => {
+    const sel = getSelection();
+    const r = lastRange.current;
+    const node = r?.startContainer;
+    const host = node ? (node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as HTMLElement))?.closest<HTMLElement>('.nb-text') : null;
+    if (sel && r && host && host.isConnected && editorRef.current?.contains(host)) {
+      host.focus({ preventScroll: true });
+      sel.removeAllRanges();
+      sel.addRange(r);
+      document.execCommand('insertText', false, text);
+      return;
+    }
+    const last = blocks[blocks.length - 1];
+    const lastEl = last && els.current.get(last.id);
+    if (lastEl) {
+      placeCaret(lastEl, 'end');
+      document.execCommand('insertText', false, text);
+      return;
+    }
+    const next = mk('text', escapeHtml(text));
+    setBlocks((bs) => [...bs, next]);
+    focusReq.current = { id: next.id, at: 'end' };
+  };
+  if (handle) handle.current = { insertText };
 
   /* 입력: md 변환·빗금 메뉴 */
   const onInput = (block: Block, el: HTMLDivElement, composing: boolean) => {
@@ -342,6 +463,12 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
     r.deleteContents();
     const html = clean(el);
     setSlash(null);
+    if (type === 'image') {
+      patch(block.id, { html });
+      pickAfter.current = block.id;
+      fileRef.current?.click();
+      return;
+    }
     if (plain(el) === '') convert(block, type, '');
     else if (type === 'divider') {
       patch(block.id, { html });
@@ -417,6 +544,7 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
       const prev = blocks[i - 1];
       if (!prev) return;
       ev.preventDefault();
+      if (prev.type === 'image') return; // 사진은 블록 메뉴의 「삭제」로만 지운다(실수로 잃지 않게).
       if (prev.type === 'divider') {
         setBlocks((bs) => bs.filter((b) => b.id !== prev.id));
         focusReq.current = { id: block.id, at: 0 };
@@ -448,6 +576,7 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
   useEffect(() => {
     const onSel = () => {
       const sel = getSelection();
+      remember();
       if (!sel || sel.isCollapsed || !sel.rangeCount) {
         setBar(null);
         setColorOpen(false);
@@ -517,7 +646,7 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
     counter = block.type === 'number' ? counter + 1 : 0;
     const no = counter;
     const editable = (cls: string, ph: string) => (
-      <Editable key={`${block.id}:${block.rev}`} block={block} className={cls} placeholder={ph} register={register} onInput={onInput} onKeyDown={onKeyDown} />
+      <Editable key={`${block.id}:${block.rev}`} block={block} className={cls} placeholder={ph} register={register} onInput={onInput} onKeyDown={onKeyDown} onPaste={onPaste} />
     );
     let body: ReactNode;
     switch (block.type) {
@@ -554,6 +683,9 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
       case 'divider':
         body = <div className="nb-divider"><hr /></div>;
         break;
+      case 'image':
+        body = block.image ? <LocalImage id={block.image} userId={userId} /> : null;
+        break;
       default:
         body = editable('', "'/'를 입력해 블록 고르기");
     }
@@ -563,6 +695,11 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
         key={block.id}
         className={`nb-row is-${block.type}${dropCls}${drag?.id === block.id ? ' is-dragging' : ''}`}
         onDragOver={(ev) => {
+          if (dropsFiles(ev)) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            return;
+          }
           if (!drag) return;
           ev.preventDefault();
           const rect = ev.currentTarget.getBoundingClientRect();
@@ -571,6 +708,12 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
         }}
         onDrop={(ev) => {
           ev.preventDefault();
+          if (dropsFiles(ev)) {
+            ev.stopPropagation();
+            const files = imageFiles(ev.dataTransfer);
+            if (files.length) void addImages(block.id, files);
+            return;
+          }
           onDrop();
         }}
       >
@@ -613,7 +756,36 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
   const barBlock = bar ? blocks.find((b) => b.id === bar.blockId) : null;
 
   return (
-    <div className="nb-editor" ref={editorRef}>
+    <div
+      className="nb-editor"
+      ref={editorRef}
+      onKeyUp={remember}
+      onMouseUp={remember}
+      onInput={remember}
+      onBlurCapture={remember}
+      onDragOver={(ev) => {
+        if (dropsFiles(ev)) ev.preventDefault();
+      }}
+      onDrop={(ev) => {
+        if (!dropsFiles(ev)) return;
+        ev.preventDefault();
+        const files = imageFiles(ev.dataTransfer);
+        if (files.length) void addImages(null, files);
+      }}
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(ev) => {
+          const files = Array.from(ev.target.files ?? []);
+          ev.target.value = '';
+          if (files.length) void addImages(pickAfter.current, files);
+          pickAfter.current = null;
+        }}
+      />
       <div
         ref={titleRef}
         className="nb-title"
@@ -647,6 +819,7 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
         </div>
       </dl>
 
+      {imageError ? <p className="notes-status is-bad" role="alert">{imageError}</p> : null}
       <div className="nb-blocks">{rows}</div>
       <button className="nb-append" onClick={() => {
         const last = blocks[blocks.length - 1];
@@ -710,7 +883,7 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
           {turnOpen && barBlock ? (
             <div className="nb-pop nb-turn">
               <div className="nb-pop-title">전환</div>
-              {TYPES.filter((t) => t.type !== 'divider').map((t) => (
+              {TURN_TYPES.filter((t) => t.type !== 'divider').map((t) => (
                 <button key={t.type} className="nb-pop-item" aria-selected={t.type === barBlock.type} onClick={() => { setTurnOpen(false); convert(barBlock, t.type); }}>
                   <span className="nb-glyph">{t.glyph}</span>
                   <span className="nb-pop-text"><b>{t.label}</b></span>
@@ -731,11 +904,11 @@ export function NoteEditor({ note, update }: { note: EditNote; update: (fn: (n: 
             }}><span className="nb-glyph"><Icon.x /></span><span className="nb-pop-text"><b>삭제</b></span><kbd>Del</kbd></button>
             <button className="nb-pop-item" onClick={() => {
               const el = els.current.get(menuBlock.id);
-              insertAfter(menuBlock.id, mk(menuBlock.type, el?.innerHTML ?? menuBlock.html, { checked: menuBlock.checked }), 'end');
+              insertAfter(menuBlock.id, mk(menuBlock.type, el?.innerHTML ?? menuBlock.html, { checked: menuBlock.checked, image: menuBlock.image }), 'end');
               setBlockMenu(null);
             }}><span className="nb-glyph"><Icon.layers /></span><span className="nb-pop-text"><b>복제</b></span></button>
-            <div className="nb-pop-title">전환</div>
-            {TYPES.map((t) => (
+            {menuBlock.type === 'image' ? null : <div className="nb-pop-title">전환</div>}
+            {(menuBlock.type === 'image' ? [] : TURN_TYPES).map((t) => (
               <button key={t.type} className="nb-pop-item" aria-selected={t.type === menuBlock.type} onClick={() => { convert(menuBlock, t.type); setBlockMenu(null); }}>
                 <span className="nb-glyph">{t.glyph}</span>
                 <span className="nb-pop-text"><b>{t.label}</b></span>

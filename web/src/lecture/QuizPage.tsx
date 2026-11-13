@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNoteLecture } from "../notes/noteLecture";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
 import { lectureHref } from "../links";
@@ -57,6 +58,7 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
   useEffect(() => {
     if (detail) document.title = `${look.title} · ${detail.title}`;
   }, [detail, look.title]);
+  useNoteLecture(detail?.title);
 
   // 놓친 것은 서버가 고른다. 마지막 카드를 찍은 뒤에 다시 불러야 채워져 온다.
   const onDone = useCallback(

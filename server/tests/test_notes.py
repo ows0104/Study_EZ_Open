@@ -55,6 +55,18 @@ def main():
     full = client.get(f"/api/me/notes/{note['id']}").json()
     assert full["blocks"] == [{"id": "a", "type": "h2", "html": "그람양성"}] and full["tags"] == ["자유 태그"]
 
+    # 사진 블록: id만 저장하고 html(예: data URL)은 버린다. 다른 종류의 image 값도 버린다.
+    pic = client.put(f"/api/me/notes/{note['id']}", json={"title": "세균 정리", "tags": ["자유 태그"], "blocks": [
+        {"id": "p", "type": "image", "html": '<img src="data:image/png;base64,AAAA">', "image": "abc12345xyz"},
+        {"id": "q", "type": "text", "html": "글", "image": "abc12345xyz"}]})
+    assert pic.status_code == 200, pic.text
+    assert pic.json()["blocks"] == [{"id": "p", "type": "image", "html": "", "image": "abc12345xyz"},
+                                    {"id": "q", "type": "text", "html": "글"}]
+    assert client.put(f"/api/me/notes/{note['id']}", json={"blocks": [{"id": "p", "type": "image"}]}).status_code == 422
+    assert client.put(f"/api/me/notes/{note['id']}", json={"blocks": [
+        {"id": "p", "type": "image", "image": "../etc/passwd"}]}).status_code == 422
+    client.put(f"/api/me/notes/{note['id']}", json={"title": "세균 정리", "tags": ["자유 태그"], "blocks": blocks[:1]})
+
     # 형식·제한
     assert client.put(f"/api/me/notes/{note['id']}", json={"blocks": [{"id": "x", "type": "table", "html": ""}]}).status_code == 422
     assert client.put(f"/api/me/notes/{note['id']}", json={"tags": ["x" * 41]}).status_code == 422

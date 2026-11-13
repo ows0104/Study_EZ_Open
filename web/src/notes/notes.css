@@ -168,3 +168,12 @@
   .notes-layout .nb-title { font-size: 30px; }
   .notes-layout .nb-props dt { width: 76px; }
 }
+
+/* 사진(2026-11-13): 이 브라우저에만 저장한 사진. 다른 기기에서는 빈 칸으로 보인다. */
+.notes-layout .nb-image { margin: 4px 0; }
+.notes-layout .nb-image img { display: block; max-width: 100%; height: auto; border-radius: 6px; }
+.notes-layout .nb-image.is-loading { height: 120px; border-radius: 6px; background: var(--surface-2); }
+.notes-layout .nb-image.is-missing {
+  display: grid; place-items: center; height: 96px; border: 1px dashed var(--line-strong); border-radius: 6px;
+  font-size: 13px; color: var(--ink-3); background: var(--surface-2);
+}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNoteLecture } from '../notes/noteLecture';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
@@ -188,6 +189,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     finally{setAdvancing(false);if(!shown)setTab('learn');}
   }
   useEffect(()=>{document.title='Main-Quiz · Study_EZ';},[]);
+  useNoteLecture(info?.title);
   async function reload() {
     if(view)await loadSession(view.sessionId);
     await refresh();
