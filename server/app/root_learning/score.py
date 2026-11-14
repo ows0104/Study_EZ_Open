@@ -1,14 +1,20 @@
 """Main-Quiz 학습률 — 사이트의 유일한 학습률 정의(2026-11-11 사용자 결정).
 
-문항(학습 상태) 점수 = min(지금 숙련도 ÷ 목표치, 1). 지금 숙련도는 마지막 평가 뒤 망각 곡선으로 깎인다.
+문항(학습 상태) 점수 = min(지금 숙련도 ÷ (목표치 × DISPLAY_TARGET_SCALE), 1). 지금 숙련도는 마지막 평가 뒤 망각 곡선으로 깎인다.
 방향은 문항 평균, 지도 목표는 필수 방향 평균, 강의는 지도 목표들의 1 − RMS(1 − 점수)다.
 중요도는 문항 목표치(등급·내 중요도)로 이미 들어가므로 따로 가중하지 않는다.
 읽기 전용 파생값이다. 평가 저장 형식·복습일 계산은 건드리지 않는다.
+
+표기 기준은 목표치의 절반이다(2026-11-14 사용자 「표기되는 학습률 목표를 현재의 50%로, 너무 채우기가 힘들어」).
+학습률 화면만의 기준이다. 저장된 목표치·복습일(`target_due`)·카드 「저장」 단계(state.question_progress)는 원래 목표치를 쓴다.
 """
 from math import sqrt
 
 from .policy import instant, target_parameters, target_retention
 from .state import counted_targets, dropped_directions, optional_tasks, personal_tiers, per_task, replay, replay_tasks
+
+# 학습률이 100%가 되는 숙련도 = 문항 목표치 × 이 값.
+DISPLAY_TARGET_SCALE = 0.5
 
 
 def current_mastery(value, at):
@@ -43,7 +49,7 @@ def _targets_for(doc, tiers, params):
 def _unit_score(value, target, at):
     if not value or not target:
         return 0.0
-    return min(current_mastery(value, at) / (value.get('target') or target), 1.0)
+    return min(current_mastery(value, at) / ((value.get('target') or target) * DISPLAY_TARGET_SCALE), 1.0)
 
 
 def lecture_score(doc, events, policy, at, *, until=None, skip_optional=False):

@@ -20,11 +20,11 @@ export function MainQuizMastery({ value }: { value: MainQuizRate | null | undefi
     <div className="mastery-heading"><strong>내 강의 학습률</strong><MasteryBadge value={value} /></div>
     {value ? <>
       <progress max={100} value={value.score} aria-label={`강의 학습률 ${value.score}%`} />
-      <p>지도 목표 {value.fullTargets}/{value.targetCount}개 목표치 도달</p>
+      <p>지도 목표 {value.fullTargets}/{value.targetCount}개 목표 달성</p>
       <details className="mastery-details">
         <summary>학습률 자세히</summary>
         <small>Main-Quiz 평가 기준 · 평가한 목표 {value.ratedTargets}/{value.targetCount}개.
-          문항마다 지금 숙련도를 목표치로 나눈 부분 점수를 지도 목표별로 모읍니다.
+          문항마다 지금 숙련도를 목표치의 절반으로 나눈 부분 점수를 지도 목표별로 모읍니다.
           마지막 평가 이후 시간이 지나면 서서히 낮아지고, 덜 익힌 목표를 더 크게 반영합니다.</small>
       </details>
     </> : <p>Main-Quiz가 열리면 풀이 기록으로 평가합니다.</p>}
