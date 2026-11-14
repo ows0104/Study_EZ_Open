@@ -70,13 +70,72 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-14-root-claude-provider/1794638094162300900-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-14T07:56:40.862059+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "tests/runner",
+        "tests/studyez_llm",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a66ce1acfb2d7980d19b7e69e6143a05b71ee4d435818b22402e0280d921d761",
+      "plan_hash": "e493d98075e25b57e9a3d22a9fa19f58418ce0742af3495819378ec815cc2b26",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-root-claude-provider/1794641684093275200-regression.log"
     }
   ],
-  "review": null,
+  "review": {
+    "at": "2026-11-14T07:57:09.814056+00:00",
+    "summary": "경계: 지정 없는 Codex 경로는 codex.run 분기 전과 같은 인자·자리 한도(회귀 2329 통과·실패 0). Codex 거절 표식 proof 모양 불변·모델 모르는 호출은 모든 표식에 막힘(검사). 실제 Claude CLI 연기 검사(작업·재개·가림·이미지 2종) 통과. 남은 위험: Claude Bash는 OS 샌드박스 밖(도구·cwd·설정 제한으로 축소), Anthropic 안전 기준 거절 가능성(보류로 멈춤).",
+    "evidence_version": 2,
+    "source_hash": "a66ce1acfb2d7980d19b7e69e6143a05b71ee4d435818b22402e0280d921d761",
+    "plan_hash": "e493d98075e25b57e9a3d22a9fa19f58418ce0742af3495819378ec815cc2b26",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-14T06:48:00.578308+00:00"
+  "updated_at": "2026-11-14T07:57:09.940420+00:00"
 }
