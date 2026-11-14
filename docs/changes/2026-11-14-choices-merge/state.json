@@ -1,0 +1,20 @@
+{
+  "id": "2026-11-14-choices-merge",
+  "title": "선지 보기·객관식 모드 선지 합치기",
+  "area": "generation",
+  "created_at": "2026-11-14T03:18:36.397753+00:00",
+  "required_checks": [
+    "generation",
+    "web",
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T03:18:36.397776+00:00"
+}
