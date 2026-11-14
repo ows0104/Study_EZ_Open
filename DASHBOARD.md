@@ -29,7 +29,6 @@
 | P1 | 감염과 면역 1·2차 시험 칸 이름 붙이기: 시간표의 11/20·11/27 시험 제목이 「시험」뿐이라 /api/study-plan이 강의를 못 묶어 메인 「오늘 복습」이 「–」. 제목을 「감염과 면역 1차 시험」「감염과 면역 2차 시험」으로 | HungryPotato01 / Claude 오늘 복습 – 세션 | fix/immunity-exam-titles (worktree ../Study_EZ_exam-titles) | data/timetable/2026_본1_2학기_시간표.json(시험 2칸 title), 운영 timetable_event 2행(title·course·course_key), docs/changes/2026-11-13-immunity-exam-titles | 2026-11-13 | PR #148 리뷰 대기. 병합 뒤 운영 DB 반영은 사용자 승인 필요 |
 | P1 | 캘린더 머리 「오늘 복습」에 오늘 푼 문제 수(reviewedToday) 표시. %p→문제 수 환산은 핸드오프로 미룸(아이디어 칸) | HungryPotato01 / Claude 오늘 복습 – 세션 | claude/review-count-card (worktree ../Study_EZ_review-count) | web/src/calendar/CalendarPage.tsx(ReviewCard), web/src/styles/calendar.css(.today-card-solved), web/src/notices/GuidePage.tsx(안내 1줄), docs/changes/2026-11-13-review-count-card·daily-goal-questions | 2026-11-13 | PR #149 리뷰 대기 |
 | P2 | 퀴즈 전체 화면 버튼(사용자 「퀴즈에서 전체 화면 모드만 추가해줘」): 학습 화면 이동 줄(StudyNav)에 전체 화면/끝 버튼, 화면을 떠나면 해제. 예습 퀴즈(QuizPage)는 플로팅 노트와 겹쳐 제외·사용자 확인 대기 | HungryPotato01 / Claude 전체 화면 세션 | claude/quiz-fullscreen (worktree ../Study_EZ_quiz-fullscreen) | web/src/StudyNav.tsx, 새 web/src/FullscreenButton.tsx, web/src/styles/base.css(.study-nav 근처), docs/changes/2026-11-13-quiz-fullscreen | 2026-11-13 | 웹만. 서버·DB 변경 없음. 구현 승인 → PR #158 https://github.com/ows0104/Study_EZ_Open/pull/158 — typecheck·build·headless 동작 확인 통과, CI 대기. master 병합(=배포)은 승인 필요 |
-| P1 | 브리지 자료 다운로드 「연결이 끊겼습니다」 대응(복습 링크 만들기에서 발생): 끊긴 이유(chrome.runtime.lastError)를 메시지에 남기고, 파일이 다 오기 전 끊기면 한 번 자동 재시도 | ows0104 / Claude 브리지 다운로드 재시도 세션 | claude/bridge-download-retry (worktree ../Study_EZ_bridge-download-retry) | bridge/chatgpt-bridge.js(fetchFile), bridge/background.js(file-stream), docs/changes/2026-11-14-bridge-download-retry | 2026-11-14 | 확장만. 서버·웹·DB 변경 없음. 관리자판은 unpacked 다시 불러오기, 스토어판은 새 버전 심사 필요 |
 
 ## 2. 앞으로 하기로 약속된 일
 
@@ -50,6 +49,7 @@
 
 ## 완료 기록 (최근 것만)
 
+| 2026-11-14 | 브리지 자료 다운로드 「연결이 끊겼습니다」(261104_02 복습 링크) 대응 — 중단. 재시도하니 정상, R2 파일·DB 크기 정상(읽기 전용 확인), 일시적 끊김으로 보고 수정(한 번 재시도·끊긴 이유 표시)은 사용자 「Drop it」으로 버림. 코드 변경 없음 | ows0104 / Claude 브리지 다운로드 재시도 세션 | - |
 | 2026-11-14 | Main-Quiz 오늘 학습 이어 풀기: 강의마다 하루 한 흐름, 중요도 칩(Optional 등)을 바꿔도 푼 문항·번호 유지·안 푼 뒷부분만 바뀜(껐다 켜면 원래 목록, 새 목표 몫 불변), 다 풀면 「더 풀기」로 같은 흐름에 이어 붙임. DB 스키마 변경 없음. CI 152/152 통과, 병합 70af0a46(자동 배포 진행) | ows0104 / Claude 이어 풀기 세션 | [#165](https://github.com/ows0104/Study_EZ_Open/pull/165) |
 | 2026-11-14 | 족보 오답노트(좌측 메뉴, 강의 구분 없이 한 페이지·퀴즈에서 틀리면 자동 담기·상중하 표시) + 족보 학생 공개: 러너 PC(ows01)에서 운영 jokbo_mark 표 생성(RLS 켜짐) → PR #164 병합 0e2b19b5·API 배포(라이브 openapi /api/jokbo/marks·wrong-notes)·Pages 성공. 족보 2026-1 R2 업로드 --audience all: 49강의·484문항 전부 audience all, 그림 150/150 크기 일치 재확인 | HungryPotato01 / Claude 족보 풀이 세션 → ows01 러너 PC 세션 | [#164](https://github.com/ows0104/Study_EZ_Open/pull/164) |
 | 2026-11-14 | Main-Quiz 객관식 모드에서 이전 선택이 체크된 채 열리던 문제: 문항을 열 때 고른 선지를 항상 비우고 브라우저에 보관된 선택(`…:picks`)을 지움, 모드 전환 시에도 비움. PR #162 병합 75643a09·API 배포 성공(health 75643a09)·Pages 성공 |
