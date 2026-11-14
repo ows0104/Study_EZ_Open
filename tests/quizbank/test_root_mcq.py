@@ -258,7 +258,7 @@ def test_v1_칸은_그대로_읽힌다():
     assert contract.attachable_v2(asset, "rev-1", doc["B1"]) is None
 
 
-# ── 나눠 묻는 문항(사용자 「묻는 게 여러개이면 선지를 나눠서 제시」)·부정만 붙인 오답(「이런 건 좀 억지인듯」) ──
+# ── 나눠 묻는 문항(사용자 「묻는 게 여러개이면 선지를 나눠서 제시」) ──
 
 def _bal():
     return _q("G1", "list", "일반적 기준: 10^3~10^4 CFU/mL; 서울대병원: 10^3 CFU/mL",
@@ -292,14 +292,6 @@ def test_묶음_문항은_오답마다_묶음이_필요하고_묶음_정답과_�
     first = {c["id"]: c["text"] for c in picked["choices"] if c["id"] in picked["groups"][0]["ids"]}
     assert "10^3~10^4 CFU/mL" in first.values() and "10^5 CFU/mL" not in first.values()
     assert [c["id"] for c in picked["choices"]] == picked["groups"][0]["ids"] + picked["groups"][1]["ids"]
-
-
-def test_정답에_부정·반대말만_붙인_오답은_뺀다():
-    q = _q("N", "list", "a", ["과거 감염의 재활성화", "기회감염"], question="면역저하 숙주에서 특히 고려해야 하는 감염의 두 양상은?")
-    assert "정답에 부정·반대말만 붙인 오답" in contract.row_errors(q, _w("과거 감염의 재활성화 억제"))
-    assert "정답에 부정·반대말만 붙인 오답" in contract.row_errors(q, _w("기회감염에 대한 감수성 감소"))
-    assert contract.row_errors(q, _w("1차 감염의 전격성 경과")) == []
-    assert contract.cue_errors(["Fe2+"], "Fe3+") == []
 
 
 def test_생성기는_묶음을_입력에_주고_검토에는_묶음_이름을_붙인다(tmp_path):

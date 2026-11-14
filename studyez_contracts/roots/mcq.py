@@ -338,16 +338,6 @@ def _absolute(text: str) -> set[str]:
     return {m.group(0).strip().lower() for m in ABSOLUTE.finditer(text)}
 
 
-# 정답에 부정·반대말만 붙인 오답(사용자 2026-11-14 「이런 건 좀 억지인듯」: 기회감염 → 「기회감염에 대한 감수성 감소」).
-NEGATION = re.compile(r'억제|감소|저하|없음|없다|없는|없이|아님|아니다|아닌|결여|불가|차단|방지|소실|부재|하지 않|되지 않')
-
-
-def _negated(correct: list[str], text: str) -> bool:
-    if not NEGATION.search(text):
-        return False
-    return any(len(normalized(t)) >= 2 and normalized(t) in normalized(text) and not NEGATION.search(t) for t in correct)
-
-
 def cue_errors(correct: list[str], text: str) -> list[str]:
     """정답 선지들과 견주어 오답 티가 나는 표기. 비어 있으면 통과."""
     errors = []
@@ -361,8 +351,6 @@ def cue_errors(correct: list[str], text: str) -> list[str]:
         errors.append('길이가 정답과 크게 다름')
     if _absolute(text) - set().union(*(_absolute(t) for t in correct)):
         errors.append('오답에만 단정 표현')
-    if _negated(correct, text):
-        errors.append('정답에 부정·반대말만 붙인 오답')
     return errors
 
 
