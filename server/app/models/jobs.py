@@ -35,9 +35,9 @@ JOB_HELD = "held"
 JOB_CANCELED = "canceled"
 JOB_OPEN = frozenset({JOB_QUEUED, JOB_RUNNING, JOB_HELD})
 
-# 자동으로 세우는 일감의 하루 상한(관리자 지시, 2026-09-01). 사람이 누른 것은
+# 자동으로 세우는 일감의 하루 상한(관리자 지시, 2026-09-01 6편 → 2026-11-14 12편). 사람이 누른 것은
 # 여기 안 든다 — 상한은 「아무도 안 봤는데 돈이 나가는 것」을 막는 장치다.
-JOB_AUTO_DAILY_CAP = 6
+JOB_AUTO_DAILY_CAP = 12
 
 # 어디서 온 일감인가. 버튼은 사람이 누른 것, 자동은 재료가 도착해서 선 것.
 JOB_BUTTON = "button"
