@@ -30,6 +30,13 @@ SYSTEM='Preserve source boundaries. Never fabricate coverage or review evidence.
 
 class ContentRestricted(ValueError):pass
 
+# studyez_llm.claude.REFUSAL_MARKER, lower-cased as classify_error reads it (no import: the adapter is archived per stage).
+CLAUDE_REFUSAL='[claude_content_restricted]'
+
+def block_provider(proof):
+    """Which provider refused (a block made before 2026-11-14 is Codex's). A block holds back that provider only."""
+    return proof.get('provider','codex')
+
 # check_result.py runs inside the model's Codex sandbox. The uv venv launcher and its base Python
 # (AppData/Roaming/uv) are not executable for the sandbox user (CodexSandboxUsers): every model
 # session of 26110901 hit "uv trampoline failed ... permission denied", and source-2 gave up and
@@ -176,6 +183,7 @@ def check_instruction(python):
         'The host runs the same check_result.py after you return and sends any error back once.\n')
 
 RESTRICTED_MESSAGE='[MODEL_CONTENT_RESTRICTED] OpenAI 콘텐츠 제한으로 요청이 거절되어 보류했습니다. 기존 결과와 검수 기록은 보존했습니다.'
+CLAUDE_RESTRICTED_MESSAGE='[MODEL_CONTENT_RESTRICTED] Claude가 안전상 이유로 응답을 거절해 보류했습니다. 기존 결과와 검수 기록은 보존했습니다.'
 
 def classify_error(error):
     parts=[];seen=set();cause=error;timeout=False
@@ -183,6 +191,9 @@ def classify_error(error):
         seen.add(id(cause));parts.append(str(cause));timeout=timeout or isinstance(cause,subprocess.TimeoutExpired)
         cause=cause.__cause__ or cause.__context__
     text='\n'.join(parts).lower()
+    # docs/changes/2026-11-14-root-claude-provider: a Claude refusal is the same hold, named for its provider.
+    if CLAUDE_REFUSAL in text or CLAUDE_RESTRICTED_MESSAGE.lower() in text:
+        return {'kind':'model_content_restricted','message':CLAUDE_RESTRICTED_MESSAGE,'automaticRetry':False}
     if isinstance(error,ContentRestricted)or "limited access to this content for safety reasons"in text:
         return {'kind':'model_content_restricted','message':RESTRICTED_MESSAGE,'automaticRetry':False}
     if timeout or ('초 안에 끝나지 않았다'in text):
@@ -208,6 +219,7 @@ def remember_restriction(out,stage,evidence):
     evidence=redact(evidence);(seat/'provider-rejection.log').write_text(evidence,encoding='utf-8')
     proof={'policy':POLICY,'classification':classification,'stage':stage,'inputHash':entry['inputHash'],
         'packetHash':packet['inputHash'],'runtimeHash':ledger['identity'],'evidenceSha256':sha(seat/'provider-rejection.log')}
+    if CLAUDE_REFUSAL in evidence.lower():proof['provider']='claude'   # Codex blocks keep their original shape
     row={'proof':proof,'proofHash':document_hash(proof)};g.write(target,row);return row
 
 def read_shared(path,attempts=5):
@@ -220,7 +232,10 @@ def read_shared(path,attempts=5):
             if attempt==attempts-1:raise
             time.sleep(0.05*(attempt+1))
 
-def require_unblocked(out):
+def require_unblocked(out,model=None):
+    """A stored refusal stops every later call to the provider that refused (never resubmit the same input to it).
+    `model` given: another provider's block does not stop this run; the operator resume archives that failed stage
+    with its block like any other failure (docs/changes/2026-11-14-root-claude-provider)."""
     out=Path(out)
     if not(out/'ledger.json').exists():return
     ledger=read_shared(out/'ledger.json')
@@ -228,12 +243,13 @@ def require_unblocked(out):
         path=out/'.native'/stage/'content-block.json'
         if not path.exists():continue
         row=read(path);p=row['proof']
+        if model is not None and block_provider(p)!=g.codex.provider(model):continue
         require(row['proofHash']==document_hash(p)and p['policy']==POLICY and p['stage']==stage
             and p['inputHash']==entry['inputHash']==document_hash(read(out/(stage+'.input.json')))
             and p['runtimeHash']==ledger['identity']and p['packetHash']==read(out/'packet.json')['inputHash']
             and sha(path.parent/'provider-rejection.log')==p['evidenceSha256'],'Changed provider-block evidence')
         require(p['classification']['kind']=='model_content_restricted'and p['classification']['automaticRetry']is False,'Invalid provider-block classification')
-        raise ContentRestricted(RESTRICTED_MESSAGE)
+        raise ContentRestricted(CLAUDE_RESTRICTED_MESSAGE if block_provider(p)=='claude' else RESTRICTED_MESSAGE)
 
 def require(ok,message):
     if not ok:raise ValueError(message)
@@ -447,7 +463,7 @@ class NativeJson:
     def __init__(self,out,*,invoke=None,timeout=2400):self.out=Path(out).resolve();self.invoke=invoke;self.timeout=timeout
 
     def __call__(self,stage,ctx,material,model):
-        require_unblocked(self.out)
+        require_unblocked(self.out,model)
         state=ctx.get('_check')   # P6: host check state, not stage input
         if '_check'in ctx:ctx={k:v for k,v in ctx.items()if k!='_check'}
         if stage.startswith('medical-'):
@@ -472,7 +488,8 @@ class NativeJson:
         task=task_for(stage,ctx)
         if ctx.get('rejectedAuthoring'):
             task+='\nThis is the explicitly authorized repair of a completed but structurally rejected brief. Copy previousAuthoring.bank, visual_stimuli and clinical_conflicts EXACTLY using local code. Correct only the brief findings and their complete structural implications, preserve original points/source boundaries, set derived and explain the correction. The rejected brief is not a valid prior accepted map. Do not create or rewrite clinical questions in this recovery step.\n'
-        python=sys.executable if self.invoke is not None else sandbox_python(work)
+        # A Claude session runs check_result.py outside Codex's sandbox: the host interpreter works there as it is.
+        python=sys.executable if self.invoke is not None or g.codex.provider(model)=='claude' else sandbox_python(work)
         (work/'task.md').write_text(task+check_instruction(python),encoding='utf-8')
         protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py','host-check.json')if(work/name).exists()}
         (seat/'adapter.py').write_bytes(Path(__file__).read_bytes())
@@ -641,7 +658,7 @@ def main():
     p.add_argument('--duplicates-of',type=Path,metavar='GENERATION_DIR');a=p.parse_args()
     if a.rerun and not a.resume:p.error('--rerun needs --resume <reason>')
     try:
-        require_unblocked(a.out)
+        require_unblocked(a.out,model=g.codex.model_name(a.model))
         from studyez_contracts.roots.parallel import is_v2_source
         packet=read(a.packet)
         if packet.get('generationPolicy')in('root-generation/3','root-generation/4'):

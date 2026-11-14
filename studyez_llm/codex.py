@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
-from .execution import AlreadyRunning, exclusive, run_process, slot, slot_limit
+from .execution import AlreadyRunning, claude_slot_limit, exclusive, run_process, slot, slot_limit
 from . import telemetry
 
 DEFAULT_MODEL = "gpt-6.1-sol"
@@ -39,7 +39,8 @@ NETWORK_MARKERS = (
     "forcibly closed", "os error 11001", "os error 10051", "os error 10054", "os error 10060", "os error 10065",
 )
 # Never a network drop, whatever else the text says: the provider refused the content or the account's limit.
-NOT_NETWORK = ("limited access to this content for safety reasons", "usage limit", "rate limit", "quota")
+NOT_NETWORK = ("limited access to this content for safety reasons", "[claude_content_restricted]", "usage limit",
+               "rate limit", "quota")
 NETWORK_HOSTS = ("chatgpt.com", "api.openai.com")
 
 
@@ -78,10 +79,16 @@ def wait_for_network(*, limit: float = 900, step: float = 15, hosts=NETWORK_HOST
 
 
 def model_name(model: str | None = None) -> str:
+    """실행할 모델 이름. `gpt-…`는 Codex, `claude-…`는 Claude Code CLI(provider)다. 다른 이름은 거절한다."""
     name = model or os.environ.get("STUDYEZ_MODEL") or DEFAULT_MODEL
-    if not name.startswith("gpt-"):
-        raise SessionError(f"GPT 모델 이름이 필요하다: {name!r}. --model 또는 STUDYEZ_MODEL을 확인해라.")
+    if not name.startswith(("gpt-", "claude-")):
+        raise SessionError(f"GPT 또는 Claude 모델 이름이 필요하다: {name!r}. --model 또는 STUDYEZ_MODEL을 확인해라.")
     return name
+
+
+def provider(model: str | None = None) -> str:
+    """'codex' 또는 'claude' (docs/changes/2026-11-14-root-claude-provider)."""
+    return "claude" if model_name(model).startswith("claude-") else "codex"
 
 
 def executable() -> str:
@@ -266,17 +273,25 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None 
         writable: list[Path] | None = None) -> dict:
     selected = model_name(model)
     started = time.monotonic()
+    claude = provider(selected) == "claude"
     request = {'cwd': str(Path(cwd).resolve()) if cwd else '', 'model': selected,
                'prompt': prompt, 'blind': blind, 'resume': resume, 'schema': schema, 'system': system,
                'images': [__import__('hashlib').sha256(Path(p).read_bytes()).hexdigest()for p in images or []]}
+    limit = claude_slot_limit() if claude else slot_limit()
     def waiting():
-        print(f"── Codex 동시 실행 한도({slot_limit()}) 대기: {label or '세션'}", flush=True)
+        print(f"── {'Claude' if claude else 'Codex'} 동시 실행 한도({limit}) 대기: {label or '세션'}", flush=True)
     try:
         # The slot is taken before the time limit starts: waiting for a free slot is not model time.
-        with exclusive(request), slot(waiting=waiting):
-            info = _run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
-                        resume=resume, schema=schema, system=system, previous_usage=previous_usage,images=images,
-                        writable=writable)
+        with exclusive(request), slot(limit, waiting=waiting, pool='claude' if claude else 'slots'):
+            if claude:
+                from . import claude as claude_cli  # `claude-…` 모델만 이 실행기로 간다
+                info = claude_cli.run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
+                                      resume=resume, schema=schema, system=system, previous_usage=previous_usage,
+                                      images=images, writable=writable)
+            else:
+                info = _run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
+                            resume=resume, schema=schema, system=system, previous_usage=previous_usage,images=images,
+                            writable=writable)
     except AlreadyRunning as cause:
         telemetry.record(status='duplicate-blocked', model=selected, label=label, cwd=cwd,
                          prompt=prompt, seconds=time.monotonic()-started, usage={})

@@ -121,6 +121,7 @@ from pathlib import Path
 
 from . import ahead, blocks, deck, eta, gate, prequeue, publish, watch
 from . import desktop_control
+from . import model_overrides
 
 # Quiz Bank(2026-10-04). 만드는 것은 ChatGPT 이고 러너는 받은 응답을 정리·검토해 올린다 —
 # `runner bank` 가 업로드까지 스스로 끝내므로 뒤의 publish 를 안 지난다.
@@ -437,10 +438,13 @@ class Agent:
         「덱을 못 만들었다」가 적힌다 — 사람은 다시 만들라고 눌렀을 뿐인데 실패로 보인다.
         """
         if job.kind in (BANK, BANK_POINTS):
+            # 관리자가 이 Main-Quiz 요청에 모델을 지정했으면 그 모델로만 돈다(runs/model-overrides.json).
+            model = model_overrides.model_for(self.runs_dir, job.root_generation_id) if job.explicit_root else None
             return [sys.executable, "-m", "runner", "bank", job.subject, "--run-id", job.run_id,
                     "--runs", str(self.runs_dir)] + (
                 ["--points-only"] if job.kind == BANK_POINTS else []) + (
-                ['--root-generation',job.root_generation_id] if job.explicit_root else [])
+                ['--root-generation',job.root_generation_id] if job.explicit_root else []) + (
+                ['--model', model] if model else [])
         if job.kind == deck.MAIN:
             argv = [sys.executable, "-m", "runner", "watch", job.subject,
                     "--run-id", job.run_id, "--build"]
@@ -822,6 +826,16 @@ class Agent:
             self.say(f"[{stamp()}] {slot} {job.label} — {message}")
             self.report(job, state="held", stage="", message=message)
             return False
+        if job.explicit_root:
+            try:
+                model = model_overrides.model_for(self.runs_dir, job.root_generation_id)
+            except model_overrides.OverrideError as error:
+                message = f"모델 지정 파일 오류로 보류했다: {error}"
+                self.say(f"[{stamp()}] {slot} {job.label} — {message}")
+                self.report(job, state="held", stage="", message=message)
+                return False
+            if model:
+                self.say(f"[{stamp()}] {slot} {job.label} — 모델 지정: {model} ({model_overrides.FILENAME})")
         if not self.take(job, slot):
             # 서버가 같은 편을 둘에게 줬다는 뜻이다. 서버도 막지만, 옛 러너가
             # 같이 떠 있거나 표가 어긋나면 여기까지 온다. **만들지 않는다** —

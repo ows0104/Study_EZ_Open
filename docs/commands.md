@@ -103,4 +103,10 @@ powershell -ExecutionPolicy Bypass -File scripts/install-agent-task.ps1
 
 `agent --once`도 실제 서버 작업을 처리할 수 있다. 연결만 확인하는 명령은 아니다.
 Windows 예약 작업은 `StudyEZ Agent`, 로그는 `runs/agent.log`다.
+Main-Quiz 한 요청만 다른 모델(예: Claude Code CLI)로 돌릴 때는 `runs/model-overrides.json`을 쓴다(사용자 확인 뒤):
+
+```json
+{"version": 1, "generations": {"<generationId>": {"model": "claude-opus-5-5", "reason": "지정 이유", "approval": "사용자 발언 원문", "at": "2026-11-14T16:00:00+09:00"}}}
+```
+
 러너 동시성·대기·재시도 정책은 [runner 안내](../runner/CLAUDE.md)를 본다.
