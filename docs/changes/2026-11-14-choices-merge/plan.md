@@ -1,14 +1,15 @@
 # 선지 보기·객관식 모드 선지 합치기 — 구현 계획
 
-구현은 (1) 사용자가 이 계획과 spec의 열린 질문에 답하고 (2) 대시보드의 「복습 퀴즈 객관식 모드」(HungryPotato01)와 파일 조정이 끝난 뒤 시작한다.
+spec의 열린 질문 6개는 2026-11-14에 사용자가 답했다(spec 「사용자 결정」).
+구현은 (1) 사용자의 구현 시작 요청과 (2) 대시보드의 「복습 퀴즈 객관식 모드」(HungryPotato01)와 파일 조정이 끝난 뒤 시작한다.
 
 ## 변경 범위·대상 파일·순서
 
 | 순서 | 영역 | 파일 | 내용 |
 |---|---|---|---|
-| 1 | 계약 | `studyez_contracts/roots/mcq.py`, `tests/contracts/` | `root-mcq/2`, 출처 넷, 표기 갈래 검사, cloze `{답}` 빈칸, 풀이 차례로 오답 고르기(순수 함수) |
+| 1 | 계약 | `studyez_contracts/roots/mcq.py`, `tests/contracts/` | `root-mcq/2`, 출처 넷, 표기 갈래·길이·단정 표현 검사, 오답 수 고정 없음(보이는 4~5), cloze `{답}` 빈칸, 풀이 차례로 오답 고르기(순수 함수) |
 | 2 | 지시문 | `content/prompts/learning-links/mcq/write.md`·`review.md`, 새 `jokbo.md` | 출처 넷·매력·표기 맞춤, 독립 검토, 족보 선지 읽기 |
-| 3 | 생성 | `quizbank/root_mcq.py`, `tests/quizbank/` | 족보 풀 단계(캐시), 오답 풀 크기, 문체 탈락 → 둘째 회차 |
+| 3 | 생성 | `quizbank/root_mcq.py`, `tests/quizbank/` | 과목 족보 풀 단계(PDF sha 캐시, 다른 강의 족보 포함), 오답 수 고정 없음, 단서 검사 탈락 → 둘째 회차 |
 | 4 | 연결 | `runner/root_mcq.py`, `runner/connection_generation.py`, `tests/runner/` | packet 족보 PDF 전달, 게시 직후 `root_mcq.publish`로 교체, v1 로컬 사본 보존 |
 | 5 | 서버 | `server/app/root_learning/mcq.py`, `server/app/routes/root_learning.py`, `server/tests/` | v1·v2 읽기, 풀이 차례, 답면 `mcqWrongNotes` |
 | 6 | 화면 | `web/src/bank/quizMode.ts`, `RootSolve.tsx`, `BankQuestion.tsx`, `web/src/types/bank.ts`, `web/tests/` | 주관식 `V`가 `mcq_choices` 사용, 답면 「왜 틀렸나」 |
@@ -21,7 +22,7 @@
 
 ## 검사 명령과 성공 조건
 - `python -m pytest tests/contracts tests/quizbank tests/runner`
-  - 새 검사: 표기 갈래 거절, cloze `{답}` 대상, 풀이 차례별 오답 고르기(같은 차례 같음·다음 차례 다름·정답 전부 포함), v1 사본 보존, 게시 직후 호출 교체
+  - 새 검사: 표기 갈래·길이·단정 표현 거절, 오답 1개만 남은 문항도 붙음, cloze `{답}` 대상, 풀이 차례별 오답 고르기(같은 차례 같음·다음 차례 다름·정답 전부 포함), v1 사본 보존, 게시 직후 호출 교체
 - `server/`에서 `PYTHONPATH=.. .venv/Scripts/python.exe -m tests root`·`mcq`
   - 앞면에 정답·이유·출처 없음, 답면에 보인 오답만, v1·`root_choices` 판은 지금과 같음
 - `web/`: `npm run typecheck`, `npm run build`, Main-Quiz 화면 검사(주관식 `V` → 같은 선지, 답면 한 줄)
