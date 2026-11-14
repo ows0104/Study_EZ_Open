@@ -23,6 +23,12 @@ function AnswerSlides({answer}:{answer:NonNullable<NonNullable<RootView['task']>
     {!examFirst&&exam}
   </Suspense>;
 }
+/** 예전 화면이 브라우저에 보관한 선지 선택(`…:picks`)을 지운다. 다른 보관값(초안·선지 보기 기록)은 건드리지 않는다. */
+function clearSavedPicks() {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('studyez:root-draft:') && k.endsWith(':picks')) localStorage.removeItem(k);
+  } catch { /* 저장소를 못 쓰면 지울 것도 읽지 않는다. */ }
+}
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 const TIER_LABEL: Record<BankTier,string> = {Essential:'★ Must-Know', Core:'Core', Important:'Important', Optional:'Optional'};
 
@@ -57,14 +63,12 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const recallClosed=!!recall&&!choices&&!task?.answer;
   const recallOpen=!!recall&&choices&&!task?.answer;
   useEffect(()=>{
+    // 고른 선지는 문항을 열 때마다 비운다(사용자 2026-11-14 「무조건 과거 기록은 삭제되도록」). 예전에 보관한 선택도 지운다.
+    setPicked(new Set());clearSavedPicks();
     try {
-      const ids:unknown=JSON.parse(localStorage.getItem(key+':picks')??'[]');
-      const allowed=new Set([...(task?.question.options??[]),...(task?.question.recall_choices??[]),...(task?.question.mcq_choices??[])].map(o=>o.id));
-      if(task?.question.format==='ox'){allowed.add('O');allowed.add('X');}
-      if(!Array.isArray(ids)||!ids.every(id=>typeof id==='string'&&allowed.has(id)))throw Error('invalid saved choices');
       const saved=localStorage.getItem(key+':choices');
-      setPicked(new Set(ids));setChoices(saved==='shown',saved==='shown'||saved==='seen');
-    }catch{setPicked(new Set());setChoices(false);onError('보관된 선지 선택을 읽지 못했습니다. 원본을 보존했습니다.');}
+      setChoices(saved==='shown',saved==='shown'||saved==='seen');
+    }catch{setChoices(false);onError('보관된 선지 보기 기록을 읽지 못했습니다. 원본을 보존했습니다.');}
     menu.current?.removeAttribute('open');setEditing(false);setEditNote('');
     heading.current?.focus();window.scrollTo(0,0);
   },[key]);
@@ -77,13 +81,13 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     const single=!mcq&&(task?.question.format==='mcq'||(!!recall&&task?.question.format==='basic'));
     const next=new Set(single?[]:picked);
     if(picked.has(id)&&!single)next.delete(id);else next.add(id);
-    if(save(':picks',JSON.stringify([...next])))setPicked(next);
+    setPicked(next);
     heading.current?.focus({preventScroll:true});
   }
   function showChoices(){if(save(':choices','shown'))setChoices(true);heading.current?.focus({preventScroll:true});}
   /** 편 단답·나열 선지를 다시 접는다(V 한 번 더·Z·Ctrl+Z). 안 보이는 선택이 답으로 가지 않게 고른 것도 비운다. */
   function hideChoices(){
-    if(save(':choices','seen')&&save(':picks','[]')){setChoices(false,true);setPicked(new Set());}
+    if(save(':choices','seen')){setChoices(false,true);setPicked(new Set());}
     heading.current?.focus({preventScroll:true});
   }
   function reveal(attempted=true){
@@ -122,7 +126,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     onExpire:()=>{if(task?.answer)rate('Again');else reveal();},
   });
   function toggleTimer(){const on=!timerOn;saveTimerOn(on);setTimerOn(on);heading.current?.focus({preventScroll:true});}
-  function toggleMode(){const next:QuizMode=mode==='mcq'?'recall':'mcq';saveQuizMode(next);setMode(next);heading.current?.focus({preventScroll:true});}
+  function toggleMode(){const next:QuizMode=mode==='mcq'?'recall':'mcq';saveQuizMode(next);setMode(next);setPicked(new Set());heading.current?.focus({preventScroll:true});}
   useEffect(()=>{
     const handler=(event:KeyboardEvent)=>{
       const target=event.target as HTMLElement;

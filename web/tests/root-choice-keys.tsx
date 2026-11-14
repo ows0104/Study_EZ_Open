@@ -58,6 +58,19 @@ try {
   press("1"); await tick();
   check(picked().join() === "3", "multi_select: same number toggles off");
 
+  // 2026-11-14: 고른 선지는 문항을 다시 열면 비어 있다. 예전 화면이 보관한 선택도 되살리지 않고 지운다.
+  const stale = 'studyez:root-draft:stale:["v1","t1"]:picks';
+  localStorage.setItem(stale, '["A","C"]');
+  localStorage.setItem('studyez:root-draft:stale:["v1","t1"]', "retired draft");
+  render(view("multi_select"), "stale"); await tick();
+  check(!picked().length, "saved picks from an earlier visit are not restored");
+  check(localStorage.getItem(stale) === null, "saved picks are deleted");
+  check(localStorage.getItem('studyez:root-draft:stale:["v1","t1"]') === "retired draft", "other saved drafts are left alone");
+  press("2"); await tick();
+  render(view("mcq"), "elsewhere"); await tick();
+  render(view("multi_select"), "stale"); await tick();
+  check(!picked().length && !Object.keys(localStorage).some(k => k.endsWith(":picks")), "returning to a question starts with nothing picked");
+
   // 단답 「선지 보기」(#118): 펴기 전에는 1–4가 아무것도 고르지 않고, V로 편 뒤에는 그 선지 번호를 고른다.
   const recallView = view("mcq");
   recallView.task!.question = { ...question("mcq"), format: "basic", options: [],
