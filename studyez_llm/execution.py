@@ -61,6 +61,18 @@ def slot_limit():
         return DEFAULT_SLOTS
 
 
+CLAUDE_SLOTS_ENV = 'STUDYEZ_CLAUDE_SLOTS'
+DEFAULT_CLAUDE_SLOTS = 2
+
+
+def claude_slot_limit():
+    """Claude Code CLI 세션은 Codex 자리와 따로 센다(docs/changes/2026-11-14-root-claude-provider)."""
+    try:
+        return max(1, int(os.environ.get(CLAUDE_SLOTS_ENV) or DEFAULT_CLAUDE_SLOTS))
+    except ValueError:
+        return DEFAULT_CLAUDE_SLOTS
+
+
 def _try_lock(handle):
     handle.seek(0, 2)
     if not handle.tell():
@@ -89,13 +101,13 @@ def _unlock(handle):
 
 
 @contextmanager
-def slot(limit=None, *, poll=2.0, sleep=time.sleep, waiting=None):
+def slot(limit=None, *, poll=2.0, sleep=time.sleep, waiting=None, pool='slots'):
     """Hold one of `limit` session slots while a model CLI call runs; wait (never fail) while all are taken.
 
     A slot is a locked file under <usage>/slots, so a process that dies gives its slot back with its handle.
     `waiting()` is called once, when the first pass finds every slot taken."""
     limit = slot_limit() if limit is None else max(1, int(limit))
-    folder = usage_root() / 'slots'
+    folder = usage_root() / pool
     folder.mkdir(parents=True, exist_ok=True)
     told = False
     while True:

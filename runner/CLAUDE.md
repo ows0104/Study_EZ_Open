@@ -22,6 +22,15 @@
   - map-tree/3 앞 단계는 포인트가 확정되면 생성기의 `normalize`를 미리 부른다(`Front.early_normalize`, `--generation <gid>/generation`). 답은 `generation/.early/normalize.json`에 입력 지문과 함께 두고, 생성기가 차례에 지문이 같을 때만 쓴다(early-call/1, quizbank/CLAUDE.md). 이 호출의 문제는 앞 단계를 실패시키지 않는다.
 - 이 변경 전의 러너는 이 요청을 모델 호출 전에 거절한다.
 
+강의별 출제 모델 지정(2026-11-14, `docs/changes/2026-11-14-root-claude-provider/`): `runs/model-overrides.json`에
+Main-Quiz 요청(generationId)마다 모델·이유·승인 발언·시각을 적으면 러너가 그 일감에만 `bank … --model <모델>`을 붙인다.
+`claude-…` 모델은 `studyez_llm.codex.run`이 Claude Code CLI(`studyez_llm/claude.py`, 이 PC의 로그인)로 넘긴다.
+프롬프트·스키마·검사·수정 상한은 같고, 원장·영수증에는 실제 모델이 남는다. 형식이 틀린 지정 파일은 그 일감을 보류한다.
+- 거절 표식(`content-block.json`)은 거절한 공급자만 막는다. 다른 공급자로 바꿔 이어 갈 때도 관리자 재개 이유가 필요하다.
+- 생성 단계 중 다른 모델로 완료된 단계가 있으면 모델을 바꿔 이어 가지 못한다(검증에서 멈춘다).
+- 복구 전용 도구(root_chunked_*, root_plan_repair, root_*_resume 등)는 Codex 기록 전용이다. 전역 `STUDYEZ_MODEL`을 Claude로 두지 않는다.
+- 강의 자료를 Anthropic으로 보내는 일이므로 지정 행을 쓰기 전에 사용자 확인을 받는다(docs/development/README.md 「사람에게 묻는 것」).
+
 `root_native_json.py`는 `v3-`로 시작하는 root-generation/3 단계도 실행한다(스키마·프롬프트·단계 검사는 `studyez_contracts.roots.generation_v3`). 그 단계는 입력의 `pages`와 그 문항의 자극 그림만 첨부한다. /2 단계 이름의 동작은 그대로다. `pipeline: map-tree/2`(형식 `source-assessment/2-map-tree/2`)는 앞 단계에서 지도·포인트와 함께 독립 문제은행(`bank/`, 지시문 `parallel/bank.md` + `map-tree/bank-task.md`)을 동시에 뽑고, 파생 packet이 root-generation/3으로 돈다. 셋 중 하나만 다시 돌아도 다른 둘은 다시 돌리지 않는다. 마지막 포인트 대조에 남은 지적의 포인트는 `openPoints`로 결과까지 간다.
 
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
