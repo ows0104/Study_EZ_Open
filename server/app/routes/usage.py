@@ -79,6 +79,7 @@ from app.models import (
     AppGrant,
     AssetGrab,
     BankFeedback,
+    JokboMark,
     BankState,
     BankStateArchive,
     Lecture,
@@ -88,6 +89,7 @@ from app.models import (
     PreviewOpen,
     Profile,
     QuizAttempt,
+    TimetableEvent,
     UserPreview,
 )
 
@@ -297,6 +299,7 @@ def usage(
     pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
     connection_saves = _count_by_user(db, ConnectionEvent, ConnectionEvent.created_at, span)
     question_reports = _count_by_user(db, BankFeedback, BankFeedback.created_at, span)
+    jokbo_answers = _count_by_user(db, JokboMark, JokboMark.answered_at, span)
     # 강의록 회독: 지운 회독은 줄이 없어 세지 않는다. 메모: 창 안에 마지막으로 고친 강의 수.
     note_reads = _count_by_user(db, NoteRead, NoteRead.created_at, span)
     memos = _count_by_user(db, LectureMemo, LectureMemo.updated_at, span)
@@ -362,6 +365,7 @@ def usage(
         (ConnectionEvent, ConnectionEvent.created_at),
         (RootEvent, RootEvent.created_at),
         (BankFeedback, BankFeedback.created_at),
+        (JokboMark, JokboMark.answered_at),
         (NoteRead, NoteRead.created_at),
         (LectureMemo, LectureMemo.updated_at),
     ):
@@ -387,6 +391,7 @@ def usage(
                 "id": uid,
                 "connectionSaves": connection_saves.get(uid, 0),
                 "questionReports": question_reports.get(uid, 0),
+                "jokboAnswers": jokbo_answers.get(uid, 0),
                 "noteReads": note_reads.get(uid, 0),
                 "memos": memos.get(uid, 0),
                 **{field: root_metrics.get(uid, {}).get(field, 0) for field in ROOT_FIELDS},
@@ -471,6 +476,7 @@ def usage_detail(
             "previewSavedAt": None,
             "connectionSaves": {"count": 0, "lastAt": None},
             "questionReports": {"count": 0, "lastAt": None},
+            "jokboAnswers": {"count": 0, "lastAt": None},
             "noteReads": {"count": 0, "lastAt": None},
             "memo": {"count": 0, "lastAt": None},
             **{field: {"count":0,"lastAt":None} for field in ROOT_FIELDS},
@@ -524,6 +530,16 @@ def usage_detail(
     ).where(BankFeedback.user_id == user_id).group_by(BankFeedback.subject, BankFeedback.run_id)):
         row = slot(subject, run_id)
         row['questionReports'] = {'count': count, 'lastAt': _iso(last)}
+        row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
+
+    # 족보는 시간표 칸에 붙는다. 그 칸에 이어진 강의가 있으면 그 줄에, 없으면 칸 id로 한 줄.
+    for event_id, count, last in db.execute(select(
+        JokboMark.event_id, func.count(), func.max(JokboMark.answered_at)
+    ).where(JokboMark.user_id == user_id, JokboMark.answered_at.is_not(None)).group_by(JokboMark.event_id)):
+        linked = db.scalars(select(Lecture).where(Lecture.timetable_event_id == event_id)).first()
+        tt = None if linked else db.get(TimetableEvent, event_id)
+        row = slot(*((linked.subject, linked.run_id) if linked else ((tt.course if tt else '') or '족보', event_id)))
+        row['jokboAnswers'] = {'count': count, 'lastAt': _iso(last)}
         row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
 
     for event in db.scalars(select(RootEvent).where(RootEvent.user_id == user_id)):
