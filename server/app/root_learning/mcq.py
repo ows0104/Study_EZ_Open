@@ -70,6 +70,9 @@ def attach_front(db, doc, question, front, *, user_id=None, when=None):
     if version == 2:
         picked = contract.select(question, row, seed(user_id, question, when or datetime.now(UTC)))
         front['mcq_choices'] = picked['choices']
+        if picked['groups']:
+            # 나눠 묻는 문항: 묶음마다 제목과 선지(사용자 2026-11-14 「묻는 게 여러개이면 선지를 나눠서 제시」).
+            front['mcq_groups'] = picked['groups']
     else:
         front['mcq_choices'] = [{'id': c['id'], 'text': c['text']} for c in row['choices']]
     return front
@@ -81,7 +84,7 @@ def attach_answer(db, doc, question, answer):
         return answer
     version, row = found
     if version == 2:
-        answer['mcqCorrectIds'] = [contract.choice_id(question['question_id'], t) for t in contract.correct_texts(question)]
+        answer['mcqCorrectIds'] = [contract.choice_id(question['question_id'], t, g) for g, t in contract.answer_choices(question)]
         # 오답 풀 전부(많아야 10개). 화면은 이번에 보인 선지의 것만 쓴다 — 답면이 씨앗을 몰라도 된다.
         answer['mcqWrongNotes'] = {w['id']: {'why': w['why_wrong'], 'source': contract.source_label(w)} for w in row['wrong']}
     else:

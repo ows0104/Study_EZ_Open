@@ -42,7 +42,7 @@ def _good(qid):
                _w("Mg2+"), _w("Ca2+"), _w("Mn2+", source="jokbo", basis="2022 족보 45번 ②",
                                            jokbo={**NO_JOKBO, "year": "2022", "number": "45", "professor": "김"})],
         "L1": [_w("털진드기", source="block", basis="쯔쯔가무시"), _w("모기", source="block", basis="말라리아"), _w("참진드기")],
-        "C1": [_w(parts=["Fe3+", "산화"]), _w(parts=["Fe2+", "환원"]), _w(parts=["Fe3+", "환원"])],
+        "C1": [{**_w("Fe3+"), "group": 0}, {**_w("Cu2+"), "group": 0}, {**_w("환원"), "group": 1}, {**_w("가수분해"), "group": 1}],
         "C2": [_w("Fe3+"), _w("Cu2+"), _w("Zn2+")],
         "S1": [_w(parts=["침입", "흡착", "복제"]), _w(parts=["흡착", "복제", "침입"])],
     }[qid]
@@ -89,26 +89,26 @@ def test_자체_선지_형식은_대상이_아니다(fmt):
 
 def test_정답과_언어가_다른_오답은_뺀다():
     q = _q("Q", "list", "a", ["Necrotizing bronchitis", "Interstitial pneumonia"])
-    assert contract.cue_errors(q, "간질 보존을 동반한 기관지 점액 과다") == ["표기 언어가 정답과 다름"]
-    assert contract.cue_errors(q, "Diffuse alveolar damage") == []
+    assert contract.cue_errors(contract.correct_texts(q), "간질 보존을 동반한 기관지 점액 과다") == ["표기 언어가 정답과 다름"]
+    assert contract.cue_errors(contract.correct_texts(q), "Diffuse alveolar damage") == []
     # 한국어 문장 속 영어 용어 하나, 짧은 한국어+약어는 언어가 다른 것이 아니다.
-    assert contract.cue_errors(_q("K", answer="바이러스 변이가 많다"), "핵 내 cccDNA가 남는다") == []
-    assert contract.cue_errors(_q("T", answer="TSST-1 독소"), "혈중으로 퍼진 균 자체") == []
+    assert contract.cue_errors(contract.correct_texts(_q("K", answer="바이러스 변이가 많다")), "핵 내 cccDNA가 남는다") == []
+    assert contract.cue_errors(contract.correct_texts(_q("T", answer="TSST-1 독소")), "혈중으로 퍼진 균 자체") == []
 
 
 def test_정답이_한글_영문_병기면_오답도_병기해야_한다():
     q = _q("Q", answer="폐렴사슬알균(S. pneumoniae)")
-    assert contract.cue_errors(q, "S. dysgalactiae") == ["표기 방식이 정답과 다름(정답은 한글·영문 병기)"]
-    assert contract.cue_errors(q, "고름사슬알균(S. pyogenes)") == []
+    assert contract.cue_errors(contract.correct_texts(q), "S. dysgalactiae") == ["표기 방식이 정답과 다름(정답은 한글·영문 병기)"]
+    assert contract.cue_errors(contract.correct_texts(q), "고름사슬알균(S. pyogenes)") == []
 
 
 def test_길이와_단정_표현_단서():
     q = _q("Q", answer="숙주세포에 대사적으로 의존한다")
-    assert "길이가 정답과 크게 다름" in contract.cue_errors(q, "독립")
-    assert contract.cue_errors(_q("S", answer="EBV"), "Cytomegalovirus") == []   # 짧은 정답은 길이를 보지 않는다
-    assert contract.cue_errors(q, "숙주세포 없이 항상 독립적으로 증식한다") == ["오답에만 단정 표현"]
-    assert contract.cue_errors(_q("B", answer="항상 숙주세포에 의존한다"), "항상 숙주세포 밖에서 증식한다") == []
-    assert contract.cue_errors(_q("A", answer="미호기성 세균"), "절대혐기성 세균") == []   # 용어 속 「절대」는 단정 표현이 아니다
+    assert "길이가 정답과 크게 다름" in contract.cue_errors(contract.correct_texts(q), "독립")
+    assert contract.cue_errors(contract.correct_texts(_q("S", answer="EBV")), "Cytomegalovirus") == []   # 짧은 정답은 길이를 보지 않는다
+    assert contract.cue_errors(contract.correct_texts(q), "숙주세포 없이 항상 독립적으로 증식한다") == ["오답에만 단정 표현"]
+    assert contract.cue_errors(contract.correct_texts(_q("B", answer="항상 숙주세포에 의존한다")), "항상 숙주세포 밖에서 증식한다") == []
+    assert contract.cue_errors(contract.correct_texts(_q("A", answer="미호기성 세균")), "절대혐기성 세균") == []   # 용어 속 「절대」는 단정 표현이 아니다
 
 
 # ── 오답 줄 검사·칸 ─────────────────────────────────────────────────────────
@@ -256,3 +256,66 @@ def test_v1_칸은_그대로_읽힌다():
     assert contract.attachable(asset, "rev-2", doc["B1"]) is None
     assert contract.attachable(asset, "rev-1", {**doc["B1"], "question": "바뀜"}) is None
     assert contract.attachable_v2(asset, "rev-1", doc["B1"]) is None
+
+
+# ── 나눠 묻는 문항(사용자 「묻는 게 여러개이면 선지를 나눠서 제시」)·부정만 붙인 오답(「이런 건 좀 억지인듯」) ──
+
+def _bal():
+    return _q("G1", "list", "일반적 기준: 10^3~10^4 CFU/mL; 서울대병원: 10^3 CFU/mL",
+              ["일반적 기준: 10^3~10^4 CFU/mL", "서울대병원: 10^3 CFU/mL"],
+              question="급성 세균성 폐렴의 BAL 정량 배양 판독에 제시된 일반적 농도 범위와 서울대병원의 기준은?")
+
+
+def _gw(group, text, source="made"):
+    return {**_w(text, source=source), "group": group}
+
+
+def test_항목별_정답이면_묶음으로_나누고_빈칸_여럿도_빈칸마다_나눈다():
+    assert contract.groups(_bal()) == [{"label": "일반적 기준", "correct": "10^3~10^4 CFU/mL"},
+                                       {"label": "서울대병원", "correct": "10^3 CFU/mL"}]
+    doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
+    assert [g["label"] for g in contract.groups(doc["C1"])] == ["빈칸 1", "빈칸 2"]
+    assert contract.groups(doc["L1"]) is None and contract.groups(doc["C2"]) is None   # 같은 종류 나열·빈칸 하나는 한 묶음
+    assert contract.groups(_q("X", "list", "a", ["감염: x", "감염: y"])) is None          # 항목 이름이 겹치면 나누지 않는다
+
+
+def test_묶음_문항은_오답마다_묶음이_필요하고_묶음_정답과_견준다():
+    q = _bal()
+    assert contract.row_errors(q, _w("10^5 CFU/mL")) == ["나눠 묻는 문항은 오답마다 묶음 번호(group) 필요"]
+    assert contract.row_errors(q, _gw(1, "10^3 CFU/mL")) == ["정답과 같은 오답"]
+    assert contract.row_errors(q, _gw(0, "10^3 CFU/mL")) == []   # 다른 묶음의 정답은 좋은 오답이다
+    entry = contract.entry_v2(q, [_gw(0, "10^1~10^2 CFU/mL"), _gw(0, "10^5~10^6 CFU/mL"), _gw(1, "10^5 CFU/mL"), _gw(1, "10^2 CFU/mL")])
+    assert contract.entry_errors_v2(q, entry) == []
+    picked = contract.select(q, entry, "s")
+    assert [g["label"] for g in picked["groups"]] == ["일반적 기준", "서울대병원"]
+    assert [len(g["ids"]) for g in picked["groups"]] == [3, 3] and len(picked["correct_ids"]) == 2
+    first = {c["id"]: c["text"] for c in picked["choices"] if c["id"] in picked["groups"][0]["ids"]}
+    assert "10^3~10^4 CFU/mL" in first.values() and "10^5 CFU/mL" not in first.values()
+    assert [c["id"] for c in picked["choices"]] == picked["groups"][0]["ids"] + picked["groups"][1]["ids"]
+
+
+def test_정답에_부정·반대말만_붙인_오답은_뺀다():
+    q = _q("N", "list", "a", ["과거 감염의 재활성화", "기회감염"], question="면역저하 숙주에서 특히 고려해야 하는 감염의 두 양상은?")
+    assert "정답에 부정·반대말만 붙인 오답" in contract.row_errors(q, _w("과거 감염의 재활성화 억제"))
+    assert "정답에 부정·반대말만 붙인 오답" in contract.row_errors(q, _w("기회감염에 대한 감수성 감소"))
+    assert contract.row_errors(q, _w("1차 감염의 전격성 경과")) == []
+    assert contract.cue_errors(["Fe2+"], "Fe3+") == []
+
+
+def test_생성기는_묶음을_입력에_주고_검토에는_묶음_이름을_붙인다(tmp_path):
+    document = {"revision": "rev-g", "title": "폐렴", "bank_snapshot": {"questions": [_bal()]}}
+    seen, reviewed = [], []
+
+    def write(rows):
+        assert rows["questions"][0]["groups"][1] == {"group": 1, "label": "서울대병원", "correct": "10^3 CFU/mL"}
+        return {"proposals": [{"question_id": "G1", "skip_reason": "", "wrong": [
+            _gw(0, "10^1~10^2 CFU/mL"), _gw(1, "10^5 CFU/mL"), _gw(1, "10^2 CFU/mL")]}]}
+
+    def review(qs):
+        reviewed.append(qs[0])
+        return {"reviews": [{"question_id": "G1", "invalid": [{"text": "[서울대병원] 10^2 CFU/mL", "reason": "불확실"}]}]}
+
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, review, seen))
+    assert reviewed[0]["correct"] == ["[일반적 기준] 10^3~10^4 CFU/mL", "[서울대병원] 10^3 CFU/mL"]
+    assert [(w["group"], w["text"]) for w in asset["questions"]["G1"]["wrong"]] == [(0, "10^1~10^2 CFU/mL"), (1, "10^5 CFU/mL")]
+    contract.validate_v2(asset, document)

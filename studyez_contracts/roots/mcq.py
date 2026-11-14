@@ -301,18 +301,55 @@ def _language_gap(correct: list[str], text: str) -> bool:
     return (kinds == {'en'} and mine == 'ko') or (kinds == {'ko'} and mine == 'en')
 
 
-def choice_id(question_id: str, text: str) -> str:
-    """선지 ID. 정답·오답이 같은 방식으로 만들어져 ID로는 정답을 알 수 없고, 같은 글이면 늘 같다."""
-    return 'k' + hashlib.sha256(f'choice\n{question_id}\n{normalized(text)}'.encode()).hexdigest()[:8]
+def choice_id(question_id: str, text: str, group: int | None = None) -> str:
+    """선지 ID. 정답·오답이 같은 방식으로 만들어져 ID로는 정답을 알 수 없고, 같은 글이면 늘 같다.
+    나눠 묻는 문항은 묶음 번호를 넣는다(두 빈칸의 답이 같은 글일 수 있다)."""
+    key = normalized(text) if group is None else f'{group}|{normalized(text)}'
+    return 'k' + hashlib.sha256(f'choice\n{question_id}\n{key}'.encode()).hexdigest()[:8]
+
+
+# 나눠 묻는 문항(사용자 2026-11-14 「묻는 게 여러개이면 선지를 나눠서 제시해야할 것 같아. 지금 섞여서 고르기가 너무 어려워」).
+# 코드가 정한다: 빈칸이 둘 이상인 cloze는 빈칸마다, 정답 단위가 모두 「항목: 값」 꼴인 basic·list는 항목마다 한 묶음.
+_LABELED = re.compile(r'^\s*([^:：\n]{1,24}?)\s*[:：]\s*(\S.*)$')
+MAX_GROUPS = 12
+
+
+def groups(question: dict) -> list[dict] | None:
+    """묶음 [{label, correct}] 또는 None(한 묶음). 묶음마다 정답은 하나다."""
+    fmt, units = question.get('format'), _units(question)
+    if len(units) < 2 or len(units) > MAX_GROUPS:
+        return None
+    if fmt == 'cloze' and blank_count(question) == len(units):
+        return [{'label': f'빈칸 {i + 1}', 'correct': u.strip()} for i, u in enumerate(units)]
+    if fmt in ('basic', 'list'):
+        found = [_LABELED.match(u) for u in units]
+        if all(found) and len({normalized(m.group(1)) for m in found}) == len(found):
+            return [{'label': m.group(1).strip(), 'correct': m.group(2).strip()} for m in found]
+    return None
+
+
+def answer_choices(question: dict) -> list[tuple[int | None, str]]:
+    """정답 선지 (묶음 번호, 글). 묶음이 없으면 번호는 None."""
+    found = groups(question)
+    return [(i, g['correct']) for i, g in enumerate(found)] if found else [(None, t) for t in correct_texts(question)]
 
 
 def _absolute(text: str) -> set[str]:
     return {m.group(0).strip().lower() for m in ABSOLUTE.finditer(text)}
 
 
-def cue_errors(question: dict, text: str) -> list[str]:
-    """정답과 견주어 오답 티가 나는 표기. 비어 있으면 통과."""
-    correct = correct_texts(question)
+# 정답에 부정·반대말만 붙인 오답(사용자 2026-11-14 「이런 건 좀 억지인듯」: 기회감염 → 「기회감염에 대한 감수성 감소」).
+NEGATION = re.compile(r'억제|감소|저하|없음|없다|없는|없이|아님|아니다|아닌|결여|불가|차단|방지|소실|부재|하지 않|되지 않')
+
+
+def _negated(correct: list[str], text: str) -> bool:
+    if not NEGATION.search(text):
+        return False
+    return any(len(normalized(t)) >= 2 and normalized(t) in normalized(text) and not NEGATION.search(t) for t in correct)
+
+
+def cue_errors(correct: list[str], text: str) -> list[str]:
+    """정답 선지들과 견주어 오답 티가 나는 표기. 비어 있으면 통과."""
     errors = []
     if _language_gap(correct, text):
         errors.append('표기 언어가 정답과 다름')
@@ -324,22 +361,47 @@ def cue_errors(question: dict, text: str) -> list[str]:
         errors.append('길이가 정답과 크게 다름')
     if _absolute(text) - set().union(*(_absolute(t) for t in correct)):
         errors.append('오답에만 단정 표현')
+    if _negated(correct, text):
+        errors.append('정답에 부정·반대말만 붙인 오답')
     return errors
+
+
+def _group_of(question: dict, row: dict) -> int | None:
+    value = row.get('group')
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+
+
+def text_v2(question: dict, row: dict) -> str:
+    """v2 오답의 선지 글. 묶음 문항은 text 그대로(그 묶음의 값), 아니면 v1과 같다(sequence는 순서를 잇는다)."""
+    if groups(question):
+        text = row.get('text')
+        return text.strip() if isinstance(text, str) else ''
+    return wrong_text(question, row)
 
 
 def row_errors(question: dict, row) -> list[str]:
     """모델이 쓴 오답 한 줄의 결함. 다른 오답과의 중복은 `entry_v2`가 뺀다."""
     if not isinstance(row, dict):
         return ['오답 형식 오류']
-    need = parts_needed(question)
-    if need:
-        parts = row.get('parts')
-        if not isinstance(parts, list) or len(parts) != need or any(not isinstance(p, str) or not normalized(p) for p in parts):
-            return [f'조합 오답은 {need}칸이 필요']
-        if question['format'] == 'sequence' and sorted(normalized(p) for p in parts) != sorted(
-                normalized(s) for s in question.get('correct_order') or []):
-            return ['순서 오답은 같은 항목의 다른 순서여야 함']
-    text = wrong_text(question, row)
+    found = groups(question)
+    if found:
+        group = _group_of(question, row)
+        if group is None or group >= len(found):
+            return ['나눠 묻는 문항은 오답마다 묶음 번호(group) 필요']
+        correct = [found[group]['correct']]
+    else:
+        if _group_of(question, row) is not None:
+            return ['한 묶음 문항에 묶음 번호']
+        need = parts_needed(question)
+        if need:
+            parts = row.get('parts')
+            if not isinstance(parts, list) or len(parts) != need or any(not isinstance(p, str) or not normalized(p) for p in parts):
+                return [f'조합 오답은 {need}칸이 필요']
+            if question['format'] == 'sequence' and sorted(normalized(p) for p in parts) != sorted(
+                    normalized(s) for s in question.get('correct_order') or []):
+                return ['순서 오답은 같은 항목의 다른 순서여야 함']
+        correct = correct_texts(question)
+    text = text_v2(question, row)
     if not normalized(text):
         return ['빈 오답']
     if row.get('source') not in SOURCES:
@@ -350,38 +412,43 @@ def row_errors(question: dict, row) -> list[str]:
         jokbo = row.get('jokbo')
         if not isinstance(jokbo, dict) or not str(jokbo.get('year') or '').strip() or not str(jokbo.get('number') or '').strip():
             return ['족보 오답은 연도·번호 필요']
-    if normalized(text) in {normalized(t) for t in correct_texts(question)}:
+    if normalized(text) in {normalized(t) for t in correct}:
         return ['정답과 같은 오답']
-    return cue_errors(question, text)
+    return cue_errors(correct, text)
 
 
 def wrong_row(question: dict, row: dict) -> dict:
     """검사를 통과한 오답 한 줄을 asset 모양으로."""
-    text = wrong_text(question, row)
-    out = {'id': choice_id(question['question_id'], text), 'text': text, 'source': row['source'],
+    text, group = text_v2(question, row), (_group_of(question, row) if groups(question) else None)
+    out = {'id': choice_id(question['question_id'], text, group), 'text': text, 'source': row['source'],
            'basis': str(row['basis']).strip(), 'why_tempting': str(row['why_tempting']).strip(),
            'why_wrong': str(row['why_wrong']).strip()}
+    if group is not None:
+        out['group'] = group
     if row['source'] == 'jokbo':
         out['jokbo'] = {k: str(row['jokbo'].get(k) or '').strip() for k in JOKBO_KEYS}
     return out
 
 
 def entry_v2(question: dict, wrong: list[dict]) -> dict:
-    """통과한 오답(1개 이상)으로 asset의 문항 한 칸. 결함 있는 줄·중복은 빼고 풀 상한까지만."""
+    """통과한 오답(1개 이상)으로 asset의 문항 한 칸. 결함 있는 줄·중복은 빼고 풀 상한까지만(묶음 문항은 묶음마다)."""
     if not eligible(question):
         raise ValueError(f"{question.get('question_id')}: 선지를 붙일 수 없는 문항")
-    seen = {normalized(t) for t in correct_texts(question)}
-    rows = []
+    seen = {(g, normalized(t)) for g, t in answer_choices(question)}
+    rows, per_group = [], {}
     for row in wrong:
         if row_errors(question, row):
             continue
-        key = normalized(wrong_text(question, row))
-        if key not in seen:
-            seen.add(key)
-            rows.append(wrong_row(question, row))
+        out = wrong_row(question, row)
+        key = (out.get('group'), normalized(out['text']))
+        if key in seen or per_group.get(out.get('group'), 0) >= MAX_POOL:
+            continue
+        seen.add(key)
+        per_group[out.get('group')] = per_group.get(out.get('group'), 0) + 1
+        rows.append(out)
     if not rows:
         raise ValueError(f"{question.get('question_id')}: 통과한 오답 없음")
-    return {'question_hash': authored_hash(question), 'wrong': rows[:MAX_POOL]}
+    return {'question_hash': authored_hash(question), 'wrong': rows}
 
 
 def entry_errors_v2(question: dict, row) -> list[str]:
@@ -390,20 +457,25 @@ def entry_errors_v2(question: dict, row) -> list[str]:
         return ['선지 칸 형식 오류']
     if row.get('question_hash') != authored_hash(question):
         return ['문항 지문 불일치']
+    found = groups(question)
     wrong = row.get('wrong')
-    if not isinstance(wrong, list) or not 1 <= len(wrong) <= MAX_POOL or any(not isinstance(w, dict) for w in wrong):
+    limit = MAX_POOL * (len(found) if found else 1)
+    if not isinstance(wrong, list) or not 1 <= len(wrong) <= limit or any(not isinstance(w, dict) for w in wrong):
         return ['오답 풀 형식 오류']
-    keys = {normalized(t) for t in correct_texts(question)}
-    ids = {choice_id(question['question_id'], t) for t in correct_texts(question)}
+    qid = question['question_id']
+    keys = {(g, normalized(t)) for g, t in answer_choices(question)}
+    ids = {choice_id(qid, t, g) for g, t in answer_choices(question)}
     for w in wrong:
-        text = w.get('text')
-        if not isinstance(text, str) or not normalized(text) or normalized(text) in keys:
+        text, group = w.get('text'), w.get('group')
+        if found and (not isinstance(group, int) or not 0 <= group < len(found)) or not found and group is not None:
+            return ['묶음 번호 오류']
+        if not isinstance(text, str) or not normalized(text) or (group, normalized(text)) in keys:
             return ['빈 오답이거나 정답·다른 오답과 겹침']
-        if w.get('id') != choice_id(question['question_id'], text) or w['id'] in ids:
+        if w.get('id') != choice_id(qid, text, group) or w['id'] in ids:
             return ['선지 ID 오류']
         if w.get('source') not in SOURCES or not str(w.get('why_wrong') or '').strip():
             return ['오답 출처·이유 없음']
-        keys.add(normalized(text))
+        keys.add((group, normalized(text)))
         ids.add(w['id'])
     return []
 
@@ -439,8 +511,13 @@ def _rank(seed: str, salt: str, key: str) -> str:
 
 
 def show_count(question: dict) -> int:
-    """한 번에 보일 오답 수(사용자 「4-5개 정도」). list는 정답 단위와 합쳐 MAX_CHOICES 이하."""
+    """한 번에 보일 오답 수(사용자 「4-5개 정도」). list는 정답 단위와 합쳐 MAX_CHOICES 이하. 묶음 문항은 묶음마다 `group_show`."""
     return max(0, min(SHOW.get(question.get('format'), 4), MAX_CHOICES - len(correct_texts(question))))
+
+
+def group_show(count: int) -> int:
+    """묶음마다 보일 오답 수. 묶음이 많으면 줄여 화면이 너무 길어지지 않게 한다."""
+    return 3 if count <= 4 else 2 if count <= 8 else 1
 
 
 def source_label(row: dict) -> str:
@@ -453,14 +530,28 @@ def source_label(row: dict) -> str:
 
 
 def select(question: dict, row: dict, seed: str) -> dict:
-    """이번 풀이에 보일 선지: 정답 전부 + 오답 풀에서 씨앗으로 고른 4~5개, 씨앗으로 섞은 순서.
+    """이번 풀이에 보일 선지: 정답 전부 + 오답 풀에서 씨앗으로 고른 것, 씨앗으로 섞은 순서.
 
     같은 씨앗이면 늘 같다(새로고침·되돌리기). 서버는 씨앗을 사용자·문항·학습일로 만든다 — 다음 복습 날엔 다른 조합이다.
-    반환: choices(앞면), correct_ids, notes(보인 오답의 이유·출처, 답면 전용)."""
+    묶음 문항은 묶음마다 정답 하나 + 오답 `group_show`개를 그 묶음 안에서 섞고, 묶음 순서는 그대로 둔다.
+    반환: choices(앞면, 묶음 순서로 이은 것), groups(묶음 문항만 [{label, ids}]), correct_ids, notes(보인 오답의 이유·출처, 답면 전용)."""
     qid = question['question_id']
-    wrong = sorted(row['wrong'], key=lambda w: _rank(seed, 'pick', w['id']))[:show_count(question)]
-    correct = [{'id': choice_id(qid, t), 'text': t} for t in correct_texts(question)]
-    shown = sorted([*correct, *({'id': w['id'], 'text': w['text']} for w in wrong)],
-                   key=lambda c: _rank(seed, 'order', c['id']))
-    return {'choices': shown, 'correct_ids': [c['id'] for c in correct],
-            'notes': {w['id']: {'why': w['why_wrong'], 'source': source_label(w)} for w in wrong}}
+    found = groups(question)
+    if not found:
+        wrong = sorted(row['wrong'], key=lambda w: _rank(seed, 'pick', w['id']))[:show_count(question)]
+        correct = [{'id': choice_id(qid, t), 'text': t} for _, t in answer_choices(question)]
+        shown = sorted([*correct, *({'id': w['id'], 'text': w['text']} for w in wrong)],
+                       key=lambda c: _rank(seed, 'order', c['id']))
+        return {'choices': shown, 'groups': None, 'correct_ids': [c['id'] for c in correct],
+                'notes': {w['id']: {'why': w['why_wrong'], 'source': source_label(w)} for w in wrong}}
+    choices, labeled, correct_ids, notes = [], [], [], {}
+    take = group_show(len(found))
+    for index, group in enumerate(found):
+        right = {'id': choice_id(qid, group['correct'], index), 'text': group['correct']}
+        mine = sorted((w for w in row['wrong'] if w.get('group') == index), key=lambda w: _rank(seed, 'pick', w['id']))[:take]
+        part = sorted([right, *({'id': w['id'], 'text': w['text']} for w in mine)], key=lambda c: _rank(seed, 'order', c['id']))
+        choices += part
+        labeled.append({'label': group['label'], 'ids': [c['id'] for c in part]})
+        correct_ids.append(right['id'])
+        notes.update({w['id']: {'why': w['why_wrong'], 'source': source_label(w)} for w in mine})
+    return {'choices': choices, 'groups': labeled, 'correct_ids': correct_ids, 'notes': notes}

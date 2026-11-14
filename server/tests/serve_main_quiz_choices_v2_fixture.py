@@ -25,8 +25,10 @@ client, user, SessionLocal = setup()
 doc = document()
 questions = doc['bank_snapshot']['questions']
 questions[0].update(question='Which ion does the enzyme bind?', answer='Fe2+', answer_units=['Fe2+'])
-questions[1].update(format='list', question='List the vectors of epidemic typhus and murine typhus.', answer='Body louse; Rat flea',
-                    answer_units=['Body louse', 'Rat flea'])
+# 나눠 묻는 문항(「항목: 값」): 묶음마다 제목과 선지가 따로 보인다.
+questions[1].update(format='list', question='What carries epidemic typhus and murine typhus, respectively?',
+                    answer='Epidemic typhus: Body louse; Murine typhus: Rat flea',
+                    answer_units=['Epidemic typhus: Body louse', 'Murine typhus: Rat flea'])
 questions[2].update(format='ox', question='Rickettsia are obligate intracellular bacteria.', answer='O', answer_units=['O'])
 doc['review']['bank_sha256'] = document_hash(doc['bank_snapshot'])
 for m, q in zip(doc['review']['mappings'], questions):
@@ -46,9 +48,12 @@ WRONG = {'Q1': [w('Fe3+', why='Fe3+ is the oxidized form; this enzyme binds the 
                 w('Cu2+', 'block', 'Copper is the Wilson disease ion, not this cofactor.'), w('Zn2+', 'lecture', 'Zinc fingers bind DNA.'),
                 w('Mg2+', why='Magnesium stabilises ATP, not this site.'), w('Mn2+', why='Manganese belongs to SOD2.'),
                 w('Ca2+', why='Calcium is the second messenger here.'), w('Co2+', why='Cobalt sits in B12.')],
-         'Q2': [w('Chigger mite', 'block', 'Chiggers carry Orientia (scrub typhus).'), w('Hard tick', 'block', 'Ticks carry RMSF.'),
-                w('Mosquito', 'block', 'Mosquitoes carry malaria, not typhus.'), w('Sand fly', why='Sand flies carry Leishmania.'),
-                w('Tsetse fly', why='Tsetse flies carry trypanosomes.')]}
+         'Q2': [{**w('Rat flea', why='Rat fleas carry murine typhus, not epidemic typhus.'), 'group': 0},
+                {**w('Chigger mite', 'block', 'Chiggers carry Orientia (scrub typhus).'), 'group': 0},
+                {**w('Hard tick', 'block', 'Ticks carry RMSF.'), 'group': 0},
+                {**w('Body louse', why='Lice carry epidemic typhus, not murine typhus.'), 'group': 1},
+                {**w('Mosquito', 'block', 'Mosquitoes carry malaria, not typhus.'), 'group': 1},
+                {**w('Sand fly', why='Sand flies carry Leishmania.'), 'group': 1}]}
 asset = {'schema': contract.SCHEMA_V2, 'revision': doc['revision'], 'skipped': {}, 'questions': {
     q['question_id']: contract.entry_v2(q, WRONG[q['question_id']]) for q in questions[:2]}}
 contract.validate_v2(asset, doc)

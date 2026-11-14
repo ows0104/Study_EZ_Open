@@ -80,9 +80,11 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   }
   function pick(id:string){
     if(locked||task?.answer)return;
+    // 나눠 묻는 문항은 묶음마다 하나를 고른다(같은 묶음의 다른 선택을 비운다).
+    const group=(mcq??recallSet)?.groups?.find(g=>g.ids.includes(id));
     // 펴 본 선지는 나열만 여럿을 고른다(단답·빈칸·순서는 정답 선지가 하나).
-    const single=!mcq&&(task?.question.format==='mcq'||(!!recall&&task?.question.format!=='list'));
-    const next=new Set(single?[]:picked);
+    const single=!group&&!mcq&&(task?.question.format==='mcq'||(!!recall&&task?.question.format!=='list'));
+    const next=new Set(single?[]:[...picked].filter(other=>!group||other===id||!group.ids.includes(other)));
     if(picked.has(id)&&!single)next.delete(id);else next.add(id);
     setPicked(next);
     heading.current?.focus({preventScroll:true});
@@ -232,7 +234,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
       recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
-      choiceNotes={task.answer?.mcqWrongNotes}/>
+      choiceNotes={task.answer?.mcqWrongNotes} choiceGroups={(mcq??recallSet)?.groups}/>
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}

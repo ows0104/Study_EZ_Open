@@ -39,8 +39,8 @@ _STR = {"type": "string"}
 JOKBO = {"type": "object", "additionalProperties": False, "required": list(contract.JOKBO_KEYS),
          "properties": {k: _STR for k in contract.JOKBO_KEYS}}
 WRONG = {"type": "array", "items": {"type": "object", "additionalProperties": False,
-                                  "required": ["text", "parts", "source", "basis", "why_tempting", "why_wrong", "jokbo"],
-                                  "properties": {"text": _STR, "parts": {"type": "array", "items": _STR},
+                                  "required": ["group", "text", "parts", "source", "basis", "why_tempting", "why_wrong", "jokbo"],
+                                  "properties": {"group": {"type": "integer"}, "text": _STR, "parts": {"type": "array", "items": _STR},
                                                  "source": {"type": "string", "enum": list(contract.SOURCES)},
                                                  "basis": _STR, "why_tempting": _STR, "why_wrong": _STR, "jokbo": JOKBO}}}
 PROPOSALS = {"type": "object", "additionalProperties": False, "required": ["proposals"], "properties": {"proposals": {
@@ -77,9 +77,15 @@ def batch_input(document: dict, batch: list[dict], context: dict, rejected: dict
                 rows.append({"run_id": lecture["run_id"], "title": lecture["title"], **_item(item)})
         return rows[:6]
 
+    def parts(q):
+        found = contract.groups(q)
+        return {"groups": [{"group": i, "label": g["label"], "correct": g["correct"]} for i, g in enumerate(found)],
+                "correct": [g["correct"] for g in found], "parts_needed": 0} if found else {
+            "groups": [], "correct": contract.correct_texts(q), "parts_needed": contract.parts_needed(q)}
+
     return {"title": document.get("title", ""), "block": context.get("block", ""), "questions": [{
         "question_id": q["question_id"], "format": q["format"], "question": q["question"], "answer": q["answer"],
-        "correct": contract.correct_texts(q), "parts_needed": contract.parts_needed(q),
+        **parts(q),
         **({"sequence_items": q.get("sequence_items", [])} if q["format"] == "sequence" else {}),
         "explanation": q.get("explanation", ""), "same_lecture": contract.same_lecture_pool(questions, q),
         "linked_jokbo": [_item(by_number[k]) for k in context.get("links", {}).get(q["question_id"], []) if k in by_number],
@@ -88,29 +94,49 @@ def batch_input(document: dict, batch: list[dict], context: dict, rejected: dict
         "jokbo": [_item(i) for i in own], "block_pool": context.get("lectures", []), "block_sheet": context.get("sheet") or {}}
 
 
+def shown(question: dict, row: dict) -> str:
+    """검토·기록에 쓰는 오답 글. 나눠 묻는 문항은 묶음 이름을 앞에 붙인다(「[서울대병원] 10^5 CFU/mL」)."""
+    found = contract.groups(question)
+    text = contract.text_v2(question, row)
+    group = row.get("group")
+    return f"[{found[group]['label']}] {text}" if found and isinstance(group, int) and 0 <= group < len(found) else text
+
+
+def _correct_shown(question: dict) -> list[str]:
+    found = contract.groups(question)
+    return [f"[{g['label']}] {g['correct']}" for g in found] if found else contract.correct_texts(question)
+
+
 def review_input(document: dict, drafts: dict, questions: dict) -> dict:
     """검토자에게는 오답을 쓴 쪽의 출처·근거·이유를 주지 않는다."""
     return {"title": document.get("title", ""), "questions": [{
         "question_id": qid, "format": questions[qid]["format"], "question": questions[qid]["question"],
-        "correct": contract.correct_texts(questions[qid]), "explanation": questions[qid].get("explanation", ""),
-        "wrong": [contract.wrong_text(questions[qid], row) for row in wrong]} for qid, wrong in drafts.items()]}
+        "correct": _correct_shown(questions[qid]), "explanation": questions[qid].get("explanation", ""),
+        "wrong": [shown(questions[qid], row) for row in wrong]} for qid, wrong in drafts.items()]}
 
 
 def keep(question: dict, wrong: list[dict]) -> tuple[list[dict], list[dict]]:
     """코드 검사(형식·출처·표기 단서)를 통과한 오답과, 빠진 오답·이유. 중복은 앞의 것만, 풀 상한까지."""
-    seen = {normalized(t) for t in contract.correct_texts(question)}
-    kept, dropped = [], []
+    grouped = bool(contract.groups(question))
+    seen = {normalized(t) for t in _correct_shown(question)}
+    kept, dropped, per = [], [], {}
     for row in wrong:
-        text = contract.wrong_text(question, row)
+        if not grouped:
+            row = {**row, "group": -1}
+        text = shown(question, row)
         errors = contract.row_errors(question, row)
         if not errors and normalized(text) in seen:
             errors = ["다른 오답과 같음"]
         if errors:
             dropped.append({"text": text, "reason": "; ".join(errors)})
             continue
+        group = row["group"]
+        if per.get(group, 0) >= contract.MAX_POOL:
+            continue
+        per[group] = per.get(group, 0) + 1
         seen.add(normalized(text))
         kept.append(row)
-    return kept[:contract.MAX_POOL], dropped
+    return kept, dropped
 
 
 def drafts_of(batch: list[dict], output: dict) -> tuple[dict, dict, dict]:
@@ -148,9 +174,9 @@ def apply_review(questions: dict, drafts: dict, output: dict) -> tuple[dict, dic
             skipped[qid] = "의학 검토를 받지 못함"
             continue
         invalid = {normalized(r["text"]): r["reason"].strip() for r in row["invalid"]}
-        removed = [{"text": contract.wrong_text(q, w), "reason": invalid[normalized(contract.wrong_text(q, w))]}
-                   for w in wrong if normalized(contract.wrong_text(q, w)) in invalid]
-        kept = [w for w in wrong if normalized(contract.wrong_text(q, w)) not in invalid]
+        removed = [{"text": shown(q, w), "reason": invalid[normalized(shown(q, w))]}
+                   for w in wrong if normalized(shown(q, w)) in invalid]
+        kept = [w for w in wrong if normalized(shown(q, w)) not in invalid]
         record[qid] = {"removed": removed, "kept": len(kept)}
         if kept:
             entries[qid] = contract.entry_v2(q, kept)

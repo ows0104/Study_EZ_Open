@@ -2769,6 +2769,10 @@ button.notice-title:hover:not(:disabled) {
 .bank-option-why-more ul { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
 .bank-option-why-more li > b { margin-right: 6px; }
 .bank-option-why-more li .bank-option-why { display: inline; margin: 0; }
+/* 나눠 묻는 문항의 묶음 제목(2026-11-14 choices-merge). */
+.bank-choice-group { margin: 14px 0 0; }
+.bank-choice-group > h3 { margin: 0 0 6px; font-size: 14px; font-weight: 650; color: var(--ink-2); }
+.bank-choice-group > .bank-options { margin-top: 0; }
 
 .bank-choice-score {
   display: grid;

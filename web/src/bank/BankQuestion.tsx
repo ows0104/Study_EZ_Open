@@ -59,7 +59,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes, choiceGroups }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -78,6 +78,8 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   choiceHint?: boolean;
   /** 덧붙인 선지의 오답마다 왜 틀렸나·족보 출처(답을 본 뒤). 고른 오답 아래에 보이고 나머지는 접어 둔다(2026-11-14 choices-merge). */
   choiceNotes?: Record<string, { why: string; source: string }>;
+  /** 나눠 묻는 문항의 묶음(빈칸마다·「항목: 값」마다). 묶음마다 제목을 달고 선지를 따로 보인다. 번호는 이어진다. */
+  choiceGroups?: { label: string; ids: string[] }[];
 }) {
   const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
   const options = recallChoices ?? q.options;
@@ -86,34 +88,44 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   const notes = recallChoices && answer && showOptions ? choiceNotes ?? {} : {};
   const note = (id: string) => notes[id] ? <span className="bank-option-why">{notes[id].source ? <b>{notes[id].source}</b> : null}{notes[id].why}</span> : null;
   const otherNotes = options.filter(option => notes[option.id] && !picked.has(option.id));
+  const byId = new Map(options.map(option => [option.id, option]));
+  const groups = recallChoices && choiceGroups?.length
+    ? choiceGroups.map(group => ({ label: group.label, options: group.ids.map(id => byId.get(id)).filter(Boolean) as typeof options }))
+    : null;
+  function renderOption(option: (typeof options)[number], index: number) {
+    const selected = picked.has(option.id);
+    const correct = expected?.includes(option.id);
+    const result = marked ? correct ? selected ? "is-correct" : "is-missed" : selected ? "is-wrong" : "" : "";
+    const label = marked ? correct ? selected ? "✓ 맞게 고른 정답" : "! 빠뜨린 정답 · 미선택"
+      : selected ? "✕ 잘못 고른 선지" : "정답 아님 · 미선택" : "";
+    const cls = `${selected ? " is-picked" : ""}${result ? ` ${result}` : ""}`;
+    return (
+      <li key={option.id}>
+        <button type="button" className={`bank-option${cls}`} disabled={disabled || Boolean(answer)}
+          aria-pressed={selected} aria-keyshortcuts={index < 9 ? String(index + 1) : undefined} onClick={() => onPick(option.id)}>
+          <b>{index + 1}</b> {option.text}
+          {label ? <span className="bank-option-result">{label}</span> : null}
+        </button>
+        {selected ? note(option.id) : null}
+      </li>
+    );
+  }
   return (
     <>
       <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
       {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady}/>}
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
-      {recallChoices && choiceHint && showOptions && !answer ? <p className="bank-note">{q.format === "list" ? "해당하는 것을 모두 고르세요." : "하나를 고르세요."}</p> : null}
-      {options.length && showOptions ? (
-        <ul className="bank-options">
-          {options.map((option, index) => {
-            const selected = picked.has(option.id);
-            const correct = expected?.includes(option.id);
-            const result = marked ? correct ? selected ? "is-correct" : "is-missed" : selected ? "is-wrong" : "" : "";
-            const label = marked ? correct ? selected ? "✓ 맞게 고른 정답" : "! 빠뜨린 정답 · 미선택"
-              : selected ? "✕ 잘못 고른 선지" : "정답 아님 · 미선택" : "";
-            const cls = `${selected ? " is-picked" : ""}${result ? ` ${result}` : ""}`;
-            return (
-              <li key={option.id}>
-                <button type="button" className={`bank-option${cls}`} disabled={disabled || Boolean(answer)}
-                  aria-pressed={selected} aria-keyshortcuts={index < 9 ? String(index + 1) : undefined} onClick={() => onPick(option.id)}>
-                  <b>{index + 1}</b> {option.text}
-                  {label ? <span className="bank-option-result">{label}</span> : null}
-                </button>
-                {selected ? note(option.id) : null}
-              </li>
-            );
-          })}
-        </ul>
+      {recallChoices && choiceHint && showOptions && !answer ? <p className="bank-note">{
+        groups ? "묻는 것마다 하나씩 고르세요." : q.format === "list" ? "해당하는 것을 모두 고르세요." : "하나를 고르세요."}</p> : null}
+      {options.length && showOptions && groups ? groups.map(group => (
+        <section key={group.label} className="bank-choice-group" aria-label={group.label}>
+          <h3>{group.label}</h3>
+          <ul className="bank-options">{group.options.map(option => renderOption(option, options.indexOf(option)))}</ul>
+        </section>
+      )) : null}
+      {options.length && showOptions && !groups ? (
+        <ul className="bank-options">{options.map(renderOption)}</ul>
       ) : null}
       {otherNotes.length ? (
         <details className="bank-option-why-more">
