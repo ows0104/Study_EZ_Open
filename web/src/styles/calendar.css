@@ -2540,6 +2540,8 @@ button.event-panel-note:hover {
   background: color-mix(in srgb, var(--ink-3) 70%, var(--surface));
 }
 .read-editor .rl-note.is-button:hover::after { background: var(--exam, #c13f37); }
+/* 족보 회독(2026-11-14): 강의록 회독보다 살짝 진한 회색 — 족보 칸 점과 같은 --ink-2. 누를 수 없다. */
+.readline i.rl-jokbo { background: color-mix(in srgb, var(--ink-2) 70%, var(--surface)); box-shadow: none; }
 .read-count { font-size: 12.5px; color: var(--ink-3); }
 .read-plus {
   display: grid; place-items: center; width: 24px; height: 24px; min-height: 0; padding: 0; border-radius: 7px;

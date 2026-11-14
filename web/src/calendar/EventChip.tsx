@@ -1,4 +1,4 @@
-import { ChipLearning, hasLearningMarks, learningDescription } from "./ChipLearning";
+import { ChipLearning, hasLearningMarks, jokboDescription, learningDescription } from "./ChipLearning";
 import { type CalendarEntry } from "./entries";
 import { splitSubject, type DisplayInfo } from "./kinds";
 import { ProfTag, professorDescription } from "./ProfessorInfo";
@@ -32,8 +32,10 @@ export function EventChip({
   const sources = entry.lectures.map(lecture => lecture.previewSource);
   const professorInfo = sources.flatMap(source => (source ? [professorDescription(source)] : [])).join("\n");
   // 그릴 것(복습 막대·예습 퀴즈·회독)이 있을 때만 아래 줄을 둔다 — Main-Quiz 없는 TBL 칸 등은 줄이 없다.
-  const hasLearning = showLearning && hasLearningMarks(entry.lectures);
-  const learning = showLearning ? entry.lectures.map(learningDescription).filter(Boolean).join(" · ") : "";
+  const hasLearning = showLearning && hasLearningMarks(entry.lectures, entry.jokboRounds);
+  const learning = showLearning
+    ? [...entry.lectures.map(learningDescription), jokboDescription(entry.jokboRounds)].filter(Boolean).join(" · ")
+    : "";
   // 번호는 시간표에 실제 강의 제목이 있을 때만 붙인다(「임상의학입문 1」처럼 제목뿐인 칸에는 안 붙인다).
   const code = info && entry.detail && info.kind !== "exam" && info.kind !== "other" ? info.code : "";
   const className = [
@@ -69,7 +71,7 @@ export function EventChip({
       ) : null}
       {hasLearning && !compact ? (
         <span className="calendar-event-footer">
-          <ChipLearning lectures={entry.lectures} />
+          <ChipLearning lectures={entry.lectures} jokboRounds={entry.jokboRounds} />
         </span>
       ) : null}
     </button>
