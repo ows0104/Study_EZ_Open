@@ -1,0 +1,137 @@
+{
+  "id": "2026-11-14-mcq-images-lenient",
+  "title": "선지: 사진 문항 그림 전달·작성·검토 기준 완화",
+  "area": "generation",
+  "created_at": "2026-11-14T11:36:12.521327+00:00",
+  "required_checks": [
+    "generation",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T11:36:53.022756+00:00",
+      "evidence": "사용자 2026-11-14 채팅: 「사진 문항은 사진 넣어서 다시 만들어줘. 그리고 강의록을 근거로 풀 수 있으면 어느정도 괜찮지 않을까? 「한여름」: 남반구에선 맞을 수 있다. 이런거까지는 좀 심한데 좀 널널하게 해도 될듯?」 + 질문 답: 검토와 작성 둘 다 / 목록 밖 실제 정답 계속 뺀다 / 소아감염 한 편만 / 끝난 작업이니 시작",
+      "scope": "plan.md 1~4: root_mcq.py·mcq 지시문·검사, 병합, 러너 재설치, 261113_02 재생성·업로드. 나머지 27편 제외",
+      "evidence_version": 2,
+      "source_hash": "411ba06baed5f7aa69b1262fd968146760bf286c684c603ae6277a1797c61b83",
+      "plan_hash": "2460eee357d316d032cba11002513e43650429517d9589a92f787b081e22eb89",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "8a06658bc707aeb5d9f8a6fb0d1edfe67fe0359414bf8cad9cd812958475cf8e"
+    }
+  },
+  "checks": [
+    {
+      "name": "generation",
+      "at": "2026-11-14T11:40:19.415498+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank/test_root_mcq.py",
+        "tests/runner/test_root_mcq_publish.py",
+        "-q"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "df37366e8ecd175ec3fdc328bced732c01fa87ac4eede10d5df3e7d9d8a5557d",
+      "plan_hash": "2460eee357d316d032cba11002513e43650429517d9589a92f787b081e22eb89",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-mcq-images-lenient/1794656417651414700-generation.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-14T11:56:09.030383+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "df37366e8ecd175ec3fdc328bced732c01fa87ac4eede10d5df3e7d9d8a5557d",
+      "plan_hash": "2460eee357d316d032cba11002513e43650429517d9589a92f787b081e22eb89",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-mcq-images-lenient/1794656428565927700-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-14T11:56:44.461764+00:00",
+    "summary": "경계: 생성기만 바뀜(서버·웹·계약 그대로). 그림은 sha 이름으로 써서 캐시 지문에 포함, 그림 없는 묶음은 기존 호출 그대로. 검토 입력에 쓴 쪽 이유가 새지 않음(기존 검사 유지). 실제 재생성 표본을 읽어 목록 밖 실제 정답 규칙 유지 확인. 남은 위험: 완화로 쉬운 오답(Q006 비감염 범주)이 남을 수 있음",
+    "evidence_version": 2,
+    "source_hash": "df37366e8ecd175ec3fdc328bced732c01fa87ac4eede10d5df3e7d9d8a5557d",
+    "plan_hash": "2460eee357d316d032cba11002513e43650429517d9589a92f787b081e22eb89",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T11:56:44.572277+00:00"
+}

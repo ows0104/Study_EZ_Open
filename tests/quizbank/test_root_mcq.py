@@ -344,3 +344,51 @@ def test_두_회차_뒤에도_1개면_선지_없이_둔다(tmp_path):
 
     asset = root_mcq.build(_document(), tmp_path, "r", call=_fake(write))
     assert "C2" not in asset["questions"] and "최소 2개" in asset["skipped"]["C2"]
+
+
+# ── 사진 문항·강의 맥락(2026-11-14 mcq-images-lenient) ─────────────────────────
+
+def test_사진_문항은_그림을_작업_폴더에_쓰고_작성과_검토_호출에_첨부한다(tmp_path):
+    import base64
+    import hashlib
+    png = b"\x89PNG\r\n\x1a\nfake-image"
+    document = _document()
+    document["bank_snapshot"]["questions"][0]["stimuli"] = [{"png_base64": base64.b64encode(png).decode()}]
+    calls = []
+
+    def call(prompt, schema, work, model, label, images=None):
+        rows = json.loads((work / "input.json").read_text(encoding="utf-8"))
+        calls.append(("review" if "reviews" in schema["properties"] else "write", rows, images))
+        if "reviews" in schema["properties"]:
+            return {"reviews": [{"question_id": q["question_id"], "invalid": []} for q in rows["questions"]]}, {}
+        return _all_good(rows), {}
+
+    root_mcq.build(document, tmp_path, "r", call=call, rounds=1)
+    name = f"images/B1-1-{hashlib.sha256(png).hexdigest()[:12]}.png"
+    for stage, rows, images in calls:
+        by_id = {q["question_id"]: q for q in rows["questions"]}
+        assert by_id["B1"]["images"] == [name], stage
+        assert all("images" not in q for qid, q in by_id.items() if qid != "B1")   # 그림 없는 문항은 그대로
+        assert [p.read_bytes() for p in images] == [png], stage
+    assert [c[0] for c in calls] == ["write", "review"]
+
+
+def test_그림_없는_묶음은_images_인자_없이_부르고_검토에_같은_강의_사실을_준다(tmp_path):
+    seen_review = []
+
+    def review(qs):
+        seen_review.extend(qs)
+        return {"reviews": [{"question_id": q["question_id"], "invalid": []} for q in qs]}
+
+    asset = root_mcq.build(_document(), tmp_path, "r", call=_fake(_all_good, review), rounds=1)   # _fake는 images 인자를 받지 않는다
+    assert asset["medicalReview"]["policy"] == "mcq-medical/3"
+    b1 = next(q for q in seen_review if q["question_id"] == "B1")
+    assert b1["lecture_facts"] == contract.same_lecture_pool(_document()["bank_snapshot"]["questions"], _document()["bank_snapshot"]["questions"][0])
+    assert "몸니" in b1["lecture_facts"]   # 같은 강의의 다른 문항 정답
+
+
+def test_깨진_그림은_그_그림만_뺀다():
+    files = root_mcq.stimuli_files([_q("B1", stimuli=[{"png_base64": "@@not-base64@@"}, {"png_base64": "iVBORw=="}])])
+    import hashlib
+    digest = hashlib.sha256(b"\x89PNG").hexdigest()[:12]
+    assert list(files) == [f"images/B1-2-{digest}.png"]
