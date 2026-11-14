@@ -1,5 +1,5 @@
 """게시 뒤 선지 작성(2026-11-14부터 게시 직후 기본 실행): 실패해도 게시를 되돌리지 않고, 성공하면 root_choices/<revision>.json 하나를 올린다."""
-from runner import root_choices, transport
+from runner import root_choices, root_mcq, transport
 
 
 class Client:
@@ -99,7 +99,7 @@ def test_no_upload는_만들기만_하고_서버를_부르지_않는다(tmp_path
 
 
 def test_게시_직후_선지를_기본으로_붙이고_실패해도_게시는_성공이다(tmp_path, monkeypatch):
-    """2026-11-14 「기본으로 설정해줘」: 근거 보강 다음에 같은 실행 폴더의 choices/에 만들어 올린다."""
+    """2026-11-14 「기본으로 설정해줘」: 근거 보강 다음에 선지를 만들어 올린다. 같은 날 두 선지를 합쳐 root_mcq가 맡는다(choices-merge)."""
     import json
     from types import SimpleNamespace
     from runner import connection_generation as worker, root_evidence
@@ -117,7 +117,7 @@ def test_게시_직후_선지를_기본으로_붙이고_실패해도_게시는_�
         order.append(("choices", subject, run_id, folder, got["document"]["revision"], model))
         return False   # 실패해도 게시 결과는 그대로다
 
-    monkeypatch.setattr(root_choices, "publish", choices)
+    monkeypatch.setattr(root_mcq, "publish", choices)
     client = SimpleNamespace(call=lambda method, path, body=None: {"status": "ready", "revision": "auto-1"})
     packet = {"sources": []}
     assert worker._generate(client, "감염과 면역", "261113_02", "/api/x", packet, out / "packet.json", out, model="m") == 0

@@ -59,7 +59,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices, choiceCorrectIds, choiceHint = true }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -76,11 +76,16 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   choiceCorrectIds?: string[];
   /** 「하나를/모두 고르세요」 안내. 객관식 모드는 정답 개수를 알리지 않으려고 끈다. */
   choiceHint?: boolean;
+  /** 덧붙인 선지의 오답마다 왜 틀렸나·족보 출처(답을 본 뒤). 고른 오답 아래에 보이고 나머지는 접어 둔다(2026-11-14 choices-merge). */
+  choiceNotes?: Record<string, { why: string; source: string }>;
 }) {
   const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
   const options = recallChoices ?? q.options;
   const expected = recallChoices ? (choiceCorrectIds ?? answer?.recallCorrectIds) : answer?.correctOptionIds;
   const marked = recallChoices ? Boolean(answer && expected?.length) : Boolean(score);
+  const notes = recallChoices && answer && showOptions ? choiceNotes ?? {} : {};
+  const note = (id: string) => notes[id] ? <span className="bank-option-why">{notes[id].source ? <b>{notes[id].source}</b> : null}{notes[id].why}</span> : null;
+  const otherNotes = options.filter(option => notes[option.id] && !picked.has(option.id));
   return (
     <>
       <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
@@ -104,10 +109,17 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
                   <b>{index + 1}</b> {option.text}
                   {label ? <span className="bank-option-result">{label}</span> : null}
                 </button>
+                {selected ? note(option.id) : null}
               </li>
             );
           })}
         </ul>
+      ) : null}
+      {otherNotes.length ? (
+        <details className="bank-option-why-more">
+          <summary>다른 오답이 틀린 이유</summary>
+          <ul>{otherNotes.map(option => <li key={option.id}><b>{options.indexOf(option) + 1}</b> {note(option.id)}</li>)}</ul>
+        </details>
       ) : null}
       {showOptions && score ? <p className={`bank-choice-score ${score.allCorrect ? "is-correct" : "is-wrong"}`} role="status">
         <strong>{score.allCorrect ? "모두 맞았어요!" : picked.size ? "정답과 선택이 달라요." : "선택한 답이 없어요."}</strong>

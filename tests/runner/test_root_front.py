@@ -13,7 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'contracts'))
 from runner import root_front as rf
 from runner import connection_generation as worker
-from runner import root_choices, root_evidence
+from runner import root_choices, root_evidence, root_mcq
 from studyez_contracts.roots import map_tree
 from studyez_contracts.roots.automation import packet_hash, validate_result
 from map_tree_fixture import TITLE, pdf, concept_map, points, fake_codex, generation_model
@@ -215,6 +215,7 @@ class Client:
 def wire(monkeypatch, client, commands, front_calls):
     monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: None)
     monkeypatch.setattr(root_choices, 'build', lambda *a, **k: None)
+    monkeypatch.setattr(root_mcq, 'build', lambda *a, **k: None)
     monkeypatch.setattr(worker.urllib.request, 'urlopen', lambda req, **k: io.BytesIO(client.bodies[req.full_url.rsplit('/', 1)[1]]))
 
     def child(args, **kwargs):

@@ -101,6 +101,11 @@ Main-Quiz 단답·나열 문항의 「선지 보기」 선지는 `root_choices` 
 `quizbank/root_choices.py`, 계약 `studyez_contracts/roots/choices.py`). 러너가 판을 게시한 직후 게시된 판 문서의 글만으로 만들어 올린다(2026-11-14부터 기본, 실패해도 게시는 그대로). 기존 판에 다시 붙이거나 빠진 강의를 채울 때는 수동 명령 `python -m runner.root_choices`를 쓴다.
 서버는 revision과 문항 지문이 맞는 문항에만 붙이고, 없으면 선지 없이 보여 준다.
 
+2026-11-14 choices-merge부터 게시 직후 기본으로 붙는 선지는 `root_mcq` kind의 `<revision>.json` 하나다(`root-mcq/2`,
+`quizbank/root_mcq.py`, 계약 `studyez_contracts/roots/mcq.py`). 주관식 「선지 보기」와 객관식 모드가 함께 쓴다. 문항마다 오답 풀만 담고,
+서버가 사용자·문항·학습일로 4~5개를 골라 보이며 답면에 오답 이유·족보 출처를 싣는다. v1(`root-mcq/1`)과 `root_choices`는 계속 읽는다.
+v1이 있던 판을 다시 만들면 러너가 로컬 `mcq/v1-<revision>.json`으로 남긴다.
+
 Main-Quiz 판의 근거 보강은 `root_evidence` kind의 `<revision>.json` 하나다(`root-evidence/1`,
 `quizbank/root_evidence.py`). 러너가 판 게시 뒤 같은 고정 원본으로 만들어 올린다. 서버는 revision과
 원본 지문이 맞을 때만 읽어 핵심 슬라이드·족보 지면·근거 상태를 붙이고, 없으면 인용 쪽만 쓴다.

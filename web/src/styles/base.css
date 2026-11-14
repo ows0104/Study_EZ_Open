@@ -2755,6 +2755,21 @@ button.notice-title:hover:not(:disabled) {
   font-weight: 650;
 }
 
+/* 덧붙인 선지의 오답이 틀린 이유(2026-11-14 choices-merge). 고른 오답 아래 한 줄, 족보 출처는 앞에 굵게. */
+.bank-option-why {
+  display: block;
+  margin: 4px 2px 0;
+  font-size: .85em;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.bank-option-why > b { margin-right: 6px; color: var(--ink); font-weight: 650; }
+.bank-option-why-more { margin: 8px 0 0; font-size: .9em; }
+.bank-option-why-more > summary { cursor: pointer; color: var(--ink-2); }
+.bank-option-why-more ul { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.bank-option-why-more li > b { margin-right: 6px; }
+.bank-option-why-more li .bank-option-why { display: inline; margin: 0; }
+
 .bank-choice-score {
   display: grid;
   gap: 6px;

@@ -6,7 +6,7 @@ import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './
 import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQuestionDialog';
 import { RootSummaryPanel } from './RootToday';
 import { ANSWER_SECONDS, questionSeconds, readTimerOn, saveTimerOn, useQuizTimer } from './quizTimer';
-import { mcqChoices, readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
+import { mcqChoices, recallChoices, readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
 const JokboSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootJokboSlides})));
@@ -58,8 +58,10 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
   const mcq=mode==='mcq'&&task?mcqChoices(task.question,task.answer):null;
   const hiddenChoices=!mcq&&task?.question.mcq_mode==='recall_first'&&!choices&&!task.answer;
-  // 단답·나열 「선지 보기」(2026-11-12): 문항의 options와 별개인 선지. 사용자가 펼 때만 보이고, 편 풀이는 도움받은 풀이로 남는다.
-  const recall=!mcq&&task&&!task.question.options.length&&task.question.recall_choices?.length?task.question.recall_choices:null;
+  // 「선지 보기」(2026-11-12): 문항의 options와 별개인 선지. 사용자가 펼 때만 보이고, 편 풀이는 도움받은 풀이로 남는다.
+  // 2026-11-14 choices-merge부터 객관식 모드와 같은 선지(mcq_choices)를 먼저 쓴다 — 빈칸·순서 문항도 편다.
+  const recallSet=!mcq&&task?recallChoices(task.question,task.answer):null;
+  const recall=recallSet?.choices??null;
   const recallClosed=!!recall&&!choices&&!task?.answer;
   const recallOpen=!!recall&&choices&&!task?.answer;
   useEffect(()=>{
@@ -78,7 +80,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   }
   function pick(id:string){
     if(locked||task?.answer)return;
-    const single=!mcq&&(task?.question.format==='mcq'||(!!recall&&task?.question.format==='basic'));
+    // 펴 본 선지는 나열만 여럿을 고른다(단답·빈칸·순서는 정답 선지가 하나).
+    const single=!mcq&&(task?.question.format==='mcq'||(!!recall&&task?.question.format!=='list'));
     const next=new Set(single?[]:picked);
     if(picked.has(id)&&!single)next.delete(id);else next.add(id);
     setPicked(next);
@@ -228,7 +231,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     {task&&<div className="quiz-card bank-card mq-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
-      recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?.correct} choiceHint={!mcq}/>
+      recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
+      choiceNotes={task.answer?.mcqWrongNotes}/>
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}

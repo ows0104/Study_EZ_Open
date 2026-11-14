@@ -34,3 +34,14 @@ export function mcqChoices(q: BankQuestion, answer: RootAnswer | null): { choice
   if (q.recall_choices?.length) return { choices: q.recall_choices, correct: answer?.recallCorrectIds };
   return null;
 }
+
+/**
+ * 주관식에서 「선지 보기」(V)로 펴는 선지. 객관식 모드와 같은 선지를 먼저 쓰고(2026-11-14 choices-merge), 없으면 예전 「선지 보기」 선지.
+ * 문항 자체 선지가 있는 문항은 대상이 아니다(그 선지가 그대로 보인다).
+ */
+export function recallChoices(q: BankQuestion, answer: RootAnswer | null): { choices: Choice[]; correct: string[] | undefined } | null {
+  if (q.options.length) return null;
+  if (q.mcq_choices?.length) return { choices: q.mcq_choices, correct: answer?.mcqCorrectIds };
+  if (q.recall_choices?.length) return { choices: q.recall_choices, correct: answer?.recallCorrectIds };
+  return null;
+}

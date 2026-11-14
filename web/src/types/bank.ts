@@ -121,6 +121,8 @@ export type BankAnswer = {
   recallCorrectIds?: string[];
   /** mcq_choices의 정답 ID. 답을 편 응답에만 온다. */
   mcqCorrectIds?: string[];
+  /** mcq_choices 오답마다 왜 틀렸나·족보 출처(root-mcq/2, 2026-11-14 choices-merge). 답을 편 응답에만 온다. */
+  mcqWrongNotes?: Record<string, { why: string; source: string }>;
   answerPairs: { left: string; right: string }[];
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
