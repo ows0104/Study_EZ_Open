@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
+import { useNoteLecture } from "../notes/noteLecture";
 import { Icon } from "../shell/icons";
 import type { JokboBand, JokboDoc, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
 import { JokboBody } from "./JokboBody";
@@ -67,6 +68,8 @@ export function JokboPage() {
       });
     return () => { alive = false; };
   }, [eventId]);
+  // 플로팅 노트의 「＋강의명」(2026-11-14 사용자: 족보 풀 때도 복습 퀴즈처럼). 이름은 머리줄과 같게.
+  useNoteLecture(data ? lectureTitle(data.doc) : null);
 
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
   const start = (items: JokboItem[]) => { setQueue(items); setRound(r => r + 1); };
