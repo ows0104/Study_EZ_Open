@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import type { Note, NoteInput, NoteSummary } from '../types/notes';
+import type { Note, NoteBlock, NoteInput, NoteSummary } from '../types/notes';
 import { deleteNoteImages } from './localImages';
 import { mk, type EditNote } from './NoteEditor';
 
@@ -22,10 +22,15 @@ const toEdit = (n: Note): EditNote => ({
 const toInput = (n: EditNote): NoteInput => ({
   title: n.title,
   tags: n.tags,
-  blocks: n.blocks.map(({ id, type, html, checked, image }) =>
-    type === 'todo' ? { id, type, html, checked: !!checked }
-      : type === 'image' ? { id, type, html: '', image }
-        : { id, type, html }),
+  blocks: n.blocks.map(({ id, type, html, checked, image, indent, open, rows, header }) => {
+    const base: NoteBlock = { id, type, html };
+    if (indent) base.indent = indent;
+    if (type === 'todo') base.checked = !!checked;
+    if (type === 'image') return { ...base, html: '', image };
+    if (type === 'toggle') base.open = open !== false;
+    if (type === 'table') return { ...base, html: '', rows: rows ?? [['']], header: header !== false };
+    return base;
+  }),
 });
 
 type SaveState = 'idle' | 'failed';

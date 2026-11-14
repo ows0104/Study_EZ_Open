@@ -67,8 +67,35 @@ def main():
         {"id": "p", "type": "image", "image": "../etc/passwd"}]}).status_code == 422
     client.put(f"/api/me/notes/{note['id']}", json={"title": "세균 정리", "tags": ["자유 태그"], "blocks": blocks[:1]})
 
+    # 들여쓰기·토글·표(2026-11-14): 해당 종류의 값만 남고, 표 html은 버린다.
+    tree = client.put(f"/api/me/notes/{note['id']}", json={"title": "세균 정리", "tags": ["자유 태그"], "blocks": [
+        {"id": "t", "type": "toggle", "html": "접기", "open": False, "rows": [["x"]]},
+        {"id": "u", "type": "bullet", "html": "하위", "indent": 1, "open": False},
+        {"id": "v", "type": "table", "html": "<b>버림</b>", "rows": [["<b>균</b>", "약"], ["MRSA", "반코마이신"]],
+         "header": False, "indent": 2},
+        {"id": "w", "type": "text", "html": "0단계", "indent": 0}]})
+    assert tree.status_code == 200, tree.text
+    assert tree.json()["blocks"] == [
+        {"id": "t", "type": "toggle", "html": "접기", "open": False},
+        {"id": "u", "type": "bullet", "html": "하위", "indent": 1},
+        {"id": "v", "type": "table", "html": "", "rows": [["<b>균</b>", "약"], ["MRSA", "반코마이신"]],
+         "header": False, "indent": 2},
+        {"id": "w", "type": "text", "html": "0단계"}]
+    bad_blocks = [
+        {"id": "x", "type": "table", "html": ""},
+        {"id": "x", "type": "table", "rows": []},
+        {"id": "x", "type": "table", "rows": [["a", "b"], ["c"]]},
+        {"id": "x", "type": "table", "rows": [["a"] * 21]},
+        {"id": "x", "type": "table", "rows": [["a"]] * 101},
+        {"id": "x", "type": "table", "rows": [["c" * 5_001]]},
+        {"id": "x", "type": "text", "indent": 7},
+        {"id": "x", "type": "text", "indent": -1},
+    ]
+    for bad in bad_blocks:
+        assert client.put(f"/api/me/notes/{note['id']}", json={"blocks": [bad]}).status_code == 422, bad
+    client.put(f"/api/me/notes/{note['id']}", json={"title": "세균 정리", "tags": ["자유 태그"], "blocks": blocks[:1]})
+
     # 형식·제한
-    assert client.put(f"/api/me/notes/{note['id']}", json={"blocks": [{"id": "x", "type": "table", "html": ""}]}).status_code == 422
     assert client.put(f"/api/me/notes/{note['id']}", json={"tags": ["x" * 41]}).status_code == 422
     assert client.put(f"/api/me/notes/{note['id']}", json={"tags": [str(i) for i in range(31)]}).status_code == 422
     assert client.put(f"/api/me/notes/{note['id']}", json={"title": "t" * 201}).status_code == 422

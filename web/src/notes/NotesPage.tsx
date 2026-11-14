@@ -34,6 +34,7 @@ export function NotesPage() {
         ))}
         <p className="notes-hint">
           <kbd>/</kbd> 블록 고르기 · <kbd>#</kbd> <kbd>-</kbd> <kbd>[]</kbd> <kbd>&gt;</kbd> 줄머리 md · <kbd>**굵게**</kbd> <kbd>`코드`</kbd> · 글을 고르면 색·하이라이트
+          <br /><kbd>Tab</kbd> 들여쓰기 · <kbd>Ctrl D</kbd> 복제 · <kbd>Ctrl Shift ↑↓</kbd> 옮기기 · <kbd>Ctrl Z</kbd> 되돌리기
         </p>
       </aside>
       <div className="notes-main">

@@ -22,9 +22,15 @@ MAX_NOTES = 500
 MAX_TAGS = 30
 MAX_TAG_LEN = 40
 
-BlockType = Literal["text", "h1", "h2", "h3", "bullet", "number", "todo", "quote", "callout", "code", "divider", "image"]
+BlockType = Literal["text", "h1", "h2", "h3", "bullet", "number", "todo", "quote", "callout", "code", "divider", "image",
+                    "toggle", "table"]
 # 사진 블록은 이 브라우저(IndexedDB)에 둔 사진의 id만 서버에 둔다. 사진 바이트는 서버로 오지 않는다(2026-11-13 사용자 지시).
 IMAGE_ID = r"^[a-z0-9]{8,40}$"
+# 2026-11-14 편집기 보완: 들여쓰기(하위 블록), 토글 접기, 표 칸.
+MAX_INDENT = 6
+MAX_TABLE_ROWS = 100
+MAX_TABLE_COLS = 20
+MAX_CELL_LEN = 5_000
 
 
 class BlockIn(BaseModel):
@@ -33,11 +39,31 @@ class BlockIn(BaseModel):
     html: str = Field(default="", max_length=20_000)
     checked: bool = False
     image: str | None = Field(default=None, pattern=IMAGE_ID)
+    indent: int = Field(default=0, ge=0, le=MAX_INDENT)
+    open: bool = True
+    rows: list[list[str]] | None = Field(default=None, max_length=MAX_TABLE_ROWS)
+    header: bool = True
 
     @model_validator(mode="after")
     def image_needs_id(self) -> "BlockIn":
         if self.type == "image" and not self.image:
             raise ValueError("사진 블록에는 사진 id가 필요합니다.")
+        return self
+
+    @model_validator(mode="after")
+    def table_shape(self) -> "BlockIn":
+        if self.type != "table":
+            return self
+        if not self.rows or not self.rows[0]:
+            raise ValueError("표에는 칸이 하나 이상 필요합니다.")
+        cols = len(self.rows[0])
+        if cols > MAX_TABLE_COLS:
+            raise ValueError(f"표는 {MAX_TABLE_COLS}열까지입니다.")
+        for row in self.rows:
+            if len(row) != cols:
+                raise ValueError("표의 행마다 칸 수가 같아야 합니다.")
+            if any(len(cell) > MAX_CELL_LEN for cell in row):
+                raise ValueError(f"표 칸은 {MAX_CELL_LEN}자까지입니다.")
         return self
 
 
@@ -81,11 +107,18 @@ def _full(note: UserNote) -> dict:
 def _blocks(payload: NoteIn) -> list[dict]:
     out = []
     for b in payload.blocks:
-        block = {"id": b.id, "type": b.type, "html": "" if b.type in ("divider", "image") else b.html}
+        block = {"id": b.id, "type": b.type, "html": "" if b.type in ("divider", "image", "table") else b.html}
         if b.type == "image":
             block["image"] = b.image
         if b.type == "todo":
             block["checked"] = b.checked
+        if b.type == "toggle":
+            block["open"] = b.open
+        if b.type == "table":
+            block["rows"] = b.rows
+            block["header"] = b.header
+        if b.indent:
+            block["indent"] = b.indent
         out.append(block)
     return out
 

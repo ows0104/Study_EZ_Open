@@ -429,6 +429,8 @@ export function GuidePage() {
           <li><kbd>/</kbd> 블록 고르기 · 줄 맨 앞 <kbd>#</kbd> <kbd>-</kbd> <kbd>1.</kbd> <kbd>[]</kbd> <kbd>&gt;</kbd> <kbd>```</kbd> <kbd>---</kbd> · 글 안 <kbd>**굵게**</kbd> <kbd>*기울임*</kbd> <kbd>~~취소~~</kbd> <kbd>`코드`</kbd></li>
           <li>글을 고르면 서식 막대: 블록 전환 · B · i · U · S · 코드 · 글자색·배경색(형광펜).</li>
           <li>줄 왼쪽 손잡이: <b>+</b> 아래에 추가 · 끌어서 옮기기 · 눌러서 삭제·복제·전환.</li>
+          <li><kbd>Tab</kbd> 한 단계 안으로 · <kbd>Shift</kbd>+<kbd>Tab</kbd> 밖으로(아래 하위 줄도 함께) · <kbd>Ctrl</kbd>+<kbd>D</kbd> 복제 · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> 옮기기 · <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기 · <kbd>Ctrl</kbd>+<kbd>Y</kbd> 다시.</li>
+          <li><kbd>/</kbd> <b>표</b>: <kbd>Tab</kbd> 다음 칸(끝 칸이면 행 추가) · 칸을 누르면 행·열 추가/삭제 · 엑셀·시트에서 복사한 칸은 표로 붙습니다. <kbd>/</kbd> <b>토글</b>: ▸로 아래 줄 접기.</li>
           <li><b>태그</b>: <b>+</b>를 눌러 입력하고 Enter 또는 쉼표로 추가, ×로 삭제.</li>
         </ul>
       </section>

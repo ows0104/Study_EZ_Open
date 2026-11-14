@@ -73,13 +73,17 @@
 .notes-layout .nb-prop-add:hover { background: var(--hover); color: var(--ink); }
 
 .notes-layout .nb-blocks { display: flex; flex-direction: column; }
-.notes-layout .nb-row { position: relative; display: flex; align-items: flex-start; margin-left: -52px; padding: 1px 0; }
+.notes-layout .nb-row {
+  position: relative; display: flex; align-items: flex-start; margin-left: -52px; padding: 1px 0;
+  /* 2026-11-14 들여쓰기: 손잡이도 함께 안쪽으로 */
+  padding-left: calc(var(--nb-indent, 0) * 26px);
+}
 .notes-layout .nb-row.is-h1 { margin-top: 22px; }
 .notes-layout .nb-row.is-h2 { margin-top: 16px; }
 .notes-layout .nb-row.is-h3 { margin-top: 10px; }
 .notes-layout .nb-row.is-dragging { opacity: 0.4; }
 .notes-layout .nb-row.is-drop-before::before, .notes-layout .nb-row.is-drop-after::after {
-  content: ''; position: absolute; left: 52px; right: 0; height: 3px; border-radius: 2px; background: var(--accent-line);
+  content: ''; position: absolute; left: calc(52px + var(--nb-indent, 0) * 26px); right: 0; height: 3px; border-radius: 2px; background: var(--accent-line);
 }
 .notes-layout .nb-row.is-drop-before::before { top: -2px; }
 .notes-layout .nb-row.is-drop-after::after { bottom: -2px; }
@@ -93,7 +97,7 @@
 .notes-layout .nb-handle[draggable='true'] { cursor: grab; }
 .notes-layout .nb-body { flex: 1; min-width: 0; }
 
-.notes-layout .nb-text { outline: none; min-height: 1.6em; padding: 3px 2px; font-size: 16px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; caret-color: var(--ink); }
+.notes-layout .nb-text { outline: none; min-height: 1.5em; padding: 3px 2px; font-size: 16px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; caret-color: var(--ink); }
 .notes-layout .nb-text:empty:focus::before { content: attr(data-placeholder); color: var(--nb-faint); }
 .notes-layout .nb-text.is-h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.3; }
 .notes-layout .nb-text.is-h2 { font-size: 23px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.35; }
@@ -103,21 +107,25 @@
 .notes-layout .nb-text code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: var(--nb-code-bg); color: #c13f37; border-radius: 4px; padding: 0.15em 0.35em; }
 .notes-layout .nb-list { display: flex; align-items: flex-start; }
 .notes-layout .nb-list .nb-text { flex: 1; min-width: 0; }
-.notes-layout .nb-marker { width: 24px; flex: none; text-align: center; font-size: 16px; line-height: 1.6; padding-top: 3px; }
-.notes-layout .nb-marker.is-number { font-variant-numeric: tabular-nums; font-size: 15px; }
-.notes-layout .nb-check { width: 16px; height: 16px; margin: 7px 8px 0 4px; flex: none; display: grid; place-items: center; border-radius: 3px; border: 1.5px solid var(--ink-2); color: var(--on-accent); }
+.notes-layout .nb-marker { min-width: 24px; flex: none; text-align: center; font-size: 16px; line-height: 1.5; padding: 3px 2px 0 0; }
+.notes-layout .nb-marker.is-number { font-variant-numeric: tabular-nums; font-size: 15px; line-height: 24px; text-align: right; padding-right: 6px; }
+.notes-layout .nb-check { width: 16px; height: 16px; margin: 7px 6px 0 4px; flex: none; display: grid; place-items: center; border-radius: 3px; border: 1.5px solid var(--ink-2); color: var(--on-accent); }
 .notes-layout .nb-check[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); }
 .notes-layout .nb-list.is-checked .nb-text { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line-strong); }
 .notes-layout .nb-quote { border-left: 3px solid var(--ink); padding-left: 14px; margin: 4px 0; }
 .notes-layout .nb-quote .nb-text { font-size: 16.5px; }
 .notes-layout .nb-callout { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px 14px 12px; margin: 4px 0; border-radius: 8px; background: var(--surface-2); }
 .notes-layout .nb-callout .nb-text { flex: 1; min-width: 0; }
-.notes-layout .nb-callout-icon { font-size: 18px; line-height: 1.6; padding-top: 1px; }
+.notes-layout .nb-callout-icon { font-size: 18px; line-height: 1.5; padding-top: 1px; }
 .notes-layout .nb-code { background: var(--surface-2); border-radius: 8px; padding: 14px 18px; margin: 4px 0; }
 .notes-layout .nb-code .nb-text { font-family: ui-monospace, Consolas, monospace; font-size: 13.5px; line-height: 1.65; }
 .notes-layout .nb-divider { padding: 10px 2px; }
 .notes-layout .nb-divider hr { border: 0; border-top: 1px solid var(--line-strong); margin: 0; }
-.notes-layout .nb-append { display: block; width: 100%; height: 120px; cursor: text; }
+/* 끝에 이어 쓰기 영역. <button>이라 전역 button:hover/:active 배경이 회색 칸으로 보였다(2026-11-14). */
+.notes-layout .nb-append,
+.notes-layout .nb-append:hover:not(:disabled),
+.notes-layout .nb-append:active:not(:disabled),
+.notes-layout .nb-append:focus-visible { display: block; width: 100%; height: 120px; cursor: text; background: none; border: 0; outline: none; }
 
 .notes-layout .nb-pop {
   position: fixed; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px;
@@ -172,8 +180,32 @@
 /* 사진(2026-11-13): 이 브라우저에만 저장한 사진. 다른 기기에서는 빈 칸으로 보인다. */
 .notes-layout .nb-image { margin: 4px 0; }
 .notes-layout .nb-image img { display: block; max-width: 100%; height: auto; border-radius: 6px; }
-.notes-layout .nb-image.is-loading { height: 120px; border-radius: 6px; background: var(--surface-2); }
+.notes-layout .nb-image.is-loading { height: 120px; }
 .notes-layout .nb-image.is-missing {
   display: grid; place-items: center; height: 96px; border: 1px dashed var(--line-strong); border-radius: 6px;
   font-size: 13px; color: var(--ink-3); background: var(--surface-2);
 }
+
+/* 토글(2026-11-14) */
+.notes-layout .nb-toggle-arrow {
+  width: 24px; height: 24px; margin: 3px 0 0; flex: none; display: grid; place-items: center; border-radius: 5px; color: var(--ink-2);
+}
+.notes-layout .nb-toggle-arrow:hover { background: var(--hover); }
+.notes-layout .nb-toggle-arrow svg { transform: rotate(90deg); transition: transform 0.12s; }
+.notes-layout .nb-toggle.is-closed .nb-toggle-arrow svg { transform: none; }
+
+/* 표(2026-11-14) */
+.notes-layout .nb-table-wrap { position: relative; margin: 6px 0; }
+.notes-layout .nb-table-scroll { overflow-x: auto; }
+.notes-layout .nb-table { border-collapse: collapse; min-width: 100%; table-layout: auto; }
+.notes-layout .nb-table td { border: 1px solid var(--line-strong); padding: 0; vertical-align: top; min-width: 96px; }
+.notes-layout .nb-table td.is-head { background: var(--surface-2); }
+.notes-layout .nb-cell { padding: 5px 8px; font-size: 14.5px; min-height: 1.5em; }
+.notes-layout .nb-cell.is-head { font-weight: 600; }
+.notes-layout .nb-table-bar {
+  position: absolute; bottom: calc(100% + 4px); right: 0; z-index: 4; display: flex; gap: 1px; padding: 3px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+.notes-layout .nb-table-bar button { height: 26px; padding: 0 8px; border-radius: 5px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+.notes-layout .nb-table-bar button:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.notes-layout .nb-table-bar button.is-on { color: var(--accent-ink); background: var(--accent-soft); }
