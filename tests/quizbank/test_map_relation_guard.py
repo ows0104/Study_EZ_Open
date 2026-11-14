@@ -3,7 +3,7 @@
 A: a map goal with no content relation of its own goes to the brief fix, and the run stops if it stays so.
 B: a question its item review ties to no goal is placed by the relations its coverage evidence names.
 C: one still off the map goes to the supplement once more after the review.
-D: an ok question left off the map stops the run before the medical review."""
+D: an ok question still off the map is reported (readiness, manifest, admin report); the run goes on."""
 import copy
 import json
 
@@ -85,11 +85,12 @@ def test_c_a_question_off_the_map_after_the_review_gets_a_late_supplement_goal(t
     assert result['manifest']['unplacedQuestions'] == []
 
 
-def test_d_an_ok_question_left_off_the_map_stops_before_the_medical_review(tmp_path):
-    model = LateModel(keep_off=True)
-    with pytest.raises(ValueError, match='지도에 못 붙은 문항 1개'):
-        run(tmp_path, model)
-    assert 'medical-0' not in model.calls
+def test_d_an_ok_question_left_off_the_map_is_reported_and_the_run_goes_on(tmp_path):
+    """사용자 결정 2026-11-14 「멈추지 말고 보고」: the run is published; the question is listed with its reason."""
+    p, model, result = run(tmp_path, LateModel(keep_off=True))
+    assert consume(result, p) == result['document']
+    assert 'medical-0' in model.calls and 'Q2' not in dict(tasks(result))
+    assert [u['question_id'] for u in result['manifest']['unplacedQuestions']] == ['Q2']
     ready = json.loads((tmp_path / 'out' / 'readiness.json').read_text(encoding='utf-8'))
     assert [u['question_id'] for u in ready['unplacedQuestions']] == ['Q2']
 

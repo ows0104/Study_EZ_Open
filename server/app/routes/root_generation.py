@@ -183,6 +183,10 @@ def build_report(result):
                          importanceNotes=len(meta['importanceNotes']))
             if 'coverageFallback' in meta:   # review-relations/2 (docs/changes/2026-11-14-map-relation-guard)
                 extra['coverageFallback'] = len(meta['coverageFallback'])
+                # D: what stayed off the map is listed for the admin, not hidden behind a count.
+                text = {q['question_id']: q.get('question', '') for q in result['document']['bank_snapshot']['questions']}
+                extra['unplacedList'] = [{'question_id': u['question_id'], 'reason': u['reason'],
+                                          'question': str(text.get(u['question_id'], ''))[:160]} for u in meta['unplacedQuestions']]
         return {'repairRounds': 0, **extra, 'taskCount': len(result['document']['tasks']), 'targetCount': len(result['brief']['targets']),
                 'issues': result['validation']['errors'] + result['validation']['warnings'],
                 'questionNotes': [{'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('의학 검토', result['medical'])]

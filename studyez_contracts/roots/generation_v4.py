@@ -157,7 +157,7 @@ def check_fixed(value, ctx, state=None):
 REVIEW_PLACEMENT = 'review-relations/1'
 # review-relations/2 (docs/changes/2026-11-14-map-relation-guard): as /1, and a question whose item review names no map
 # relation takes the relations its goal coverage judgment names where it answers some component (B); what is still
-# unplaced goes once more to the supplement stage after the review (C), and anything left stops the run (D).
+# unplaced goes once more to the supplement stage after the review (C), and what is left is reported (D).
 REVIEW_PLACEMENT2 = 'review-relations/2'
 RELATION_CLAIM = obj(relation_id=TEXT, part={'type': 'string', 'enum': ['whole', 'partial']}, reason=TEXT)
 

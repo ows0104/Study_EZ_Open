@@ -158,7 +158,7 @@ def run(packet, out, model, invoke, resume=None):
     # its item review names; the goal coverage judgment only finds what is not asked yet.
     # review-relations/2 (docs/changes/2026-11-14-map-relation-guard): a new run also checks the map's content relations
     # after normalize (A), places a question its review ties to nothing by its coverage evidence (B), sends what is
-    # still unplaced to the supplement once more after the review (C) and stops if any ok question is left (D).
+    # still unplaced to the supplement once more after the review (C) and reports what is left (D).
     fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
@@ -548,12 +548,11 @@ def run(packet, out, model, invoke, resume=None):
     g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
     v3.require(doc['tasks'], '학습 가능한 과제가 0개입니다. 의학 검토 전에 멈춥니다. readiness.json을 보세요.')
     if guarded:
-        # D: every ok question that is not a merged duplicate is a task, or the run stops before the medical review.
+        # D (사용자 결정 2026-11-14 「멈추지 말고 보고」): what B and C could not place is published off the map as before,
+        # listed with its reason in readiness.json, the manifest and the admin report; the run does not stop for it.
         left = placed['unplacedQuestions']
-        print(f"── 검토 밖 배치(범위 점검 판정) {len(placed['coverageFallback'])}개 · 남은 문항 {len(left)}개", flush=True)
-        v3.require(not left, f'지도에 못 붙은 문항 {len(left)}개가 남아 의학 검토 전에 멈춥니다(검수 ok 문항은 모두 과제여야 함). '
-                             f'readiness.json의 unplacedQuestions를 보세요: '
-                             + ', '.join(f"{u['question_id']}({u['reason'].split(':')[0]})" for u in left[:20]))
+        print(f"── 검토 밖 배치(범위 점검 판정) {len(placed['coverageFallback'])}개 · 지도에 못 붙고 남은 문항 {len(left)}개"
+              + (': ' + ', '.join(f"{u['question_id']}({u['reason'].split(':')[0]})" for u in left[:20]) if left else ''), flush=True)
 
     # medical (once, medical-final/1) ----------------------------------------------
     clinical_input, _ = v3.medical_parts(bank, v3.context_sent(conflicts, context))
