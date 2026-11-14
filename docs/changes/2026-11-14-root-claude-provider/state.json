@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-14-root-claude-provider",
+  "title": "Main-Quiz 강의별 Claude 출제 경로",
+  "area": "generation",
+  "created_at": "2026-11-14T06:20:58.374548+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T06:20:58.374586+00:00"
+}
