@@ -254,10 +254,11 @@ def summary(doc, events, available, now, policy, skip_optional=False):
     for row in [*before, *carried]:
         if row['id'] not in ready_ids:
             row['recalled'] = False
-    from .score import lecture_score  # score가 이 모듈을 쓰므로 여기서 부른다.
+    from .score import DISPLAY_TARGET_SCALE, lecture_score  # score가 이 모듈을 쓰므로 여기서 부른다.
     return {'total': len(rows), 'learned': sum(r['learned'] for r in rows), 'recalled': sum(r['recalled'] for r in rows),
-            # 사이트 학습률(2026-11-11): 목록·캘린더·패널·시험 계획과 같은 값.
-            'score': lecture_score(doc, events, policy, now, skip_optional=skip_optional)['score'],
+            # 사이트 학습률(2026-11-11): 목록·캘린더·패널과 같은 보이는 값(목표치 절반 기준, 2026-11-14).
+            'score': lecture_score(doc, events, policy, now, skip_optional=skip_optional,
+                                   target_scale=DISPLAY_TARGET_SCALE)['score'],
             'unseen': sum(not r['learned'] for r in rows), 'unready': sum(not r['ready'] for r in rows),
             'importantUnseen': sum(r['important'] and not r['learned'] for r in rows),
             'newToday': sum(r['firstAt'] is not None and r['firstAt'] >= day_start(now, policy) for r in rows),

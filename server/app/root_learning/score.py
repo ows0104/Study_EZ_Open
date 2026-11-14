@@ -1,19 +1,20 @@
 """Main-Quiz 학습률 — 사이트의 유일한 학습률 정의(2026-11-11 사용자 결정).
 
-문항(학습 상태) 점수 = min(지금 숙련도 ÷ (목표치 × DISPLAY_TARGET_SCALE), 1). 지금 숙련도는 마지막 평가 뒤 망각 곡선으로 깎인다.
+문항(학습 상태) 점수 = min(지금 숙련도 ÷ (목표치 × target_scale), 1). 지금 숙련도는 마지막 평가 뒤 망각 곡선으로 깎인다.
 방향은 문항 평균, 지도 목표는 필수 방향 평균, 강의는 지도 목표들의 1 − RMS(1 − 점수)다.
 중요도는 문항 목표치(등급·내 중요도)로 이미 들어가므로 따로 가중하지 않는다.
 읽기 전용 파생값이다. 평가 저장 형식·복습일 계산은 건드리지 않는다.
 
-표기 기준은 목표치의 절반이다(2026-11-14 사용자 「표기되는 학습률 목표를 현재의 50%로, 너무 채우기가 힘들어」).
-학습률 화면만의 기준이다. 저장된 목표치·복습일(`target_due`)·카드 「저장」 단계(state.question_progress)는 원래 목표치를 쓴다.
+화면에 보이는 학습률만 목표치의 절반을 100%로 센다(2026-11-14 사용자 「표기되는 학습률 목표를 현재의 50%로」,
+「보이는 것만」). 목록·캘린더·패널·강의 페이지가 `target_scale=DISPLAY_TARGET_SCALE`로 부른다.
+시험 계획(routes/study_plan)은 기본값 1로 원래 목표치를 쓴다. 저장 목표치·복습일·카드 「저장」 단계도 그대로다.
 """
 from math import sqrt
 
 from .policy import instant, target_parameters, target_retention
 from .state import counted_targets, dropped_directions, optional_tasks, personal_tiers, per_task, replay, replay_tasks
 
-# 학습률이 100%가 되는 숙련도 = 문항 목표치 × 이 값.
+# 화면에 보이는 학습률이 100%가 되는 숙련도 = 문항 목표치 × 이 값. 계획 계산은 1.
 DISPLAY_TARGET_SCALE = 0.5
 
 
@@ -46,17 +47,18 @@ def _targets_for(doc, tiers, params):
     return by_task, by_direction
 
 
-def _unit_score(value, target, at):
+def _unit_score(value, target, at, scale=1.0):
     if not value or not target:
         return 0.0
-    return min(current_mastery(value, at) / ((value.get('target') or target) * DISPLAY_TARGET_SCALE), 1.0)
+    return min(current_mastery(value, at) / ((value.get('target') or target) * scale), 1.0)
 
 
-def lecture_score(doc, events, policy, at, *, until=None, skip_optional=False):
+def lecture_score(doc, events, policy, at, *, until=None, skip_optional=False, target_scale=1.0):
     """`until`까지의 평가로 `at` 시점의 학습률. 지도 목표가 없으면 score=None.
 
     `skip_optional`(Optional 계산 제외, 2026-11-13): 그 시점 Optional 문항을 없는 것처럼 센다 — /4는 방향 평균에서
-    빼고, 문항이 모두 Optional인 방향과 남은 (필수) 방향이 없는 목표는 뺀다."""
+    빼고, 문항이 모두 Optional인 방향과 남은 (필수) 방향이 없는 목표는 뺀다.
+    `target_scale`: 문항 목표치에 곱하는 값. 화면 표시는 DISPLAY_TARGET_SCALE, 시험 계획은 1."""
     until = until or at
     tiers = personal_tiers(doc, events, until)
     exclude = optional_tasks(doc, events, until) if skip_optional else frozenset()
@@ -73,12 +75,12 @@ def lecture_score(doc, events, policy, at, *, until=None, skip_optional=False):
 
         def direction_score(did):
             ids = siblings.get(did) or []
-            return sum(_unit_score(tasks.get(i), task_targets.get(i), at) for i in ids) / len(ids) if ids else 0.0
+            return sum(_unit_score(tasks.get(i), task_targets.get(i), at, target_scale) for i in ids) / len(ids) if ids else 0.0
     else:
         _, directions = replay(doc, events, until, policy, exclude)
 
         def direction_score(did):
-            return _unit_score(directions.get(did), direction_targets.get(did), at)
+            return _unit_score(directions.get(did), direction_targets.get(did), at, target_scale)
 
     scores, rated = [], 0
     for target in counted_targets(doc, dropped):

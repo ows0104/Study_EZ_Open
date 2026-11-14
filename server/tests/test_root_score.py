@@ -125,10 +125,14 @@ assert old_score['targetCount'] == 1 and 0 < old_score['score'] < 100, old_score
 assert current_mastery({}, NOW) == 0
 state = {'mastery': 0.9, 'lastAt': NOW, 'ratingDays': 2}
 assert current_mastery(state, NOW) == 0.9 > current_mastery(state, NOW + timedelta(days=5)) > 0
-# 11. 표기 기준은 목표치의 절반(2026-11-14): 목표치의 절반이면 100%, 4분의 1이면 50%.
+# 11. 보이는 값만 목표치의 절반 기준(2026-11-14): 절반이면 100%, 4분의 1이면 50%. 계획 기준(기본 1)은 그대로.
 assert DISPLAY_TARGET_SCALE == 0.5
 half = {'mastery': 0.4, 'lastAt': NOW, 'ratingDays': 2, 'target': 0.8}
-assert _unit_score(half, 0.8, NOW) == 1.0
-assert abs(_unit_score(dict(half, mastery=0.2), 0.8, NOW) - 0.5) < 1e-9
-assert _unit_score(dict(half, mastery=0.9), 0.8, NOW) == 1.0          # 1에서 자른다
+assert _unit_score(half, 0.8, NOW, DISPLAY_TARGET_SCALE) == 1.0
+assert abs(_unit_score(dict(half, mastery=0.2), 0.8, NOW, DISPLAY_TARGET_SCALE) - 0.5) < 1e-9
+assert _unit_score(dict(half, mastery=0.9), 0.8, NOW, DISPLAY_TARGET_SCALE) == 1.0   # 1에서 자른다
+assert abs(_unit_score(half, 0.8, NOW) - 0.5) < 1e-9                                 # 계획 기준
+plan_view = lecture_score(doc, once, POLICY, NOW + timedelta(minutes=1))
+shown = lecture_score(doc, once, POLICY, NOW + timedelta(minutes=1), target_scale=DISPLAY_TARGET_SCALE)
+assert plan_view == one and shown['value'] > plan_view['value'], (plan_view, shown)
 print('test_root_score ok')
