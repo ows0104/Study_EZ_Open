@@ -118,6 +118,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   }
   // 진행 중 회차의 남은 문항 수: 「오늘 학습 재개」 배지. 정리 화면일 때만 읽는다.
   const [openLeft,setOpenLeft]=useState<{id:string;left:number}|null>(null);
+  // 칩을 바꾸면 같은 흐름의 뒷부분이 바뀐다(2026-11-14 이어 풀기): 남은 수를 다시 읽는다.
+  const [refocused,setRefocused]=useState(0);
   const openId=view?null:info?.sessionId??null;
   useEffect(()=>{
     setOpenLeft(null);
@@ -126,7 +128,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     api<RootView>(`/api/root-learning/sessions/${openId}`)
       .then(v=>{if(live)setOpenLeft({id:openId,left:v.finished?0:Math.max(0,v.count-v.position)});}).catch(()=>{});
     return()=>{live=false;};
-  },[openId]);
+  },[openId,refocused]);
   // 정리 화면의 뒤로: 들어온 화면(강의 목록·캘린더)으로, 바로 열린 창이면 캘린더로.
   const navigate=useNavigate();
   const leave=()=>(window.history.state?.idx>0?navigate(-1):navigate('/'));
@@ -149,7 +151,9 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     setInfo({...current,focus:{...current.focus,tiers}});setFocusing(true);
     try{
       const next=await api<RootOverview>(base+'/focus',{method:'PUT',body:JSON.stringify({requestId:crypto.randomUUID(),tiers})});
-      if(seq===focusSeq.current)setInfo(next);
+      // 미리 받은 문항은 옛 뒷부분이다. 비우고 남은 수를 다시 읽는다.
+      forget();
+      if(seq===focusSeq.current){setInfo(next);setRefocused(v=>v+1);}
     }catch(e){if(seq===focusSeq.current){setInfo(current);setError((e as Error).message);}}
     finally{if(seq===focusSeq.current)setFocusing(false);}
   }
