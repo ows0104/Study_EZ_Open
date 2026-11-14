@@ -78,7 +78,7 @@ export type JokboSummary = {
 
 export type JokboResponse = JokboSummary & { uploadedAt?: string; doc: JokboDoc };
 
-/** 오답노트 표시(2026-11-14). high 틀림 · mid 좁혀서 · low 헷갈림. */
+/** 오답노트 표시(2026-11-14). 화면: high 모르겠음 · mid 주의 · null 괜찮음. low(예전 하 헷갈림)는 주의로 보인다(`jokbo/marks.tsx`). */
 export type JokboBand = "high" | "mid" | "low";
 
 export type JokboMark = {
@@ -92,7 +92,7 @@ export type JokboMark = {
   markedAt: string | null;
 };
 
-/** 오답노트 한 줄. 강의를 가리지 않고 모은다(`GET /api/jokbo/wrong-notes`). */
+/** 오답노트 한 줄(`GET /api/jokbo/wrong-notes`). 화면이 강의별로 묶는다. */
 export type JokboNoteEntry = {
   mark: JokboMark;
   lecture: { eventId: string; number: string; title: string; date: string };
