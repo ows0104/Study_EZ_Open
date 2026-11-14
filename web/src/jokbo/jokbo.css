@@ -1,7 +1,12 @@
-/* 족보 퀴즈(2026-11-13). Main-Quiz 시작 화면의 머리·숫자 칸·칩·시작 버튼(main-quiz.css)을 그대로 쓰고
-   족보에만 필요한 것을 더한다. 갈래 색을 새로 만들지 않는다 — 강조색 둘은 예습·복습 것이다. */
+/* 족보 퀴즈(2026-11-13). 시작 화면은 Main-Quiz 시작 화면의 머리·숫자 칸·칩·시작 버튼(main-quiz.css)을 쓰고,
+   풀이·끝 화면은 예습 퀴즈 틀(prequiz.css의 pq-*)을 쓴다(2026-11-14 사용자 「예습퀴즈 느낌」).
+   갈래 색을 새로 만들지 않는다 — 강조색 둘은 예습·복습 것이고 족보는 먹색이다. */
 
 .jokbo-learning{max-width:860px;margin:0 auto;padding-bottom:96px}
+/* 읽는 화면은 좁게: 문제 한 줄이 40자 안팎에서 끊기도록. main-quiz.css의 셸 안 1100px보다 세게 건다
+   (그 1100px이 2026-11-14 「문제가 너무 가로로 길다」의 원인이었다). */
+.main-quiz-learning.jokbo-learning:not(.is-start),
+.app-shell:not(.is-bare) .main-quiz-learning.jokbo-learning:not(.is-start){max-width:780px}
 .jokbo-start{display:flex;flex-direction:column;gap:18px}
 .jokbo-badge{color:var(--ink);background:var(--surface-2);border-color:var(--line-strong)}
 .jokbo-admin-tag{font-size:11.5px;font-weight:600;font-style:normal;color:var(--warn);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:999px;padding:2px 9px}
@@ -14,75 +19,107 @@
 .main-quiz-learning .jokbo-years button{height:30px;padding:0 12px;font-size:13px}
 @media (max-width:640px){.jokbo-scope{flex-direction:column;align-items:stretch}}
 
-/* 풀이 */
-.jokbo-solve{display:flex;flex-direction:column;gap:14px}
-.jokbo-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13.5px}
-.jokbo-progress{font-weight:700;font-variant-numeric:tabular-nums}
-.jokbo-meta{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+/* ── 풀이 ─────────────────────────────────────────── */
+.jokbo-solve .pq-track i{background:var(--ink-2)}
+.jokbo-card.pq-card{padding:28px 32px 30px;min-height:0}
+.jokbo-meta{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;margin:0 0 18px;font-size:12.5px;color:var(--ink-2)}
 .jokbo-who{padding:2px 10px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink-2);font-size:12.5px}
 .jokbo-who.is-same{border-color:var(--ink);color:var(--ink);font-weight:700}
+.jokbo-num{color:var(--ink-3);font-variant-numeric:tabular-nums}
 .jokbo-repeat{padding:2px 10px;border-radius:999px;background:var(--exam-soft);color:var(--exam-ink);font-size:12.5px;font-weight:600}
 
-.jokbo-card{display:flex;flex-direction:column;gap:12px}
-.jokbo-shared{margin:0;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:14.5px;white-space:pre-wrap}
-.jokbo-stem{margin:0;font-size:17px;line-height:1.6;white-space:pre-wrap}
-.jokbo-figures{display:flex;flex-wrap:wrap;gap:10px}
+/* 본문(JokboBody). 풀이·끝·오답노트가 같이 쓴다. */
+.jokbo-shared{margin:0 0 14px;padding:12px 16px;border-radius:10px;background:var(--surface-2);font-size:15.5px;line-height:1.75;white-space:pre-wrap;word-break:keep-all}
+.jokbo-stem{margin:0;font-size:18px;font-weight:500;line-height:1.8;letter-spacing:-.005em;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+.jokbo-figures{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
 .jokbo-figures img{max-width:100%;height:auto;max-height:420px;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#fff}
-.jokbo-options{margin:4px 0 0}
-.jokbo-choice-note{margin:4px 0 8px 34px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.bank-options.jokbo-options{gap:10px;margin:22px 0 0}
+.jokbo-options .bank-option{display:flex;align-items:baseline;gap:12px;padding:12px 16px;font-size:16px;line-height:1.65;word-break:keep-all;overflow-wrap:anywhere}
+.jokbo-options .bank-option b{flex:none;min-width:1em;margin:0;font-variant-numeric:tabular-nums}
+.jokbo-options .bank-option span{min-width:0;flex:1;white-space:pre-wrap}
+.jokbo-options .bank-option:not(:disabled):hover{border-color:var(--line-strong);background:var(--hover)}
+.jokbo-choice-note{margin:6px 0 4px 44px;font-size:14px;line-height:1.7;color:var(--ink-2);word-break:keep-all}
+.jokbo-need{margin:12px 0 0}
 
-.jokbo-answer{display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
-.jokbo-verdict{margin:0;display:flex;align-items:baseline;gap:12px;font-size:20px;font-weight:700}
-.jokbo-verdict span{font-size:14px;font-weight:600;color:var(--ink-2)}
-.jokbo-verdict.is-correct{color:var(--ok)}
-.jokbo-verdict.is-wrong{color:var(--exam-ink)}
-.jokbo-verdict.is-ungraded{color:var(--ink-2)}
-.jokbo-caution{margin:0;padding:10px 12px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn);font-size:14px;line-height:1.55}
-.jokbo-explain{margin:0;font-size:15px;line-height:1.7}
-.jokbo-correction{margin:0;font-size:13px;color:var(--ink-2)}
+.jokbo-answer{display:flex;flex-direction:column;gap:12px;margin-top:24px;padding-top:20px;border-top:1px dashed var(--line)}
+.jokbo-verdict{margin:0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.jokbo-verdict strong{font-size:20px;font-weight:700}
+.jokbo-verdict span{font-size:15px;font-weight:600;color:var(--ink-2)}
+.jokbo-verdict.is-correct strong{color:var(--ok)}
+.jokbo-verdict.is-wrong strong{color:var(--exam-ink)}
+.jokbo-verdict.is-ungraded strong,.jokbo-verdict.is-none strong{color:var(--ink-2)}
+.jokbo-caution{margin:0;padding:10px 14px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn);font-size:14.5px;line-height:1.7;word-break:keep-all}
+.jokbo-explain{margin:0;padding:14px 18px;border-radius:12px;background:var(--surface-2);font-size:15.5px;line-height:1.8;white-space:pre-wrap;word-break:keep-all}
+.jokbo-correction{margin:0;font-size:13px;line-height:1.6;color:var(--ink-2)}
 .jokbo-basis{margin:0;font-size:12.5px;color:var(--ink-3)}
 
-.jokbo-done{display:flex;flex-direction:column;gap:18px;padding-top:12px}
-.jokbo-done h2{margin:0;font-size:22px}
-.jokbo-done .mq-stats .is-wrong b{color:var(--exam-ink)}
-.jokbo-done-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+/* 독: 답 전 「답 보기」 하나, 답 뒤 모르겠음 · 주의 · 괜찮음. 기본값(Enter)은 테두리를 굵게. */
+.jokbo-dock .jokbo-reveal{flex:0 1 560px}
+.jokbo-dock .jokbo-rate{flex:0 1 240px;font-size:15px}
+.jokbo-rate.is-unknown{border-color:color-mix(in srgb,#b23a3a 35%,var(--line));color:#a83232;background:color-mix(in srgb,#b23a3a 5%,var(--surface))}
+.jokbo-rate.is-caution{border-color:color-mix(in srgb,#ad7115 35%,var(--line));color:#986315;background:color-mix(in srgb,#ad7115 5%,var(--surface))}
+.jokbo-rate.is-fine{border-color:color-mix(in srgb,#27815b 35%,var(--line));color:#21704e;background:color-mix(in srgb,#27815b 5%,var(--surface))}
+.jokbo-rate.is-default{box-shadow:inset 0 0 0 1.5px currentColor}
+.jokbo-rate:hover{filter:brightness(.97)}
 
 /* 변형(2026-11-13): 앞서 푼 문제와 달라진 선지. 고르기 전에도 보인다 — 어디가 바뀌었는지 보는 것이 목적이다. */
 .jokbo-variant{padding:2px 10px;border-radius:999px;background:var(--accent2-soft);color:var(--accent2-ink);border:1px solid var(--accent2-line);font-size:12.5px;font-weight:600}
 .jokbo-options .bank-option.is-changed{box-shadow:inset 3px 0 0 var(--accent2)}
-.jokbo-options .bank-option.is-changed::after{content:"바뀜";float:right;padding-left:10px;font-size:11.5px;font-weight:700;color:var(--accent2-ink)}
+.jokbo-options .bank-option.is-changed::after{content:"바뀜";flex:none;margin-left:auto;padding-left:10px;font-size:11.5px;font-weight:700;color:var(--accent2-ink)}
 
-/* 오답노트(2026-11-14). 상이 가장 크게, 하가 가장 조용히 — 무게는 중요도를 따른다. */
-.jokbo-bands{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.jokbo-bands-label{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-right:2px}
-.jokbo-band{height:28px;padding:0 11px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);font-size:12.5px;font-weight:600;cursor:pointer}
-.jokbo-band:hover{border-color:var(--ink-2);color:var(--ink)}
-.jokbo-band.is-high[aria-pressed="true"]{background:var(--exam-ink);border-color:var(--exam-ink);color:#fff}
-.jokbo-band.is-mid[aria-pressed="true"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
-.jokbo-band.is-low[aria-pressed="true"]{background:var(--surface-2);border-color:var(--ink-2);color:var(--ink)}
+/* ── 끝 화면 ───────────────────────────────────────── */
+.jokbo-today.pq-today{border-color:var(--line-strong);background:linear-gradient(135deg,var(--surface-2),var(--surface) 70%)}
+.jokbo-today.pq-today h2{color:var(--ink-2)}
+.jokbo-count-unknown{color:#a83232}
+.jokbo-count-caution{color:#986315}
+.jokbo-finish.pq-start-button{border:0;cursor:pointer;background:var(--ink);font:inherit;font-size:15px;font-weight:600}
+.jokbo-finish.pq-start-button:hover{background:color-mix(in srgb,var(--ink) 85%,#000)}
+.jokbo-kept-tools{display:flex;gap:8px;flex-wrap:wrap}
+.jokbo-kept-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.jokbo-kept-card{padding:24px 28px;border:1px solid var(--line);border-left:4px solid var(--line-strong);border-radius:14px;background:var(--surface)}
+.jokbo-kept-index,.jokbo-note-index{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
 
+/* 오답노트 표시. 모르겠음이 가장 크게, 괜찮음이 가장 조용히 — 무게는 중요도를 따른다. */
+.jokbo-kept-card.is-unknown,.jokbo-note.is-unknown{border-left-color:#b23a3a}
+.jokbo-kept-card.is-caution,.jokbo-note.is-caution{border-left-color:#ad7115}
+.jokbo-kept-card.is-fine,.jokbo-note.is-fine{border-left-color:var(--ok)}
+.jokbo-rating-tag{padding:2px 9px;border-radius:999px;font-weight:700}
+.jokbo-rating-tag.is-unknown{background:color-mix(in srgb,#b23a3a 10%,var(--surface));color:#a83232}
+.jokbo-rating-tag.is-caution{background:var(--warn-soft);color:#986315}
+.jokbo-rating-tag.is-fine{background:var(--ok-soft);color:var(--ok)}
+
+.jokbo-ratings{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px dashed var(--line)}
+.jokbo-rating{height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);font-size:13px;font-weight:600;cursor:pointer}
+.jokbo-rating:hover{border-color:var(--ink-2);color:var(--ink)}
+.jokbo-rating.is-unknown[aria-checked="true"]{background:#a83232;border-color:#a83232;color:#fff}
+.jokbo-rating.is-caution[aria-checked="true"]{background:var(--warn-soft);border-color:#ad7115;color:#986315}
+.jokbo-rating.is-fine[aria-checked="true"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+
+/* ── 오답노트 ──────────────────────────────────────── */
 .jokbo-notes-count{font-variant-numeric:tabular-nums;color:var(--ink-3);font-weight:600}
-.jokbo-notes-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 16px}
+.main-quiz-learning .jokbo-notes-lectures{margin:6px 0 0}
+.main-quiz-learning .jokbo-notes-lectures button{height:32px;padding:0 13px;font-size:13px}
+.jokbo-notes-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 20px;padding-top:12px;border-top:1px dashed var(--line)}
 .jokbo-notes-bar .mq-focus{margin-top:0}
+.main-quiz-learning .jokbo-show-all{margin-left:auto;height:34px;padding:0 14px;font-size:13px}
+.jokbo-show-all[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);font-weight:700}
 .jokbo-notes-missing,.jokbo-notes-empty{margin:0 0 12px;font-size:13.5px;color:var(--ink-3)}
+.jokbo-notes-group+.jokbo-notes-group{margin-top:30px}
+.jokbo-notes-group-head{display:flex;align-items:baseline;gap:8px;margin:0 0 12px;font-size:16px;font-weight:700}
+.jokbo-notes-group-head a{color:var(--ink);text-decoration:none}
+.jokbo-notes-group-head a:hover{text-decoration:underline}
+.jokbo-notes-group-head span{color:var(--ink-3);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .jokbo-notes-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
-.jokbo-note{padding:16px 18px;border:1px solid var(--line);border-left:4px solid var(--line-strong);border-radius:12px;background:var(--surface)}
-@media (max-width:640px){.jokbo-note{padding:12px 12px}}
-.jokbo-note.is-high{border-left-color:var(--exam-ink)}
-.jokbo-note.is-mid{border-left-color:var(--warn)}
-.jokbo-note.is-low{border-left-color:var(--line-strong)}
-.jokbo-note.is-cleared{border-left-color:var(--ok)}
-.jokbo-note-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
-.jokbo-note-index{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
-.jokbo-band-tag{padding:2px 9px;border-radius:999px;font-weight:700}
-.jokbo-band-tag.is-high{background:var(--exam-soft);color:var(--exam-ink)}
-.jokbo-band-tag.is-mid{background:var(--warn-soft);color:var(--warn)}
-.jokbo-band-tag.is-low{background:var(--surface-2);color:var(--ink-2)}
-.jokbo-note-cleared{padding:2px 9px;border-radius:999px;background:var(--ok-soft);color:var(--ok);font-weight:700}
-.jokbo-note-now{padding:2px 9px;border-radius:999px;border:1px solid var(--warn-line);color:var(--warn);font-weight:600}
-.jokbo-note-lecture{color:var(--ink);font-weight:600;text-decoration:none}
-.jokbo-note-lecture:hover{text-decoration:underline}
+.jokbo-note{padding:24px 28px;border:1px solid var(--line);border-left:4px solid var(--line-strong);border-radius:14px;background:var(--surface)}
 .jokbo-note-wrong{color:var(--exam-ink);font-weight:600}
-.jokbo-note-actions{display:flex;gap:10px;align-items:center}
+.jokbo-note-actions{display:flex;gap:10px;align-items:center;margin-top:16px}
 .jokbo-note-actions .quiz-submit{min-height:34px}
-.jokbo-note .jokbo-bands{padding-top:10px;border-top:1px dashed var(--line)}
+
+@media (max-width:640px){
+  .jokbo-card.pq-card{padding:20px 16px 22px}
+  .jokbo-stem{font-size:17px}
+  .jokbo-options .bank-option{font-size:15.5px;padding:11px 13px;gap:10px}
+  .jokbo-choice-note{margin-left:34px}
+  .jokbo-kept-card,.jokbo-note{padding:18px 14px}
+  .main-quiz-learning .jokbo-show-all{margin-left:0}
+}

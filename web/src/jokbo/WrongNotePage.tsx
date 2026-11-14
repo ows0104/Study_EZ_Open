@@ -1,41 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { jokboHref } from "../links";
-import type { JokboBand, JokboItem, JokboNoteEntry, JokboNotes } from "../types/jokbo";
-import { BANDS, BandButtons, postAnswer, putBand } from "./marks";
+import type { JokboBand, JokboNoteEntry, JokboNotes } from "../types/jokbo";
+import { JokboBody } from "./JokboBody";
+import { RATINGS, RatingButtons, postAnswer, putBand, shownBand, type Shown } from "./marks";
 import { grade, needed, type Verdict } from "./selection";
 import "../bank/main-quiz.css";
 import "./jokbo.css";
 
 /**
- * 족보 오답노트(2026-11-14 사용자 지시). amgi 족보 오답노트처럼 강의를 가리지 않고 한 화면에 모은다.
+ * 족보 오답노트(2026-11-14 사용자 지시). 족보 퀴즈에서 모르겠음·주의로 넣은 문제를 모은다.
  *
- * 풀기     답을 가린다. 선지를 고르면 채점하고(틀리면 다시 「상 틀림」), 「답 보기」로 그냥 열 수도 있다.
- * 정답 보기 정답·선지별 해설·해설이 처음부터 펴져 있다.
+ * 강의 칩으로 거르고, 목록은 강의별로 묶는다(2026-11-14 개편 「강의별로 분류」).
+ * 카드는 답을 가린 채 시작한다. 선지를 고르면 채점하고(틀리면 다시 모르겠음), 「답 보기」로 그냥 열 수도 있다.
+ * 맨 위 「전체 정답 보기」가 모든 카드를 한 번에 연다(예전 풀기/정답 보기 토글은 없앴다).
  *
- * 목록은 들어올 때 한 번 세운다. 표시를 떼거나 바꿔도 줄이 그 자리에 남는다 — 잘못 누른 것을
- * 되돌릴 수 있고 훑던 자리를 잃지 않는다. 거르기도 들어올 때의 표시로 한다.
+ * 목록은 들어올 때 한 번 세운다. 괜찮음으로 빼거나 바꿔도 줄이 그 자리에 남는다 — 잘못 누른 것을
+ * 되돌릴 수 있고 훑던 자리를 잃지 않는다. 거르기도 들어올 때의 표시로 한다. 예전 low는 주의로 센다.
  */
-type View = "solve" | "note";
-const VIEW_KEY = "jokbo-wrong-view";
-
-function loadView(): View {
-  try { return localStorage.getItem(VIEW_KEY) === "note" ? "note" : "solve"; } catch { return "solve"; }
-}
+type Lecture = { eventId: string; label: string; date: string; count: number };
 
 function lectureLabel(e: JokboNoteEntry): string {
   const title = e.lecture.title.replace(/^[^)\s]{1,8}\)\s*/, "");
   return /^\d+$/.test(e.lecture.number) ? `${e.lecture.number}. ${title}` : title;
 }
 
+const RANK: Record<string, number> = { high: 0, mid: 1 };
+
 export function WrongNotePage() {
   const [data, setData] = useState<JokboNotes | null>(null);
   const [error, setError] = useState("");
   const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
-  const [view, setView] = useState<View>(loadView);
-  const [on, setOn] = useState<Record<JokboBand, boolean>>({ high: true, mid: true, low: true });
+  const [lecture, setLecture] = useState<string>("all");
+  const [on, setOn] = useState<{ high: boolean; mid: boolean }>({ high: true, mid: true });
   const [showAll, setShowAll] = useState(false);
+  const pending = useRef<Record<string, Promise<unknown>>>({});
 
   useEffect(() => {
     let alive = true;
@@ -49,28 +49,40 @@ export function WrongNotePage() {
     return () => { alive = false; };
   }, []);
 
-  const count = useMemo(() => {
-    const c: Record<JokboBand, number> = { high: 0, mid: 0, low: 0 };
-    for (const e of data?.items ?? []) if (e.mark.band) c[e.mark.band] += 1;
-    return c;
-  }, [data]);
+  // 들어올 때의 표시(예전 low는 주의)로 센다·거른다·늘어놓는다.
+  const entries = useMemo(() => (data?.items ?? [])
+    .map((e, order) => ({ e, band: shownBand(e.mark.band), order }))
+    .filter((x): x is { e: JokboNoteEntry; band: "high" | "mid"; order: number } => x.band !== null), [data]);
 
-  function switchView(next: View) {
-    setView(next);
-    if (next === "solve") setShowAll(false);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* 이번 화면만 바뀐다 */ }
-  }
+  const lectures = useMemo(() => {
+    const out = new Map<string, Lecture>();
+    for (const { e } of entries) {
+      const got = out.get(e.lecture.eventId);
+      if (got) got.count += 1;
+      else out.set(e.lecture.eventId, { eventId: e.lecture.eventId, label: lectureLabel(e), date: e.lecture.date, count: 1 });
+    }
+    return [...out.values()].sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label, "ko"));
+  }, [entries]);
 
-  function setBand(e: JokboNoteEntry, band: JokboBand | null) {
+  const inLecture = entries.filter(x => lecture === "all" || x.e.lecture.eventId === lecture);
+  const count = { high: inLecture.filter(x => x.band === "high").length, mid: inLecture.filter(x => x.band === "mid").length };
+  const shown = inLecture.filter(x => on[x.band]);
+  const groups = lectures
+    .map(l => ({ lecture: l, rows: shown.filter(x => x.e.lecture.eventId === l.eventId)
+      .sort((a, b) => RANK[a.band] - RANK[b.band] || a.order - b.order) }))
+    .filter(g => g.rows.length);
+
+  function setBand(e: JokboNoteEntry, band: Shown) {
     setBands(prev => ({ ...prev, [e.item.id]: band }));
-    putBand(e.lecture.eventId, e.item.id, band)
+    const after = pending.current[e.item.id] ?? Promise.resolve();
+    void after.then(() => putBand(e.lecture.eventId, e.item.id, band))
       .then(m => setBands(prev => ({ ...prev, [e.item.id]: m.band })))
       .catch(() => { /* 다음에 들어오면 서버 값 */ });
   }
 
   function answered(e: JokboNoteEntry, verdict: Verdict) {
     if (verdict === "wrong") setBands(prev => ({ ...prev, [e.item.id]: "high" }));
-    postAnswer(e.lecture.eventId, e.item.id, verdict)
+    pending.current[e.item.id] = postAnswer(e.lecture.eventId, e.item.id, verdict)
       .then(m => setBands(prev => ({ ...prev, [e.item.id]: m.band })))
       .catch(() => { /* 기록 실패는 화면을 막지 않는다 */ });
   }
@@ -78,66 +90,79 @@ export function WrongNotePage() {
   if (error) return <main className="main-quiz-learning jokbo-learning"><p className="notice is-error">{error}</p></main>;
   if (!data) return <main className="main-quiz-learning jokbo-learning"><p className="event-panel-loading">불러오는 중…</p></main>;
 
-  const note = view === "note";
-  const shown = data.items.filter(e => e.mark.band && on[e.mark.band]);
+  let index = 0;
   return (
     <main className="main-quiz-learning jokbo-learning jokbo-notes">
       <header className="page-head mq-head">
         <div>
           <p className="mq-kicker"><span className="mq-badge jokbo-badge">족보</span></p>
-          <h1>오답노트 <span className="jokbo-notes-count">{data.items.length}</span></h1>
+          <h1>오답노트 <span className="jokbo-notes-count">{entries.length}</span></h1>
         </div>
       </header>
 
-      <div className="jokbo-notes-bar">
-        <div className="mq-focus" role="radiogroup" aria-label="보기">
-          <button type="button" role="radio" aria-checked={!note} aria-pressed={!note} onClick={() => switchView("solve")}>풀기</button>
-          <button type="button" role="radio" aria-checked={note} aria-pressed={note} onClick={() => switchView("note")}>정답 보기</button>
-        </div>
-        <div className="mq-focus" role="group" aria-label="표시">
-          {BANDS.map(b => (
-            <button key={b.key} type="button" aria-pressed={on[b.key]} className={count[b.key] ? undefined : "is-empty"}
-              onClick={() => setOn(prev => ({ ...prev, [b.key]: !prev[b.key] }))}>
-              {b.label} {b.word}<b>{count[b.key]}</b>
-            </button>
+      {lectures.length ? (
+        <div className="mq-focus jokbo-notes-lectures" role="radiogroup" aria-label="강의">
+          <button type="button" role="radio" aria-checked={lecture === "all"} aria-pressed={lecture === "all"}
+            onClick={() => setLecture("all")}>전체<b>{entries.length}</b></button>
+          {lectures.map(l => (
+            <button key={l.eventId} type="button" role="radio" aria-checked={lecture === l.eventId} aria-pressed={lecture === l.eventId}
+              onClick={() => setLecture(l.eventId)}>{l.label}<b>{l.count}</b></button>
           ))}
         </div>
-        {!note && shown.length ? (
-          <button type="button" className="pill-button" aria-pressed={showAll} onClick={() => setShowAll(v => !v)}>
-            {showAll ? "답 가리기" : "답 전부 보기"}
+      ) : null}
+
+      {entries.length ? (
+        <div className="jokbo-notes-bar">
+          <div className="mq-focus" role="group" aria-label="표시">
+            {RATINGS.filter((r): r is typeof r & { key: "high" | "mid" } => r.key !== null).map(r => (
+              <button key={r.tone} type="button" aria-pressed={on[r.key]} className={count[r.key] ? undefined : "is-empty"}
+                onClick={() => setOn(prev => ({ ...prev, [r.key]: !prev[r.key] }))}>
+                {r.label}<b>{count[r.key]}</b>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="pill-button jokbo-show-all" aria-pressed={showAll} onClick={() => setShowAll(v => !v)}>
+            {showAll ? "전체 정답 가리기" : "전체 정답 보기"}
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {data.missing ? <p className="jokbo-notes-missing">볼 수 없는 문제 {data.missing}</p> : null}
 
-      {shown.length ? (
-        <ol className="jokbo-notes-list">
-          {shown.map((e, i) => (
-            <NoteCard key={e.item.id} entry={e} index={i + 1} open={note || showAll}
-              band={bands[e.item.id] ?? null} onBand={band => setBand(e, band)} onAnswered={v => answered(e, v)} />
-          ))}
-        </ol>
-      ) : (
-        (data.items.length ? null : <p className="jokbo-notes-empty">비어 있음</p>)
-      )}
+      {groups.length ? groups.map(g => (
+        <section key={g.lecture.eventId} className="jokbo-notes-group">
+          <h2 className="jokbo-notes-group-head">
+            <Link to={jokboHref(g.lecture.eventId)}>{g.lecture.label}</Link>
+            <span>{g.rows.length}</span>
+          </h2>
+          <ol className="jokbo-notes-list">
+            {g.rows.map(({ e, band }) => {
+              index += 1;
+              return (
+                <NoteCard key={e.item.id} entry={e} entered={band} index={index} open={showAll}
+                  band={bands[e.item.id] ?? null} onBand={next => setBand(e, next)} onAnswered={v => answered(e, v)} />
+              );
+            })}
+          </ol>
+        </section>
+      )) : (entries.length ? null : <p className="jokbo-notes-empty">비어 있음</p>)}
     </main>
   );
 }
 
-function NoteCard({ entry, index, open, band, onBand, onAnswered }: {
-  entry: JokboNoteEntry; index: number; open: boolean;
+function NoteCard({ entry, entered, index, open, band, onBand, onAnswered }: {
+  entry: JokboNoteEntry; entered: "high" | "mid"; index: number; open: boolean;
   band: JokboBand | null;
-  onBand: (band: JokboBand | null) => void;
+  onBand: (band: Shown) => void;
   onAnswered: (verdict: Verdict) => void;
 }) {
-  const item: JokboItem = entry.item;
+  const item = entry.item;
   const [picked, setPicked] = useState<number[]>([]);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const revealed = open || verdict !== null;
   const need = needed(item);
-  const entered = BANDS.find(b => b.key === entry.mark.band);
-  const x = item.explanation;
+  const now = shownBand(band);
+  const tone = RATINGS.find(r => r.key === now)?.tone ?? "fine";
   const years = item.years?.length ? item.years : [item.yearLabel];
 
   function check(choice: number[]) {
@@ -155,76 +180,28 @@ function NoteCard({ entry, index, open, band, onBand, onAnswered }: {
   }
 
   return (
-    <li className={`quiz-card bank-card jokbo-card jokbo-note${band ? ` is-${band}` : " is-cleared"}`}>
-      <div className="jokbo-note-meta">
+    <li className={`quiz-card bank-card jokbo-card jokbo-note is-${tone}${now !== entered ? " is-changed-band" : ""}`}>
+      <div className="jokbo-meta">
         <span className="jokbo-note-index">{index}</span>
-        {entered ? <span className={`jokbo-band-tag is-${entered.key}`}>{entered.label} {entered.word}</span> : null}
-        {!band ? <span className="jokbo-note-cleared">뗌</span> : band !== entry.mark.band ? (
-          <span className="jokbo-note-now">지금 {BANDS.find(b => b.key === band)?.label}</span>
-        ) : null}
-        <Link className="jokbo-note-lecture" to={jokboHref(entry.lecture.eventId)}>{lectureLabel(entry)}</Link>
         <span className={`jokbo-who is-${entry.kind}`}>{years.join("·")} {entry.professors.join(", ") || "교수 미상"}</span>
-        <span className="jokbo-note-num">{item.number}번</span>
+        <span className="jokbo-num">{item.number}번</span>
         {entry.mark.wrongCount ? <span className="jokbo-note-wrong">틀림 {entry.mark.wrongCount}</span> : null}
       </div>
 
-      {item.sharedPrompt ? <p className="jokbo-shared">{item.sharedPrompt}</p> : null}
-      <p className="jokbo-stem">{item.stem}</p>
-      {item.figures?.length ? (
-        <div className="jokbo-figures">
-          {item.figures.map(f => (f.url ? <img key={f.file} src={f.url} alt="" width={f.w} height={f.h} loading="lazy" /> : null))}
-        </div>
-      ) : null}
+      {/* 고르지 않고 「정답 보기」로 연 것은 판정이 없다. */}
+      <JokboBody item={item} picked={picked} revealed={revealed} verdict={picked.length ? verdict : null}
+        onPick={revealed ? undefined : pick} />
 
-      <ul className="bank-options jokbo-options">
-        {item.choices.map((choice, i) => {
-          const n = i + 1;
-          const selected = picked.includes(n);
-          const key = item.answerStatus === "all-correct" || item.answers.includes(n);
-          const cls = !revealed ? (selected ? " is-picked" : "")
-            : item.answerStatus === "missing" ? (selected ? " is-picked" : "")
-            : key ? (selected ? " is-correct" : " is-missed") : selected ? " is-wrong" : "";
-          const choiceNote = revealed ? x?.choiceNotes?.[i] : undefined;
-          return (
-            <li key={n}>
-              <button type="button" className={`bank-option${cls}`} disabled={revealed} aria-pressed={selected} onClick={() => pick(n)}>
-                <b>{n}</b> {choice}
-              </button>
-              {choiceNote ? <p className="jokbo-choice-note">{choiceNote}</p> : null}
-            </li>
-          );
-        })}
-      </ul>
-
-      {revealed ? (
-        <div className="jokbo-answer">
-          <p className={`jokbo-verdict is-${verdict ?? "ungraded"}`}>
-            {verdict === "correct" ? "맞음" : verdict === "wrong" ? "틀림" : null}
-            <span>
-              {item.answerStatus === "all-correct" ? "전원 정답"
-                : item.answerStatus === "missing"
-                  ? `답안지에 답 없음${x?.proposedAnswers?.length ? ` · 추정 ${x.proposedAnswers.join(", ")}` : ""}`
-                  : `정답 ${item.answers.join(item.answerMode === "all_of" ? " + " : " 또는 ")}`}
-            </span>
-          </p>
-          {item.keyConflict && item.mergedFrom ? (
-            <p className="jokbo-caution">해마다 답안지 답이 다름: {item.yearLabel} {item.answers.join(",")}
-              {item.mergedFrom.map(m => ` · ${m.yearLabel} ${m.answers.join(",") || "–"}`).join("")}</p>
-          ) : null}
-          {x?.caution ? <p className="jokbo-caution">{x.caution}</p> : null}
-          {x ? <p className="jokbo-explain">{x.text}</p> : null}
-          {item.correctionNote ? <p className="jokbo-correction">교정: {item.correctionNote}</p> : null}
-        </div>
-      ) : (
+      {revealed ? null : (
         <div className="jokbo-note-actions">
           {need > 1 ? (
             <button type="button" className="quiz-submit" disabled={picked.length !== need} onClick={() => check(picked)}>확인 · {need}개</button>
           ) : null}
-          <button type="button" className="pill-button" onClick={() => check([])}>답 보기</button>
+          <button type="button" className="pill-button" onClick={() => check([])}>정답 보기</button>
         </div>
       )}
 
-      <BandButtons band={band} onChange={onBand} />
+      <RatingButtons band={band} onChange={onBand} />
     </li>
   );
 }

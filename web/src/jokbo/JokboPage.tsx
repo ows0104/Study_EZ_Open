@@ -1,24 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { Icon } from "../shell/icons";
 import type { JokboBand, JokboDoc, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
-import { BandButtons, postAnswer, putBand } from "./marks";
+import { JokboBody } from "./JokboBody";
+import { RATINGS, postAnswer, putBand, shownBand, type Shown } from "./marks";
 import {
   changedChoices, defaultScope, grade, needed, otherYears, pickItems, professorsOf, sameItemIds, yearsOf,
   type JokboScope, type Verdict,
 } from "./selection";
 import "../bank/main-quiz.css";
+import "../lecture/prequiz.css";
 import "./jokbo.css";
 
 /**
  * 강의별 족보 퀴즈(2026-11-13 사용자 지시).
  *
- * 진입 화면에서 범위(같은 교수만 / 다른 교수까지 + 연도)를 고르고, 복습 퀴즈처럼
- * **한 문제씩** 푼다. 고르면 바로 정답·선지별 해설이 나온다.
+ * 진입 화면에서 범위(같은 교수만 / 다른 교수까지 + 연도)를 고르고 **한 문제씩** 푼다.
+ * 고르면 바로 정답·선지별 해설이 나온다.
  *
- * 풀면 결과를 서버에 남긴다(2026-11-14 오답노트). 틀리면 오답노트에 「상 틀림」으로 담기고,
- * 답 아래 상·중·하로 직접 담거나 뗀다. 복습 퀴즈식 간격 채점은 아직 없다(사용자 결정 대기).
+ * 2026-11-14 개편(사용자 「예습퀴즈 느낌」): 풀이·끝 화면을 예습 퀴즈 틀(머리줄·진행 막대·카드·아래 독)로.
+ * 답을 본 뒤 독에서 **모르겠음 · 주의 · 괜찮음**을 골라야 넘어간다 — 고른 것이 오답노트 표시다.
+ * 끝 화면은 이번에 오답노트에 넣은 문제를 답·해설과 함께 펼쳐 둔다.
+ * 틀리면 서버가 먼저 high(모르겠음)를 붙이고, 사람이 고른 값이 그 뒤에 덮는다.
  */
 export function JokboPage() {
   const { eventId = "" } = useParams();
@@ -26,25 +30,33 @@ export function JokboPage() {
   const [data, setData] = useState<JokboResponse | null>(null);
   const [error, setError] = useState("");
   const [queue, setQueue] = useState<JokboItem[] | null>(null);
+  const [round, setRound] = useState(0);
   const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
+  const bandsRef = useRef(bands);
+  bandsRef.current = bands;
+  // 채점 기록(틀리면 서버가 high를 붙인다)이 끝난 뒤에 표시를 쓴다. 순서가 뒤집히면 고른 표시가 high로 덮인다.
+  const pending = useRef<Record<string, Promise<unknown>>>({});
 
   useEffect(() => {
     let alive = true;
     api<{ marks: JokboMark[] }>(`/api/jokbo/marks?eventId=${encodeURIComponent(eventId)}`)
-      .then(got => { if (alive) setBands(Object.fromEntries(got.marks.map(m => [m.itemId, m.band]))); })
+      .then(got => { if (alive) setBands(prev => ({ ...Object.fromEntries(got.marks.map(m => [m.itemId, m.band])), ...prev })); })
       .catch(() => { /* 표시를 못 읽어도 풀 수는 있다 */ });
     return () => { alive = false; };
   }, [eventId]);
 
-  const saved = useCallback((mark: JokboMark) => setBands(prev => ({ ...prev, [mark.itemId]: mark.band })), []);
   const answered = useCallback((itemId: string, verdict: Verdict) => {
     if (verdict === "wrong") setBands(prev => ({ ...prev, [itemId]: "high" }));
-    postAnswer(eventId, itemId, verdict).then(saved).catch(() => { /* 기록 실패는 풀이를 막지 않는다 */ });
-  }, [eventId, saved]);
-  const changeBand = useCallback((itemId: string, band: JokboBand | null) => {
+    pending.current[itemId] = postAnswer(eventId, itemId, verdict).catch(() => { /* 기록 실패는 풀이를 막지 않는다 */ });
+  }, [eventId]);
+
+  const rate = useCallback((itemId: string, band: Shown) => {
+    const before = bandsRef.current[itemId] ?? null;
+    if (before === band) return; // 틀려서 서버가 이미 high, 또는 원래 표시 그대로
     setBands(prev => ({ ...prev, [itemId]: band }));
-    putBand(eventId, itemId, band).then(saved).catch(() => { /* 다음 불러오기에서 서버 값으로 돌아간다 */ });
-  }, [eventId, saved]);
+    const after = pending.current[itemId] ?? Promise.resolve();
+    void after.then(() => putBand(eventId, itemId, band)).catch(() => { /* 다음 불러오기에서 서버 값으로 돌아간다 */ });
+  }, [eventId]);
 
   useEffect(() => {
     let alive = true;
@@ -57,15 +69,16 @@ export function JokboPage() {
   }, [eventId]);
 
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
+  const start = (items: JokboItem[]) => { setQueue(items); setRound(r => r + 1); };
 
   if (error) return <main className="main-quiz-learning jokbo-learning"><p className="notice is-error">{error}</p></main>;
   if (!data) return <main className="main-quiz-learning jokbo-learning"><p className="event-panel-loading">불러오는 중…</p></main>;
   return (
     <main className={`main-quiz-learning jokbo-learning${queue ? "" : " is-start"}`}>
       {queue
-        ? <JokboSolve doc={data.doc} items={queue} onExit={() => setQueue(null)} onRetry={setQueue}
-            bands={bands} onAnswered={answered} onBand={changeBand} />
-        : <JokboStart data={data} onBack={back} onStart={setQueue} />}
+        ? <JokboSolve key={round} doc={data.doc} items={queue} bands={bands}
+            onExit={() => setQueue(null)} onLeave={back} onRetry={start} onAnswered={answered} onRate={rate} />
+        : <JokboStart data={data} onBack={back} onStart={start} />}
     </main>
   );
 }
@@ -175,174 +188,185 @@ function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: ()
 
 // ─────────────────────────────────────────────── 풀이
 
-type Result = { id: string; verdict: Verdict };
+type Result = { item: JokboItem; verdict: Verdict; picked: number[]; band?: Shown };
 
-function JokboSolve({ doc, items, onExit, onRetry, bands, onAnswered, onBand }: {
-  doc: JokboDoc; items: JokboItem[]; onExit: () => void; onRetry: (items: JokboItem[]) => void;
+const BACK_ICON = (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
+);
+
+function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, onRate }: {
+  doc: JokboDoc; items: JokboItem[];
   bands: Record<string, JokboBand | null>;
+  onExit: () => void; onLeave: () => void; onRetry: (items: JokboItem[]) => void;
   onAnswered: (itemId: string, verdict: Verdict) => void;
-  onBand: (itemId: string, band: JokboBand | null) => void;
+  onRate: (itemId: string, band: Shown) => void;
 }) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number[]>([]);
   const [shown, setShown] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
   const item = items[index] as JokboItem | undefined;
+  const verdict = shown ? results[results.length - 1]?.verdict : undefined;
+  // 독의 기본값(Enter·Space): 틀렸으면 모르겠음, 그 밖은 괜찮음.
+  const suggested: Shown = verdict === "wrong" ? "high" : null;
 
   const reveal = useCallback((choice: number[]) => {
     if (!item || shown) return;
-    const verdict: Verdict = choice.length ? grade(item, choice) : (item.answerStatus === "missing" ? "ungraded" : "wrong");
+    const v: Verdict = choice.length ? grade(item, choice) : (item.answerStatus === "missing" ? "ungraded" : "wrong");
     setPicked(choice);
     setShown(true);
-    setResults(prev => [...prev, { id: item.id, verdict }]);
-    onAnswered(item.id, verdict);
+    setResults(prev => [...prev, { item, verdict: v, picked: choice }]);
+    onAnswered(item.id, v);
   }, [item, shown, onAnswered]);
 
-  const next = useCallback(() => {
+  const rate = useCallback((band: Shown) => {
+    if (!item || !shown) return;
+    onRate(item.id, band);
+    setResults(prev => prev.map((r, i) => (i === prev.length - 1 ? { ...r, band } : r)));
     setIndex(i => i + 1);
     setPicked([]);
     setShown(false);
     window.scrollTo({ top: 0 });
-  }, []);
+  }, [item, shown, onRate]);
 
   const pick = useCallback((n: number) => {
     if (!item || shown) return;
     if (needed(item) === 1) { reveal([n]); return; }
-    setPicked(prev => {
-      const has = prev.includes(n);
-      const out = has ? prev.filter(x => x !== n) : [...prev, n];
-      return out;
-    });
+    setPicked(prev => (prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n]));
   }, [item, shown, reveal]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
+      if (event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.target instanceof HTMLElement
+        && event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
       if (!item) return;
       const n = Number(event.key);
-      if (!shown && Number.isInteger(n) && n >= 1 && n <= item.choices.length) { event.preventDefault(); pick(n); return; }
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        if (shown) next();
-        else reveal(picked);
+      const enter = event.key === "Enter" || event.key === " ";
+      if (!shown) {
+        if (Number.isInteger(n) && n >= 1 && n <= item.choices.length) { event.preventDefault(); pick(n); }
+        else if (enter) { event.preventDefault(); reveal(picked); }
+        return;
       }
+      if (Number.isInteger(n) && n >= 1 && n <= RATINGS.length) { event.preventDefault(); rate(RATINGS[n - 1].key); }
+      else if (enter) { event.preventDefault(); rate(suggested); }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [item, shown, picked, pick, reveal, next]);
+  }, [item, shown, picked, pick, reveal, rate, suggested]);
 
-  if (!item) {
-    const wrongIds = new Set(results.filter(r => r.verdict === "wrong").map(r => r.id));
-    const count = (v: Verdict) => results.filter(r => r.verdict === v).length;
-    return (
-      <section className="jokbo-done">
-        <h2>{lectureTitle(doc)}</h2>
-        <div className="mq-stats">
-          <div className="is-recalled"><span>맞힘</span><b>{count("correct")}</b></div>
-          <div className="is-wrong"><span>틀림</span><b>{count("wrong")}</b></div>
-          {count("ungraded") ? <div><span>답 없음</span><b>{count("ungraded")}</b></div> : null}
-        </div>
-        <div className="jokbo-done-actions">
-          {wrongIds.size ? (
-            <button className="mq-start-button" onClick={() => onRetry(items.filter(it => wrongIds.has(it.id)))}>
-              <Icon.play />틀린 문제 다시<span className="mq-card-count">{wrongIds.size}</span>
-            </button>
-          ) : null}
-          <button className="pill-button" onClick={onExit}>범위 다시 고르기</button>
-        </div>
-      </section>
-    );
-  }
+  const head = (
+    <header className="pq-head">
+      <p className="pq-kicker">
+        <button type="button" className="quiz-back" onClick={onExit}>{BACK_ICON}뒤로</button>
+        <span className="pq-badge jokbo-badge">족보</span>
+        <span className="pq-title">{lectureTitle(doc)}</span>
+      </p>
+    </header>
+  );
+
+  if (!item) return <JokboDone head={head} items={items} results={results} bands={bands} onLeave={onLeave} onRetry={onRetry} />;
 
   const who = professorsOf(doc, item.id);
   const asked = yearsOf(item);
   // 반복 표시: 합친 사본의 연도가 정본이고, 없으면 원천이 적어 둔 반복 연도(다른 강의로 간 사본 포함).
   const repeat = asked.length > 1 ? asked : item.repeatYears?.length ? item.repeatYears : [];
   const changed = new Set(changedChoices(item, items[index - 1]));
-  const verdict = shown ? results[results.length - 1]?.verdict : undefined;
   const need = needed(item);
-  const x = item.explanation;
   return (
-    <section className="jokbo-solve">
-      <div className="quiz-top jokbo-top">
-        <button type="button" className="quiz-back" onClick={onExit}>
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>범위
-        </button>
-        <span className="jokbo-progress">{index + 1} / {items.length}</span>
-        <span className="jokbo-meta">
+    <section className="prequiz-learning quiz jokbo-solve">
+      {head}
+      <div className="pq-progress" aria-live="polite">
+        <h2 className="pq-count">족보 {index + 1} / {items.length}</h2>
+        <span className="pq-track jokbo-track" aria-hidden="true"><i style={{ width: `${(index / items.length) * 100}%` }} /></span>
+      </div>
+
+      <div className="pq-card jokbo-card">
+        <div className="jokbo-meta">
           <span className={`jokbo-who is-${who.kind}`}>{item.yearLabel} {who.professors.join(", ") || "교수 미상"}</span>
+          <span className="jokbo-num">{item.number}번</span>
           {repeat.length > 1 ? <span className="jokbo-repeat">출제 {repeat.join("·")}</span> : null}
           {changed.size ? <span className="jokbo-variant">변형 · 바뀐 선지 {changed.size}</span> : null}
-        </span>
+        </div>
+        <JokboBody item={item} picked={picked} revealed={shown} verdict={verdict} changed={changed} onPick={pick} eagerImages />
+        {!shown && need > 1 ? <p className="bank-note jokbo-need">{need}개</p> : null}
       </div>
 
-      <div className="quiz-card bank-card mq-card jokbo-card">
-        {item.sharedPrompt ? <p className="jokbo-shared">{item.sharedPrompt}</p> : null}
-        <p className="jokbo-stem">{item.stem}</p>
-        {item.figures?.length ? (
-          <div className="jokbo-figures">
-            {item.figures.map(f => f.url ? <img key={f.file} src={f.url} alt="" width={f.w} height={f.h} loading="eager" /> : null)}
-          </div>
-        ) : null}
-        <ul className="bank-options jokbo-options">
-          {item.choices.map((choice, i) => {
-            const n = i + 1;
-            const selected = picked.includes(n);
-            const key = item.answerStatus === "all-correct" || item.answers.includes(n);
-            const cls = !shown ? (selected ? " is-picked" : "")
-              : item.answerStatus === "missing" ? (selected ? " is-picked" : "")
-              : key ? (selected ? " is-correct" : " is-missed") : selected ? " is-wrong" : "";
-            const note = shown ? x?.choiceNotes?.[i] : undefined;
-            return (
-              <li key={n}>
-                <button type="button" className={`bank-option${cls}${changed.has(i) ? " is-changed" : ""}`} disabled={shown} aria-pressed={selected}
-                  aria-keyshortcuts={n <= 9 ? String(n) : undefined} onClick={() => pick(n)}>
-                  <b>{n}</b> {choice}
-                </button>
-                {note ? <p className="jokbo-choice-note">{note}</p> : null}
-              </li>
-            );
-          })}
-        </ul>
-        {!shown && need > 1 ? <p className="bank-note">{need}개</p> : null}
-
-        {shown ? (
-          <div className="jokbo-answer" role="status">
-            <p className={`jokbo-verdict is-${verdict}`}>
-              {verdict === "correct" ? "맞음" : verdict === "wrong" ? "틀림" : "답안지에 답 없음"}
-              <span>
-                {item.answerStatus === "all-correct" ? "전원 정답"
-                  : item.answerStatus === "missing"
-                    ? (x?.proposedAnswers?.length ? `추정 ${x.proposedAnswers.join(", ")}` : "")
-                    : `정답 ${item.answers.join(item.answerMode === "all_of" ? " + " : " 또는 ")}`}
-              </span>
-            </p>
-            {item.keyConflict && item.mergedFrom ? (
-              <p className="jokbo-caution">해마다 답안지 답이 다름: {item.yearLabel} {item.answers.join(",")}
-                {item.mergedFrom.map(m => ` · ${m.yearLabel} ${m.answers.join(",") || "–"}`).join("")}</p>
-            ) : null}
-            <BandButtons band={bands[item.id] ?? null} onChange={band => onBand(item.id, band)} />
-            {x?.caution ? <p className="jokbo-caution">{x.caution}</p> : null}
-            {x ? <p className="jokbo-explain">{x.text}</p> : null}
-            {item.correctionNote ? <p className="jokbo-correction">교정: {item.correctionNote}</p> : null}
-            {x ? (
-              <p className="jokbo-basis">
-                {x.basis.kind === "notes" ? `필기${x.basis.pages?.length ? ` p.${x.basis.pages.join(", ")}` : ""}` : "일반 지식"}
-                {" · "}{[item, ...(item.mergedFrom ?? [])].map(c => `${c.yearLabel} ${c.number}번`).join(" · ")}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="quiz-bar bank-solve-bar">
-        {shown ? (
-          <button className="quiz-submit" onClick={next} aria-keyshortcuts="Enter Space">다음 <kbd>Enter</kbd></button>
-        ) : (
-          <button className="quiz-submit" onClick={() => reveal(picked)} disabled={need > 1 && picked.length !== need && picked.length !== 0}
+      <div className="quiz-bar pq-dock jokbo-dock" aria-label={shown ? "오답노트" : "답"}>
+        {shown ? RATINGS.map((r, i) => {
+          const isDefault = r.key === suggested;
+          return (
+            <button key={r.tone} className={`quiz-grade jokbo-rate is-${r.tone}${isDefault ? " is-default" : ""}`}
+              onClick={() => rate(r.key)} aria-keyshortcuts={isDefault ? `${i + 1} Enter Space` : String(i + 1)}>
+              <span className="quiz-grade-name">{r.label} <kbd>{isDefault ? `${i + 1} / Enter` : i + 1}</kbd></span>
+            </button>
+          );
+        }) : (
+          <button className="quiz-submit jokbo-reveal" onClick={() => reveal(picked)}
+            disabled={need > 1 && picked.length !== need && picked.length !== 0}
             aria-keyshortcuts="Enter Space">{picked.length ? "확인" : "답 보기"} <kbd>Enter</kbd></button>
         )}
       </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────── 끝
+
+/** 예습 퀴즈 완료 화면처럼: 요약 상자, 그 아래 이번에 오답노트에 넣은 문제를 답·해설과 함께 펼친다. */
+function JokboDone({ head, items, results, bands, onLeave, onRetry }: {
+  head: ReactNode; items: JokboItem[]; results: Result[];
+  bands: Record<string, JokboBand | null>;
+  onLeave: () => void; onRetry: (items: JokboItem[]) => void;
+}) {
+  const kept = results.filter(r => r.band);
+  const right = results.filter(r => r.verdict === "correct").length;
+  const unknown = results.filter(r => r.band === "high").length;
+  const caution = results.filter(r => r.band === "mid").length;
+  return (
+    <section className="prequiz-learning pq-done jokbo-done">
+      {head}
+      <div className="pq-today jokbo-today">
+        <div className="pq-today-text">
+          <h2>족보 완료</h2>
+          <p><b>{results.length}</b>문항 · 맞힘 <b>{right}</b>
+            {unknown ? <> · 모르겠음 <b className="jokbo-count-unknown">{unknown}</b></> : null}
+            {caution ? <> · 주의 <b className="jokbo-count-caution">{caution}</b></> : null}</p>
+        </div>
+        <div className="pq-actions">
+          <button className="pill-button" onClick={() => onRetry(items)}>다시 풀기</button>
+          <button className="pq-start-button jokbo-finish" onClick={onLeave}>족보 마치기</button>
+        </div>
+      </div>
+
+      {kept.length ? (
+        <section className="prequiz-difficult jokbo-kept">
+          <header className="prequiz-difficult-head">
+            <h3>오답노트에 넣은 문제 <b>{kept.length}</b></h3>
+            <span className="jokbo-kept-tools">
+              <Link className="pill-button" to="/wrong-notes">오답노트</Link>
+              <button className="pill-button" onClick={() => onRetry(kept.map(r => r.item))}>이 문제만 다시 풀기</button>
+            </span>
+          </header>
+          <ol className="jokbo-kept-list">
+            {kept.map((r, i) => {
+              const now = r.item.id in bands ? shownBand(bands[r.item.id]) : (r.band ?? null);
+              const label = RATINGS.find(x => x.key === now) ?? RATINGS[2];
+              return (
+                <li key={r.item.id} className={`jokbo-kept-card is-${label.tone}`}>
+                  <div className="jokbo-meta">
+                    <span className="jokbo-kept-index">{i + 1}</span>
+                    <span className={`jokbo-rating-tag is-${label.tone}`}>{label.label}</span>
+                    <span className="jokbo-who">{r.item.yearLabel}</span>
+                    <span className="jokbo-num">{r.item.number}번</span>
+                  </div>
+                  <JokboBody item={r.item} picked={r.picked} revealed verdict={r.verdict} />
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : null}
     </section>
   );
 }
