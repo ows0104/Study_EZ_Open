@@ -24,6 +24,7 @@ from app.root_learning import content as root_content
 from app.models import Lecture, TimetableEvent
 from app.preview_sources import public_source
 from app.routes.common import asset_grabs, bank_timelines, grab_tracks, material_marks, prequiz_progress
+from app.routes.jokbo import jokbo_round_counts
 from app.routes.lecture_notes import note_read_counts
 
 router = APIRouter()
@@ -61,6 +62,8 @@ def read_timetable(
     progress = prequiz_progress(db, user.id, keys) if include_study else {}
     grabs = asset_grabs(db, user.id, keys) if include_study else {}
     reads = note_read_counts(db, user.id, keys) if include_study else {}
+    # 족보 회독은 강의가 아니라 시간표 칸에 붙는다(필기가 없는 칸에도 족보가 있다).
+    jokbo_rounds = jokbo_round_counts(db, user.id, event_ids) if include_study else {}
     overviews = lecture_overviews(db, user, keys, include_cards=include_cards) if include_study else {}
     # 검토·공개된 Main-Quiz(뿌리 학습). `quiz`(Quiz Bank)와 따로 둔다 — 모아풀기는 은행만 섞는다.
     published = root_content.published_for(db, keys, user)
@@ -110,6 +113,8 @@ def read_timetable(
                 "slot": event.slot,
                 # 한 칸에 여러 강의가 붙을 수 있다. 선택형 과목이 그렇다.
                 "lectures": by_event.get(event.id, []),
+                # 본인 족보 회독 수(칸의 회독 줄). 목록만 먼저 읽을 때는 0.
+                "jokboRounds": jokbo_rounds.get(event.id, 0),
             }
             for event in events
         ]

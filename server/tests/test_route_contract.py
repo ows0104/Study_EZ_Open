@@ -234,12 +234,14 @@ def main() -> None:
     check_bank_schema_identity()
     # 2026-11-13: jokbo — 강의(시간표 칸)별 족보 풀이 읽기·러너 업로드(routes/jokbo.py, 문서는 R2).
     # 2026-11-14: 오답노트 — 푼 결과·상중하 표시(jokbo_mark 표), 강의를 가리지 않는 오답노트.
+    # 2026-11-14: 족보 회독 — 끝 화면에 닿으면 1회독(jokbo_round 표).
     jokbo_routes = """GET /api/jokbo/events/{event_id}
 GET /api/jokbo/events/{event_id}/summary
 GET /api/jokbo/marks
 GET /api/jokbo/wrong-notes
 POST /api/jokbo/events/{event_id}/items/{item_id}/answer
 PUT /api/jokbo/events/{event_id}/items/{item_id}/mark
+POST /api/jokbo/events/{event_id}/rounds
 PUT /api/admin/jokbo/events/{event_id}
 GET /api/admin/jokbo/figures/{name}
 PUT /api/admin/jokbo/figures/{name}"""

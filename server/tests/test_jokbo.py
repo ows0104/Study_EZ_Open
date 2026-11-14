@@ -107,14 +107,27 @@ def main():
     assert m["band"] is None and m["wrongCount"] == 1, m
     assert [e["item"]["id"] for e in client.get("/api/jokbo/wrong-notes").json()["items"]] == ["a"]
     assert len(client.get("/api/jokbo/marks?eventId=ev18").json()["marks"]) == 2
+    # 족보 회독: 마무리 화면에 닿을 때마다 한 줄. 시간표 칸에 실린다.
+    def rounds_on_timetable():
+        events = client.get("/api/timetable").json()["events"]
+        return next(e["jokboRounds"] for e in events if e["id"] == "ev18")
+    assert rounds_on_timetable() == 0
+    assert client.post("/api/jokbo/events/ev18/rounds").json() == {"jokboRounds": 1}
+    assert client.post("/api/jokbo/events/ev18/rounds").json() == {"jokboRounds": 2}
+    assert rounds_on_timetable() == 2
+    assert client.post("/api/jokbo/events/nope/rounds").status_code == 404
+    assert next(e for e in client.get("/api/timetable?include_study=false").json()["events"]
+                if e["id"] == "ev18")["jokboRounds"] == 0
     # 남의 기록은 안 보인다
     login(admin=True)
     assert client.get("/api/jokbo/marks").json()["marks"] == []
+    assert rounds_on_timetable() == 0
     # 족보를 관리자 전용으로 되돌리면 학생 오답노트에서는 빠지고 missing으로 센다
     assert client.put("/api/admin/jokbo/events/ev18", json=DOC, headers=RUNNER).status_code == 200
     login()
     assert client.get("/api/jokbo/wrong-notes").json() == {"items": [], "missing": 1}
     assert ans("a", "wrong").status_code == 404
+    assert client.post("/api/jokbo/events/ev18/rounds").status_code == 404  # 안 보이는 족보에는 못 더한다
     print("jokbo: 모두 통과")
 
 

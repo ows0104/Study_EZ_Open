@@ -5,7 +5,8 @@ import { prequizDone } from "./entries";
  * 칸 아래 학습 표시(2026-11 개편).
  *
  *   위 = 회독 줄: 학습률 막대와 같은 두께의 점선. 예습 퀴즈 토막은 미완료면 회색 테두리, 끝까지 풀면 예습 색으로
- *        채운다(예습은 1회독까지만 센다). 뒤에 강의록 회독 토막(2026-11-10 2단계)이 하나에 하나씩 붙는다.
+ *        채운다(예습은 1회독까지만 센다). 뒤에 강의록 회독 토막(2026-11-10 2단계)이 하나에 하나씩 붙고,
+ *        그 뒤에 족보 회독 토막(2026-11-14, 족보처럼 살짝 진한 회색)이 붙는다. 족보는 시간표 칸 단위다.
  *   아래 = 복습 학습률 막대: 회색 테두리만 있는 막대를 학습률만큼 연한 메인 색(--accent-line)으로 채운다(2026-11-12 사용자 지시 —
  *          옛 「덜 채울수록 진하다」는 없앴다). Main-Quiz가 없으면 막대가 없고, 불러오는 중이면 같은 회색 테두리만(채움만 나중에 생긴다).
  * 학습률은 Main-Quiz 하나다(2026-11-11). 서버가 시간표에 실어 준 `mastery`를 그대로 쓴다 — Quiz Bank는 legacy.
@@ -43,6 +44,10 @@ export function learningDescription(lecture: LectureRef) {
   return `${lecture.title}: ${preFor(lecture)}${readsFor(lecture)} · ${reviewFor(lecture).description}`;
 }
 
+export function jokboDescription(rounds: number) {
+  return rounds ? `족보 ${rounds}회독` : "";
+}
+
 /** 복습 막대: 회색 테두리 + 학습률만큼 연한 메인 색 채움(색은 CSS `.meter`·`.meter > span`). */
 export function ReviewMeter({ score, className = "" }: { score: number | null; className?: string }) {
   if (score === null) return <span className={`meter is-closed ${className}`} />;
@@ -62,27 +67,32 @@ export function reviewShown(lecture: LectureRef) {
   return !!lecture.marks.mainQuiz;
 }
 
-/** 칸 아래 줄에 그릴 것이 있는가: 복습 막대, 예습 퀴즈 토막, 강의록 회독. */
-export function hasLearningMarks(lectures: LectureRef[]) {
-  return lectures.some(l => reviewShown(l) || l.marks.prequiz || (l.noteReads ?? 0) > 0);
+/** 칸 아래 줄에 그릴 것이 있는가: 복습 막대, 예습 퀴즈 토막, 강의록 회독, 족보 회독. */
+export function hasLearningMarks(lectures: LectureRef[], jokboRounds = 0) {
+  return jokboRounds > 0 || lectures.some(l => reviewShown(l) || l.marks.prequiz || (l.noteReads ?? 0) > 0);
 }
 
-export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
-  if (!lectures.length) return null;
+/** 칸 아래 회독 줄에 그리는 토막 상한(강의록+족보). */
+const MAX_CHIP_SEGMENTS = 8;
+
+export function ChipLearning({ lectures, jokboRounds = 0 }: { lectures: LectureRef[]; jokboRounds?: number }) {
+  if (!lectures.length && !jokboRounds) return null;
   const meters = lectures.filter(reviewShown);
   const reviews = meters.map(reviewFor);
-  const description = lectures.map(learningDescription).join(" · ");
+  const description = [...lectures.map(learningDescription), jokboDescription(jokboRounds)].filter(Boolean).join(" · ");
   const preOpen = lectures.some(l => l.marks.prequiz);
   const preDone = lectures.every(l => !l.marks.prequiz || prequizDone(l)) && preOpen;
   const single = lectures.length === 1 ? reviews[0] : null;
   // 강의록 회독은 앞에서부터 채운다(예습 퀴즈 완료 토막 다음). 둘 다 없을 때만 빈 테두리 칸 하나.
-  const reads = Math.max(0, ...lectures.map(l => l.noteReads ?? 0));
+  const reads = Math.min(Math.max(0, ...lectures.map(l => l.noteReads ?? 0)), MAX_CHIP_SEGMENTS);
+  const jokbo = Math.min(jokboRounds, MAX_CHIP_SEGMENTS - reads);
   return (
     <span className="chip-learning-pair" title={description} aria-label={description}>
       <span className="readline" aria-hidden="true">
         {preDone ? <i className="rl-pre is-on" /> : null}
-        {Array.from({ length: Math.min(reads, 8) }, (_, index) => <i key={index} className="rl-note" />)}
-        {preOpen && !preDone && !reads ? <i className="rl-pre" /> : null}
+        {Array.from({ length: reads }, (_, index) => <i key={index} className="rl-note" />)}
+        {Array.from({ length: jokbo }, (_, index) => <i key={`j${index}`} className="rl-jokbo" />)}
+        {preOpen && !preDone && !reads && !jokbo ? <i className="rl-pre" /> : null}
       </span>
       <span className="chip-learning is-main">
         {/* 화면에는 막대만 보이고, 숫자는 화면 낭독용으로 남긴다. */}
