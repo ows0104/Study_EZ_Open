@@ -3,6 +3,7 @@ import { api, ApiError } from "../api";
 import type { StudyPlan } from "../types/studyPlan";
 import { useStudyTarget } from "./useStudyTarget";
 import { useOptionalVersion } from "../bank/optionalExclusion";
+import { shownGoal } from "./shownGoal";
 import "../styles/mastery.css";
 
 export function StudyPlanBoard() {
@@ -18,7 +19,7 @@ export function StudyPlanBoard() {
     setData(null);
     setError("");
     api<StudyPlan>(`/api/study-plan?target=${target}`)
-      .then(value => { if (live) { setData(value); setUnavailable(false); } })
+      .then(value => { if (live) { setData({ ...value, plans: value.plans.map(shownGoal) }); setUnavailable(false); } })
       .catch((cause: Error) => {
         if (!live) return;
         if (cause instanceof ApiError && cause.status === 404) setUnavailable(true);
@@ -80,7 +81,8 @@ export function StudyPlanBoard() {
         <details className="study-plan-help"><summary>목표 계산 기준</summary>
           <p>같은 과목의 다음 시험까지를 범위로 자동 추정합니다. 실제 시험 범위가 다르면 목표도 달라집니다.
             예정 강의를 분량에 미리 포함하므로, 신규 강의가 공개되기 전에도 해야 할 학습량에 반영됩니다.</p>
-          <p>강의 학습률은 Main-Quiz 기록으로 계산합니다(목록·캘린더와 같은 값). 시험 {data.plans[0]?.bufferDays ?? 2}일 전(시험 시작 48시간 전)까지 목표에 도달하도록 계획합니다. 현재 기록에서 추정한 하루 학습률 유지 비율을 바탕으로,
+          <p>계획은 Main-Quiz 기록의 원래 목표치 기준 학습률로 계산하고, 오늘 목표(%p)는 계산한 값의 절반을 보여 줍니다.
+            강의 목록·캘린더의 학습률은 목표치의 절반을 100%로 보여 주므로 이 판의 학습률과 다를 수 있습니다. 시험 {data.plans[0]?.bufferDays ?? 2}일 전(시험 시작 48시간 전)까지 목표에 도달하도록 계획합니다. 현재 기록에서 추정한 하루 학습률 유지 비율을 바탕으로,
             망각 보충까지 합친 하루 확보량이 고르게 되도록 초반 순증가 목표를 높입니다. 기록이 없으면 하루 90% 유지를 가정합니다.</p>
           <p>마지막 {data.plans[0]?.bufferDays ?? 2}일은 목표 수준 유지와 밀린 분량 보충에 씁니다. 목표는 한국 시간 오전 4시 기록으로 계산하고 현재 기록으로 남은 분량을 갱신합니다.
             목표 도달 시각부터는 복습 계획으로 전환하며, 시험 당일에는 시험 시작 시각이 마감입니다.</p>
