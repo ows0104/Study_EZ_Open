@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { Icon } from "../shell/icons";
-import type { JokboDoc, JokboItem, JokboResponse } from "../types/jokbo";
+import type { JokboBand, JokboDoc, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
+import { BandButtons, postAnswer, putBand } from "./marks";
 import {
   changedChoices, defaultScope, grade, needed, otherYears, pickItems, professorsOf, sameItemIds, yearsOf,
   type JokboScope, type Verdict,
@@ -16,8 +17,8 @@ import "./jokbo.css";
  * 진입 화면에서 범위(같은 교수만 / 다른 교수까지 + 연도)를 고르고, 복습 퀴즈처럼
  * **한 문제씩** 푼다. 고르면 바로 정답·선지별 해설이 나온다.
  *
- * 채점 기록은 아직 서버에 남기지 않는다 — 채점 방식(복습 퀴즈와 같게 / 더 단순하게)은
- * 사용자가 정하기로 했다. 지금은 이 화면 안에서만 맞힘·틀림을 세고 틀린 문제를 다시 푼다.
+ * 풀면 결과를 서버에 남긴다(2026-11-14 오답노트). 틀리면 오답노트에 「상 틀림」으로 담기고,
+ * 답 아래 상·중·하로 직접 담거나 뗀다. 복습 퀴즈식 간격 채점은 아직 없다(사용자 결정 대기).
  */
 export function JokboPage() {
   const { eventId = "" } = useParams();
@@ -25,6 +26,25 @@ export function JokboPage() {
   const [data, setData] = useState<JokboResponse | null>(null);
   const [error, setError] = useState("");
   const [queue, setQueue] = useState<JokboItem[] | null>(null);
+  const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
+
+  useEffect(() => {
+    let alive = true;
+    api<{ marks: JokboMark[] }>(`/api/jokbo/marks?eventId=${encodeURIComponent(eventId)}`)
+      .then(got => { if (alive) setBands(Object.fromEntries(got.marks.map(m => [m.itemId, m.band]))); })
+      .catch(() => { /* 표시를 못 읽어도 풀 수는 있다 */ });
+    return () => { alive = false; };
+  }, [eventId]);
+
+  const saved = useCallback((mark: JokboMark) => setBands(prev => ({ ...prev, [mark.itemId]: mark.band })), []);
+  const answered = useCallback((itemId: string, verdict: Verdict) => {
+    if (verdict === "wrong") setBands(prev => ({ ...prev, [itemId]: "high" }));
+    postAnswer(eventId, itemId, verdict).then(saved).catch(() => { /* 기록 실패는 풀이를 막지 않는다 */ });
+  }, [eventId, saved]);
+  const changeBand = useCallback((itemId: string, band: JokboBand | null) => {
+    setBands(prev => ({ ...prev, [itemId]: band }));
+    putBand(eventId, itemId, band).then(saved).catch(() => { /* 다음 불러오기에서 서버 값으로 돌아간다 */ });
+  }, [eventId, saved]);
 
   useEffect(() => {
     let alive = true;
@@ -43,7 +63,8 @@ export function JokboPage() {
   return (
     <main className={`main-quiz-learning jokbo-learning${queue ? "" : " is-start"}`}>
       {queue
-        ? <JokboSolve doc={data.doc} items={queue} onExit={() => setQueue(null)} onRetry={setQueue} />
+        ? <JokboSolve doc={data.doc} items={queue} onExit={() => setQueue(null)} onRetry={setQueue}
+            bands={bands} onAnswered={answered} onBand={changeBand} />
         : <JokboStart data={data} onBack={back} onStart={setQueue} />}
     </main>
   );
@@ -156,8 +177,11 @@ function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: ()
 
 type Result = { id: string; verdict: Verdict };
 
-function JokboSolve({ doc, items, onExit, onRetry }: {
+function JokboSolve({ doc, items, onExit, onRetry, bands, onAnswered, onBand }: {
   doc: JokboDoc; items: JokboItem[]; onExit: () => void; onRetry: (items: JokboItem[]) => void;
+  bands: Record<string, JokboBand | null>;
+  onAnswered: (itemId: string, verdict: Verdict) => void;
+  onBand: (itemId: string, band: JokboBand | null) => void;
 }) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number[]>([]);
@@ -167,10 +191,12 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
 
   const reveal = useCallback((choice: number[]) => {
     if (!item || shown) return;
+    const verdict: Verdict = choice.length ? grade(item, choice) : (item.answerStatus === "missing" ? "ungraded" : "wrong");
     setPicked(choice);
     setShown(true);
-    setResults(prev => [...prev, { id: item.id, verdict: choice.length ? grade(item, choice) : (item.answerStatus === "missing" ? "ungraded" : "wrong") }]);
-  }, [item, shown]);
+    setResults(prev => [...prev, { id: item.id, verdict }]);
+    onAnswered(item.id, verdict);
+  }, [item, shown, onAnswered]);
 
   const next = useCallback(() => {
     setIndex(i => i + 1);
@@ -295,6 +321,7 @@ function JokboSolve({ doc, items, onExit, onRetry }: {
               <p className="jokbo-caution">해마다 답안지 답이 다름: {item.yearLabel} {item.answers.join(",")}
                 {item.mergedFrom.map(m => ` · ${m.yearLabel} ${m.answers.join(",") || "–"}`).join("")}</p>
             ) : null}
+            <BandButtons band={bands[item.id] ?? null} onChange={band => onBand(item.id, band)} />
             {x?.caution ? <p className="jokbo-caution">{x.caution}</p> : null}
             {x ? <p className="jokbo-explain">{x.text}</p> : null}
             {item.correctionNote ? <p className="jokbo-correction">교정: {item.correctionNote}</p> : null}
