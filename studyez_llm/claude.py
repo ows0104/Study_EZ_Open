@@ -27,6 +27,20 @@ INLINE_IMAGE_BYTES = 20_000_000
 # 공급자 거절은 원장의 model_content_restricted 판정이 읽는 표식으로 올린다(runner.root_native_json.classify_error).
 REFUSAL_MARKER = "[CLAUDE_CONTENT_RESTRICTED]"
 LIMIT_MARKERS = ("usage limit", "rate limit", "limit reached", "quota", "overloaded")
+FALLBACK_MARKER = "[CLAUDE_MODEL_FALLBACK]"
+# Claude 세션은 같은 단계에서 Codex보다 오래 걸린다(261109_02: 단계당 10~84분). 호출한 쪽의 제한에 이 배수를 곱한다.
+TIMEOUT_FACTOR_ENV = "STUDYEZ_CLAUDE_TIMEOUT_FACTOR"
+DEFAULT_TIMEOUT_FACTOR = 3
+
+
+def timeout_for(timeout: int) -> int:
+    try:
+        factor = float(os.environ.get(TIMEOUT_FACTOR_ENV) or DEFAULT_TIMEOUT_FACTOR)
+    except ValueError:
+        factor = DEFAULT_TIMEOUT_FACTOR
+    return max(1, round(timeout * max(1.0, factor)))
+
+
 # Windows 명령줄(약 32,000자)을 넘지 않게, 긴 시스템 지시·스키마는 인자 대신 첫 메시지 앞에 싣는다.
 ARG_LIMIT = 8000
 
@@ -157,9 +171,26 @@ def parse_events(stdout: str, *, model: str) -> dict:
               "output_tokens": int(usage.get("output_tokens") or 0),
               "cache_read_input_tokens": int(usage.get("cache_read_input_tokens") or 0),
               "cache_creation_input_tokens": int(usage.get("cache_creation_input_tokens") or 0)}
+    models = answered_models(result, model, counts["output_tokens"])
     return {"text": text, "session_id": result.get("session_id"), "turns": int(result.get("num_turns") or 0),
             "cost_usd": result.get("total_cost_usd"), "usage": counts,
-            "models": {model: counts["output_tokens"]}, "provider": "claude", "warnings": []}
+            "models": models, "provider": "claude", "warnings": []}
+
+
+def answered_models(result: dict, model: str, output_tokens: int) -> dict:
+    """실제로 답을 쓴 모델 → 출력 토큰. 요청하지 않은 모델이 답을 썼으면(CLI의 자동 모델 전환) 실패로 올린다.
+
+    2026-11-14 261109_02: claude-opus-5-5로 요청한 단계마다 CLI가 첫 응답에서 claude-opus-5로 넘어가 거의 모든 답을
+    그 모델이 썼는데, 원장에는 요청 모델이 남았다. 원장의 모델은 실제 모델이어야 하므로 그런 세션은 받지 않는다."""
+    usage = result.get("modelUsage")
+    if not isinstance(usage, dict) or not usage:
+        return {model: output_tokens}
+    wrote = {name: int((row or {}).get("outputTokens") or 0) for name, row in usage.items()}
+    others = sorted(name for name, tokens in wrote.items() if name != model and tokens > 0)
+    if others:
+        raise SessionError(f"{FALLBACK_MARKER} 요청한 {model} 대신 {', '.join(others)}가 답을 썼다(CLI 자동 모델 전환). "
+                           "원장에 다른 모델로 남기지 않도록 이 단계를 받지 않는다.")
+    return {model: wrote.get(model, output_tokens)}
 
 
 def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str, timeout: int = 1800, label: str = "",
@@ -170,17 +201,23 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str, timeou
     if resume and previous_usage is None:
         raise SessionError("Claude 세션 재개에는 이전 응답의 session_usage가 필요하다")
     started = time.monotonic()
+    limit = timeout_for(timeout)
     inline, listed = inline_images(images)
     with tempfile.TemporaryDirectory(prefix="studyez-claude-", ignore_cleanup_errors=True) as tmp:
         work = Path(tmp) if blind else Path(cwd).resolve()
         argv = command(model=model, blind=blind, resume=resume, schema=schema, system=system, writable=writable)
-        message = first_message(prompt_text(prompt, system=system, schema=schema), inline, listed)
+        # 첫 메시지는 파일로 넘긴다. 파이프에 쓰면 CLI가 다 읽을 때까지 쓰기가 막혀 시간 제한 검사가 그 뒤로
+        # 밀린다(2026-11-14 261109_02: 2400초 제한 단계가 80분 돌고 끝난 뒤에야 시간 초과로 처리됨).
+        stdin_path = Path(tmp) / "message.jsonl"
+        stdin_path.write_text(first_message(prompt_text(prompt, system=system, schema=schema), inline, listed),
+                              encoding="utf-8")
         try:
-            proc = run_process(argv, input=message, cwd=work, timeout=timeout,
-                               capture_output=True, text=True, encoding="utf-8", errors="replace",
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), env=child_env())
+            with stdin_path.open("rb") as stdin:
+                proc = run_process(argv, input=None, stdin=stdin, cwd=work, timeout=limit,
+                                   capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), env=child_env())
         except subprocess.TimeoutExpired as cause:
-            raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
+            raise SessionError(f"{label or '세션'}: {limit}초 안에 끝나지 않았다") from cause
         except OSError as cause:
             raise SessionError(f"{label or '세션'}: claude 실행 실패: {cause}") from cause
     try:
