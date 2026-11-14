@@ -123,15 +123,19 @@ def test_출처·이유·족보_연도번호가_없으면_거절():
     assert contract.row_errors(doc["B1"], _w("Fe2+")) == ["정답과 같은 오답"]
 
 
-def test_오답_하나만_통과해도_칸을_만들고_ID로는_정답을_알_수_없다():
+def test_괜찮은_오답이_2개_미만이면_칸을_만들지_않고_ID로는_정답을_알_수_없다():
+    """사용자 2026-11-14 「해도 0개이거나 1개이면 그냥 선택지가 안 보이게 해줘」."""
     doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
-    entry = contract.entry_v2(doc["B1"], [_w("Fe3+"), _w("Fe3+"), _w("x", source="other")])
-    assert [w["text"] for w in entry["wrong"]] == ["Fe3+"]
+    with pytest.raises(ValueError, match="최소 2개"):
+        contract.entry_v2(doc["B1"], [_w("Fe3+"), _w("Fe3+"), _w("x", source="other")])   # 중복·결함을 빼면 1개
+    entry = contract.entry_v2(doc["B1"], [_w("Fe3+"), _w("Cu2+")])
     assert contract.entry_errors_v2(doc["B1"], entry) == []
+    assert contract.entry_errors_v2(doc["B1"], {**entry, "wrong": entry["wrong"][:1]}) == ["오답 부족"]
     picked = contract.select(doc["B1"], entry, "seed")
-    assert len(picked["choices"]) == 2 and all(c["id"].startswith("k") and len(c["id"]) == 9 for c in picked["choices"])
-    with pytest.raises(ValueError):
-        contract.entry_v2(doc["B1"], [_w("Fe2+")])
+    assert len(picked["choices"]) == 3 and all(c["id"].startswith("k") and len(c["id"]) == 9 for c in picked["choices"])
+    # 묶음 문항은 한 묶음이라도 2개 미만이면 문항 전체가 선지 없이 나간다.
+    with pytest.raises(ValueError, match="빈칸 2"):
+        contract.entry_v2(doc["C1"], [{**_w("Fe3+"), "group": 0}, {**_w("Cu2+"), "group": 0}, {**_w("환원"), "group": 1}])
 
 
 # ── 회전(사용자 「5 4-5개 정도 … 괜찮은 오답이 나오는 만큼」) ─────────────────────
@@ -301,7 +305,7 @@ def test_생성기는_묶음을_입력에_주고_검토에는_묶음_이름을_�
     def write(rows):
         assert rows["questions"][0]["groups"][1] == {"group": 1, "label": "서울대병원", "correct": "10^3 CFU/mL"}
         return {"proposals": [{"question_id": "G1", "skip_reason": "", "wrong": [
-            _gw(0, "10^1~10^2 CFU/mL"), _gw(1, "10^5 CFU/mL"), _gw(1, "10^2 CFU/mL")]}]}
+            _gw(0, "10^1~10^2 CFU/mL"), _gw(0, "10^5~10^6 CFU/mL"), _gw(1, "10^5 CFU/mL"), _gw(1, "10^2 CFU/mL"), _gw(1, "10^4 CFU/mL")]}]}
 
     def review(qs):
         reviewed.append(qs[0])
@@ -309,5 +313,34 @@ def test_생성기는_묶음을_입력에_주고_검토에는_묶음_이름을_�
 
     asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, review, seen))
     assert reviewed[0]["correct"] == ["[일반적 기준] 10^3~10^4 CFU/mL", "[서울대병원] 10^3 CFU/mL"]
-    assert [(w["group"], w["text"]) for w in asset["questions"]["G1"]["wrong"]] == [(0, "10^1~10^2 CFU/mL"), (1, "10^5 CFU/mL")]
+    assert [(w["group"], w["text"]) for w in asset["questions"]["G1"]["wrong"]] == [
+        (0, "10^1~10^2 CFU/mL"), (0, "10^5~10^6 CFU/mL"), (1, "10^5 CFU/mL"), (1, "10^4 CFU/mL")]
     contract.validate_v2(asset, document)
+
+
+def test_한_회차에_1개만_통과하면_다음_회차에_그것을_주고_더_받아_합친다(tmp_path):
+    document, seen = _document(), []
+
+    def write(rows):
+        second = len(seen) > 1
+        out = []
+        for q in rows["questions"]:
+            wrong = _good(q["question_id"])
+            if q["question_id"] == "C2":
+                wrong = [_w("Cu2+")] if second else [_w("Fe3+")]
+            out.append({"question_id": q["question_id"], "wrong": wrong, "skip_reason": ""})
+        return {"proposals": out}
+
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, seen=seen))
+    assert [q["question_id"] for q in seen[1]["questions"]] == ["C2"]
+    assert seen[1]["questions"][0]["previous_kept"] == ["Fe3+"]
+    assert [w["text"] for w in asset["questions"]["C2"]["wrong"]] == ["Fe3+", "Cu2+"]
+
+
+def test_두_회차_뒤에도_1개면_선지_없이_둔다(tmp_path):
+    def write(rows):
+        return {"proposals": [{"question_id": q["question_id"], "skip_reason": "",
+                               "wrong": [_w("Fe3+")] if q["question_id"] == "C2" else _good(q["question_id"])} for q in rows["questions"]]}
+
+    asset = root_mcq.build(_document(), tmp_path, "r", call=_fake(write))
+    assert "C2" not in asset["questions"] and "최소 2개" in asset["skipped"]["C2"]

@@ -265,6 +265,9 @@ SCHEMA_V2 = 'root-mcq/2'
 SOURCES = ('lecture', 'block', 'jokbo', 'made')
 SHOW = {'basic': 5, 'cloze': 5, 'sequence': 5, 'list': 4}
 MAX_POOL = 10
+# 괜찮은 오답이 이보다 적으면 선지를 보이지 않는다(사용자 2026-11-14 「해도 0개이거나 1개이면 그냥 선택지가 안 보이게 해줘」).
+# 묶음 문항은 묶음마다 센다 — 한 묶음이라도 모자라면 그 문항은 주관식으로만 나간다.
+MIN_WRONG = 2
 JOKBO_KEYS = ('run_id', 'title', 'year', 'number', 'professor')
 _HANGUL = re.compile('[가-힣]')
 _LATIN = re.compile('[A-Za-z]')
@@ -434,9 +437,19 @@ def entry_v2(question: dict, wrong: list[dict]) -> dict:
         seen.add(key)
         per_group[out.get('group')] = per_group.get(out.get('group'), 0) + 1
         rows.append(out)
-    if not rows:
-        raise ValueError(f"{question.get('question_id')}: 통과한 오답 없음")
+    short = shortfall(question, rows)
+    if short:
+        raise ValueError(f"{question.get('question_id')}: {short}")
     return {'question_hash': authored_hash(question), 'wrong': rows}
+
+
+def shortfall(question: dict, rows: list[dict]) -> str:
+    """괜찮은 오답이 MIN_WRONG개 미만이면 그 이유, 아니면 빈 글. 묶음 문항은 묶음마다 본다."""
+    found = groups(question)
+    if not found:
+        return '' if len(rows) >= MIN_WRONG else f'괜찮은 오답 {len(rows)}개(최소 {MIN_WRONG}개)'
+    short = [g['label'] for i, g in enumerate(found) if sum(1 for r in rows if r.get('group') == i) < MIN_WRONG]
+    return f"오답이 {MIN_WRONG}개 미만인 묶음: {', '.join(short)}" if short else ''
 
 
 def entry_errors_v2(question: dict, row) -> list[str]:
@@ -450,6 +463,8 @@ def entry_errors_v2(question: dict, row) -> list[str]:
     limit = MAX_POOL * (len(found) if found else 1)
     if not isinstance(wrong, list) or not 1 <= len(wrong) <= limit or any(not isinstance(w, dict) for w in wrong):
         return ['오답 풀 형식 오류']
+    if shortfall(question, wrong):
+        return ['오답 부족']
     qid = question['question_id']
     keys = {(g, normalized(t)) for g, t in answer_choices(question)}
     ids = {choice_id(qid, t, g) for g, t in answer_choices(question)}
@@ -505,7 +520,7 @@ def show_count(question: dict) -> int:
 
 def group_show(count: int) -> int:
     """묶음마다 보일 오답 수. 묶음이 많으면 줄여 화면이 너무 길어지지 않게 한다."""
-    return 3 if count <= 4 else 2 if count <= 8 else 1
+    return 3 if count <= 4 else 2
 
 
 def source_label(row: dict) -> str:

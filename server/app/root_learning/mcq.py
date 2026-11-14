@@ -45,6 +45,14 @@ def stored(db, doc):
     return _CACHE[key]
 
 
+def current(db, doc) -> bool:
+    """이 판에 새 선지(root-mcq/2)가 올라와 있나. 있으면 예전 「선지 보기」(root_choices)는 쓰지 않는다 —
+    새 선지가 없는 문항(괜찮은 오답 2개 미만)은 선지 없이 둔다(사용자 2026-11-14 「0개이거나 1개이면 그냥 선택지가 안 보이게」,
+    「주관식 선택 시에는 v키로 그 문제에서 지금 만든 선택지 볼 수 있도록」)."""
+    asset = stored(db, doc)
+    return isinstance(asset, dict) and asset.get('schema') == contract.SCHEMA_V2 and asset.get('revision') == getattr(doc, 'revision', None)
+
+
 def entry(db, doc, question):
     """이 판·이 문항 글에 맞는 (판 형식, 칸) 또는 None."""
     if question.get('format') not in contract.FORMATS:

@@ -64,7 +64,7 @@ def _item(item: dict) -> dict:
         "options": [f"{o['mark']} {o['text']}" for o in item.get("options", [])]}
 
 
-def batch_input(document: dict, batch: list[dict], context: dict, rejected: dict) -> dict:
+def batch_input(document: dict, batch: list[dict], context: dict, rejected: dict, kept: dict | None = None) -> dict:
     questions = document["bank_snapshot"]["questions"]
     own = context.get("jokbo", [])
     by_number = {(i["year"], i["number"]): i for i in own}
@@ -90,7 +90,8 @@ def batch_input(document: dict, batch: list[dict], context: dict, rejected: dict
         "explanation": q.get("explanation", ""), "same_lecture": contract.same_lecture_pool(questions, q),
         "linked_jokbo": [_item(by_number[k]) for k in context.get("links", {}).get(q["question_id"], []) if k in by_number],
         "other_jokbo": other(q),
-        "previous_rejected": rejected.get(q["question_id"], [])} for q in batch],
+        "previous_rejected": rejected.get(q["question_id"], []),
+        "previous_kept": [shown(q, w) for w in (kept or {}).get(q["question_id"], [])]} for q in batch],
         "jokbo": [_item(i) for i in own], "block_pool": context.get("lectures", []), "block_sheet": context.get("sheet") or {}}
 
 
@@ -162,9 +163,10 @@ def drafts_of(batch: list[dict], output: dict) -> tuple[dict, dict, dict]:
     return drafts, skipped, dropped
 
 
-def apply_review(questions: dict, drafts: dict, output: dict) -> tuple[dict, dict, dict, dict]:
-    """의학 검토가 지적한 오답을 뺀다. (통과한 칸, 건너뛴 이유, 문항별 검토 기록, 문항별 뺀 오답)"""
-    reviews, entries, skipped, record, rejected = {}, {}, {}, {}, {}
+def apply_review(questions: dict, drafts: dict, output: dict, kept_before: dict | None = None) -> tuple[dict, dict, dict, dict, dict]:
+    """의학 검토가 지적한 오답을 뺀다. 앞 회차에서 통과한 오답(kept_before)과 합쳐 MIN_WRONG개가 되면 칸을 만든다.
+    (통과한 칸, 건너뛴 이유, 문항별 검토 기록, 문항별 뺀 오답, 모자라 다음 회차로 넘기는 통과 오답)"""
+    reviews, entries, skipped, record, rejected, partial = {}, {}, {}, {}, {}, {}
     for row in output.get("reviews", []):
         reviews.setdefault(row.get("question_id"), row)
     for qid, wrong in drafts.items():
@@ -178,12 +180,27 @@ def apply_review(questions: dict, drafts: dict, output: dict) -> tuple[dict, dic
                    for w in wrong if normalized(shown(q, w)) in invalid]
         kept = [w for w in wrong if normalized(shown(q, w)) not in invalid]
         record[qid] = {"removed": removed, "kept": len(kept)}
-        if kept:
-            entries[qid] = contract.entry_v2(q, kept)
-        else:
-            skipped[qid] = "의학 검토 뒤 남은 오답 없음: " + "; ".join(f"{r['text']}({r['reason']})" for r in removed)
+        if removed:
             rejected[qid] = removed
-    return entries, skipped, record, rejected
+        pool = _merge(q, [*(kept_before or {}).get(qid, []), *kept])
+        short = contract.shortfall(q, [contract.wrong_row(q, w) for w in pool])
+        if short:
+            skipped[qid] = short + (" · 검토가 뺀 오답: " + "; ".join(f"{r['text']}({r['reason']})" for r in removed) if removed else "")
+            partial[qid] = pool
+        else:
+            entries[qid] = contract.entry_v2(q, pool)
+    return entries, skipped, record, rejected, partial
+
+
+def _merge(question: dict, rows: list[dict]) -> list[dict]:
+    """같은 오답(묶음·글)은 앞의 것만."""
+    seen, out = set(), []
+    for row in rows:
+        key = normalized(shown(question, row))
+        if key not in seen:
+            seen.add(key)
+            out.append(row)
+    return out
 
 
 def _stage(work: Path, name: str, prompt: str, schema: dict, data: dict, model: str | None, label: str, call, usage: list):
@@ -213,11 +230,11 @@ def _stage(work: Path, name: str, prompt: str, schema: dict, data: dict, model: 
 
 
 def _batch(document: dict, by_id: dict, batch: list[dict], work: Path, label: str, context: dict, rejected: dict,
-           prompts: tuple[str, str], model: str | None, call) -> dict:
+           prompts: tuple[str, str], model: str | None, call, kept_before: dict | None = None) -> dict:
     """묶음 하나: 작성 → 코드 검사 → 의학 검토 → 반영."""
     prompt, review_prompt = prompts
-    got = {"questions": {}, "skipped": {}, "reviewed": {}, "rejected": {}, "styled": {}, "failed": 0, "usage": []}
-    output, error = _stage(work, "mcq-write", prompt, PROPOSALS, batch_input(document, batch, context, rejected), model,
+    got = {"questions": {}, "skipped": {}, "reviewed": {}, "rejected": {}, "styled": {}, "partial": {}, "failed": 0, "usage": []}
+    output, error = _stage(work, "mcq-write", prompt, PROPOSALS, batch_input(document, batch, context, rejected, kept_before), model,
                            f"{label} 작성", call, got["usage"])
     if output is None:
         got["failed"] = 1
@@ -226,6 +243,9 @@ def _batch(document: dict, by_id: dict, batch: list[dict], work: Path, label: st
     drafts, missed, styled = drafts_of(batch, output)
     got["skipped"].update(missed)
     got["styled"].update(styled)
+    for qid in missed:   # 이번에 하나도 못 쓴 문항도 앞 회차 통과 오답은 다음 회차로 넘긴다
+        if (kept_before or {}).get(qid):
+            got["partial"][qid] = kept_before[qid]
     if not drafts:
         return got
     verdicts, error = _stage(work / "review", "mcq-review", review_prompt, REVIEWS, review_input(document, drafts, by_id),
@@ -234,22 +254,23 @@ def _batch(document: dict, by_id: dict, batch: list[dict], work: Path, label: st
         got["failed"] = 1
         got["skipped"].update({qid: f"의학 검토 호출 실패: {error}" for qid in drafts})
         return got
-    entries, missed, record, removed = apply_review(by_id, drafts, verdicts)
+    entries, missed, record, removed, partial = apply_review(by_id, drafts, verdicts, kept_before)
     got["questions"].update(entries)
     got["skipped"].update(missed)
     got["reviewed"].update(record)
     got["rejected"].update(removed)
+    got["partial"].update(partial)
     return got
 
 
-def _round(document, by_id, targets, out: Path, run_id: str, number: int, context, rejected, prompts, model, call):
+def _round(document, by_id, targets, out: Path, run_id: str, number: int, context, rejected, prompts, model, call, kept=None):
     batches = [targets[i:i + BATCH] for i in range(0, len(targets), BATCH)]
     if not batches:
         return []
     with ThreadPoolExecutor(max_workers=max(1, min(WORKERS, len(batches)))) as pool:
         futures = [pool.submit(_batch, document, by_id, batch, out / f"round-{number}" / f"batch-{index}",
                                f"Main-Quiz {run_id} 선지 {number}회차 {index + 1}/{len(batches)}",
-                               context, rejected, prompts, model, call) for index, batch in enumerate(batches)]
+                               context, rejected, prompts, model, call, kept) for index, batch in enumerate(batches)]
         return [f.result() for f in futures]
 
 
@@ -260,13 +281,15 @@ def build(document: dict, out: Path, run_id: str, *, context: dict | None = None
     by_id = {q["question_id"]: q for q in document["bank_snapshot"]["questions"]}
     targets = [q for q in by_id.values() if contract.eligible(q)]
     prompts = (PROMPT.read_text(encoding="utf-8"), REVIEW_PROMPT.read_text(encoding="utf-8"))
-    questions, skipped, usage, reviewed, failed, rejected, styled = {}, {}, [], {}, 0, {}, {}
+    questions, skipped, usage, reviewed, failed, rejected, styled, kept = {}, {}, [], {}, 0, {}, {}, {}
     pending = targets
     for number in range(1, max(1, rounds) + 1):
-        results = _round(document, by_id, pending, out, run_id, number, context, rejected, prompts, model, call)
+        results = _round(document, by_id, pending, out, run_id, number, context, rejected, prompts, model, call, kept)
         skipped = {}
         failed = 0
+        kept = {}
         for got in results:   # 묶음 순서로 모은다
+            kept.update(got["partial"])
             questions.update(got["questions"])
             skipped.update(got["skipped"])
             reviewed.update(got["reviewed"])

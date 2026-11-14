@@ -384,8 +384,10 @@ def learner_front(doc, q, db=None, user_id=None):
     from app.root_learning import choices, mcq
     # 단답·나열 「선지 보기」(2026-11-12)·객관식 모드(2026-11-14): 이 판·이 문항 글에 맞는 선지가 있을 때만 붙는다.
     shown = light.hydrate(db, doc, q) if db is not None else q
-    return mcq.attach_front(db, doc, q, choices.attach_front(db, doc, q, {**content.front(shown), 'targetMastery': target}),
-                            user_id=user_id, when=now())
+    front = {**content.front(shown), 'targetMastery': target}
+    if not mcq.current(db, doc):   # 새 선지(root-mcq/2)가 있는 판은 예전 「선지 보기」를 쓰지 않는다(2026-11-14 choices-merge)
+        front = choices.attach_front(db, doc, q, front)
+    return mcq.attach_front(db, doc, q, front, user_id=user_id, when=now())
 
 
 def personal_editable(doc):
@@ -622,7 +624,8 @@ def revealed_answer(db, doc, q, generation=_UNSET):
     from app.root_learning.evidence import attach_evidence
     attach_evidence(db, doc, q, generation, answer)
     from app.root_learning import choices, mcq
-    choices.attach_answer(db, doc, q, answer)
+    if not mcq.current(db, doc):
+        choices.attach_answer(db, doc, q, answer)
     mcq.attach_answer(db, doc, q, answer)
     return answer
 
@@ -630,6 +633,8 @@ def revealed_answer(db, doc, q, generation=_UNSET):
 def recall_choice_entry(db, doc, q):
     """주관식에서 펼 수 있는 덧붙인 선지가 있나: 「선지 보기」(root_choices) 또는 공용 선지(root_mcq, 2026-11-14 choices-merge)."""
     from app.root_learning import choices, mcq
+    if mcq.current(db, doc):
+        return mcq.entry(db, doc, q)
     return choices.entry(db, doc, q) or mcq.entry(db, doc, q)
 
 
