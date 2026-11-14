@@ -45,7 +45,7 @@ def call_model(stage,context,material,model,timeout=2400):
         prompt='독립 의학 정답 검수다. 중요도나 과거 판정은 평가하지 않는다. 실제 문항·정답·모든 answer_units·해설·임상 충돌을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. 오류/의심을 그대로 기록한다. reviews에는 입력의 모든 question_id마다 ok·doubt·wrong 판정을 정확히 한 줄씩 작성하며, 오류가 없는 문항도 ok로 적는다. conflicts의 사실과 현재 정답을 구별한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n'
         if context.get('medicalFinal'):prompt=MEDICAL_FINAL_PROMPT
         prompt+=json.dumps({'input':context['clinicalInput'],'images':labels},ensure_ascii=False)
-        result=codex.run(prompt,blind=True,model=model,timeout=900,label='연결 독립 정답 검수',schema=g.output_schema(REVIEW_REPORT),system=SYSTEM,images=images)
+        result=codex.run(prompt,blind=True,model=model,timeout=3600 if codex.provider(model)=='claude'else 900,label='연결 독립 정답 검수',schema=g.output_schema(REVIEW_REPORT),system=SYSTEM,images=images)
         visual.paths(context['bank'],material)
         raw=json.loads(result['text']);jsonschema.validate(raw,REVIEW_REPORT)
         value=shape(raw,context['bank'])
