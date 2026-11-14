@@ -113,7 +113,6 @@ from .quiz_publication import QuizPublicationCheck
 
 __all__ = [
     "UserNote",
-    "JokboMark",
     "NoteRead",
     "LectureMemo",
     "BankVersion", "BankStateArchive",
@@ -143,5 +142,3 @@ __all__ = [
 from .root_learning import RootContent, RootControl, RootImage, RootSession, RootEvent
 
 from .root_generation import RootGeneration
-
-from .jokbo import JokboMark

@@ -42,9 +42,6 @@ ACTIONS = (
           ('root_generation', 'Main Quiz 생성 요청 저장', 'rootGenerations'),
           ('root_generated', 'Main Quiz 생성·검수 게시 완료', 'rootGenerated'),
       )),
-    # jokbo_mark 한 줄 = 족보 한 문항을 푼 사람(마지막으로 푼 때). 같은 문항을 다시 풀어도 한 줄이다.
-    Action('jokbo_answer', '족보 퀴즈 풀이', 'quizzes', ('jokboAnswers',),
-           ('jokboAnswers', 'count'), ('jokboAnswers', 'lastAt'), '문항', '문항'),
     Action('connection_save', '연결 학습 저장 (이동·열람·자기확인)', 'quizzes', ('connectionSaves',),
            ('connectionSaves', 'count'), ('connectionSaves', 'lastAt'), '작업', '작업'),
     # bank_feedback 한 줄 = 「문제 수정·제보」 저장 한 번(기존 은행·Main-Quiz 공통). 되돌리기는 줄을 남기지 않는다.
