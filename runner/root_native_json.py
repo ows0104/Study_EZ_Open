@@ -459,8 +459,15 @@ def artifact(work,receipt):
     after=path.stat();require((stat.st_ino,stat.st_mtime_ns,stat.st_size)==(after.st_ino,after.st_mtime_ns,after.st_size),'Native file changed during acceptance')
     return body,loads(model_text(body))
 
+# Claude Code CLI reads the attached pages one by one; v4-add-0 of 261109_02 hit 2400s twice
+# (docs/changes/2026-11-15-claude-stage-timeout). Codex stages keep the original limit.
+CLAUDE_TIMEOUT=7200
+
 class NativeJson:
     def __init__(self,out,*,invoke=None,timeout=2400):self.out=Path(out).resolve();self.invoke=invoke;self.timeout=timeout
+
+    def timeout_for(self,model):
+        return max(self.timeout,CLAUDE_TIMEOUT)if g.codex.provider(model)=='claude'else self.timeout
 
     def __call__(self,stage,ctx,material,model):
         require_unblocked(self.out,model)
@@ -503,7 +510,7 @@ class NativeJson:
         result=None
         try:
             result=(self.invoke or g.codex.run)(first_message(images,inline_inputs(work),python),
-                blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
+                blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout_for(model),
                 label='연결 파일 실행 '+stage,schema=RECEIPT,system=SYSTEM,**({'images':images}if images else{}))
             g.write(seat/'provider.json',result)
             require(type(result.get('turns'))is int and result['turns']>0 and result.get('session_id'),'Missing actual native completion')
@@ -524,7 +531,7 @@ class NativeJson:
             if error is not None and followups:
                 (seat/'check-failure.json').write_text(json.dumps({'error':str(error)[:4000],'outputSha256':first_output},ensure_ascii=False),encoding='utf-8')
                 followup=(self.invoke or g.codex.run)(FOLLOWUP.format(error=str(error)[:4000]),
-                    blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
+                    blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout_for(model),
                     label='연결 파일 실행 '+stage+' 형식 확인 후속',schema=RECEIPT,system=SYSTEM,
                     resume=result['session_id'],previous_usage=result['usage'])
                 g.write(seat/'provider-followup.json',followup)

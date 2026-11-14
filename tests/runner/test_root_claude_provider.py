@@ -105,3 +105,10 @@ def test_claude_거절은_claude만_막고_이름을_밝힌다(claude_restricted
 def test_codex_거절_표식의_모양은_그대로다(restricted):
     out, packet, calls = restricted
     assert 'provider' not in n.read(out / '.native/generate/content-block.json')['proof']
+
+
+def test_claude_단계만_시한이_길다(tmp_path):
+    native = n.NativeJson(tmp_path)
+    assert native.timeout_for(CLAUDE) == n.CLAUDE_TIMEOUT == 7200
+    assert native.timeout_for('gpt-6.1-sol') == 2400
+    assert n.NativeJson(tmp_path, timeout=9000).timeout_for(CLAUDE) == 9000
