@@ -419,7 +419,7 @@ def project_session(db, row, doc, user, when):
         q = content.question(doc.document, task)
         shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
         reveal = row.state['reveals'].get(task['task_id'])
-        out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db),
+        out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
                        'answer': revealed_answer(db, doc, shown) if reveal else None,
                        'response': reveal['response'] if reveal else None,
                        'attempted': reveal['attempted'] if reveal else None,
@@ -447,15 +447,19 @@ _UNSET = object()
 # 개인 수정은 문제은행 없이 선 판(standalone)에만 적용한다. 문제은행과 연결된 판은 기존 규칙상 개인 수정본이 있으면
 # 그 과제를 연결 미확인으로 막으므로(content.availability) 여기서는 제보만 받는다.
 
-def learner_front(doc, q, db=None):
-    """Question front plus the target retention new ratings aim for (Quiz Bank 「목표 N%」)."""
+def learner_front(doc, q, db=None, user_id=None):
+    """Question front plus the target retention new ratings aim for (Quiz Bank 「목표 N%」).
+    user_id: 선지(root-mcq/2)가 이번에 보일 오답을 고르는 씨앗(사용자·문항·학습일, 2026-11-14 choices-merge)."""
     plans = {p['concept_id']: p for p in doc.document['bank_snapshot'].get('retrieval_plan', [])}
     personal = q['tier'] if q.get('personalTier') else None
     target = policy.target_retention(q, plans.get(q.get('concept_id')), policy.target_parameters(), personal)
     from app.root_learning import choices, mcq
     # 단답·나열 「선지 보기」(2026-11-12)·객관식 모드(2026-11-14): 이 판·이 문항 글에 맞는 선지가 있을 때만 붙는다.
     shown = light.hydrate(db, doc, q) if db is not None else q
-    return mcq.attach_front(db, doc, q, choices.attach_front(db, doc, q, {**content.front(shown), 'targetMastery': target}))
+    front = {**content.front(shown), 'targetMastery': target}
+    if not mcq.current(db, doc):   # 새 선지(root-mcq/2)가 있는 판은 예전 「선지 보기」를 쓰지 않는다(2026-11-14 choices-merge)
+        front = choices.attach_front(db, doc, q, front)
+    return mcq.attach_front(db, doc, q, front, user_id=user_id, when=now())
 
 
 def personal_editable(doc):
@@ -553,7 +557,7 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                             highlighted=payload.report, correction=correction))
     db.commit()
     current = content.with_tier(bank_personal.apply_edit(original, edit), content.tiers_for(db, doc, user.id))
-    return {'question': learner_front(doc, current, db), 'answer': revealed_answer(db, doc, current),
+    return {'question': learner_front(doc, current, db, user.id), 'answer': revealed_answer(db, doc, current),
             'reported': reported, 'highlighted': reported and payload.report}
 
 
@@ -590,7 +594,7 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
     # Only target-scheduled ratings move with the tier; earlier ones keep their own schedule.
     rescheduled = any(e['kind'] == 'rate' and e['revision'] == doc.revision and e['payload'].get('targetParameters')
                       and questions.get(e['payload'].get('task_id')) == question_id for e in events)
-    result = {'question': learner_front(doc, current, db), 'rescheduled': rescheduled}
+    result = {'question': learner_front(doc, current, db, user.id), 'rescheduled': rescheduled}
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
                      revision=doc.revision, kind='tier', payload=data, result=result, created_at=when))
     try:
@@ -696,14 +700,18 @@ def revealed_answer(db, doc, q, generation=_UNSET):
     from app.root_learning.evidence import attach_evidence
     attach_evidence(db, doc, q, generation, answer)
     from app.root_learning import choices, mcq
-    choices.attach_answer(db, doc, q, answer)
+    if not mcq.current(db, doc):
+        choices.attach_answer(db, doc, q, answer)
     mcq.attach_answer(db, doc, q, answer)
     return answer
 
 
 def recall_choice_entry(db, doc, q):
-    from app.root_learning import choices
-    return choices.entry(db, doc, q)
+    """주관식에서 펼 수 있는 덧붙인 선지가 있나: 「선지 보기」(root_choices) 또는 공용 선지(root_mcq, 2026-11-14 choices-merge)."""
+    from app.root_learning import choices, mcq
+    if mcq.current(db, doc):
+        return mcq.entry(db, doc, q)
+    return choices.entry(db, doc, q) or mcq.entry(db, doc, q)
 
 
 def prior_exposure(doc, task, q, session_state, choices_shown=None, recall_choices=False):
@@ -760,7 +768,7 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
         if task['task_id'] in available:
             q = content.question(doc.document, task)
             shown = content.with_tier(with_personal(q, edits), tiers)
-            frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db),
+            frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
                              'answer': revealed_answer(db, doc, shown, generation),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}
         out['frames'].append(frame)

@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-14-choices-merge",
+  "title": "선지 보기·객관식 모드 선지 합치기",
+  "area": "generation",
+  "created_at": "2026-11-14T03:18:36.397753+00:00",
+  "required_checks": [
+    "generation",
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T03:36:02.649995+00:00",
+      "evidence": "사용자 2026-11-14 채팅: 6개 결정 뒤 「I'll coordinate, then start」(조정은 사용자가, 구현 시작)",
+      "scope": "plan.md 1~7(코드·지시문·문서·로컬 검사·Draft PR). 시범 모델 호출·병합·러너 재설치·재생성 업로드는 제외",
+      "evidence_version": 2,
+      "source_hash": "dcba5ed8e0b6d5888f01f42388adf753170cb700d120319e2547db435b0854a0",
+      "plan_hash": "0e54abf56a125c96653a587ae44c7638062e175514e2f71a4e85d1658871da6b",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "928dac6242cd39a308cda40737d24f19be0f7d4bfd8e40cc15d6e201d7bc732f"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T03:36:07.204903+00:00"
+}

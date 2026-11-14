@@ -1,9 +1,12 @@
-"""객관식 모드 선지: 모든 형식에 오답(block·subtle)만 받아 의학 검토·계약 검사를 통과한 문항만 싣는다(모델은 가짜)."""
+"""선지(주관식 「선지 보기」·객관식 모드 공용, `root-mcq/2`): 출처 넷·표기 단서 검사·마지막 의학 검토·오답 풀 회전(모델은 가짜).
+
+v1(`root-mcq/1`) 계약 함수는 이미 올라간 v1 asset을 읽기 위해 남아 있어 그 검사도 둔다.
+"""
 import json
 
 import pytest
 
-from quizbank import root_mcq
+from quizbank import jokbo_pool, root_mcq
 from studyez_contracts.roots import mcq as contract
 
 
@@ -18,24 +21,30 @@ def _document():
         _q("B1", answer="Fe2+"),
         _q("L1", "list", "몸니, 벼룩", ["몸니", "벼룩"]),
         _q("C1", "cloze", "a", ["Fe2+", "산화"], question="{{c1}} 이온이 {{c2}}된다"),
-        _q("C2", "cloze", "Fe2+", ["Fe2+"], question="{{c1}} 이온"),
+        _q("C2", "cloze", "Fe2+", ["Fe2+"], question="{Fe2+} 이온"),
         _q("S1", "sequence", "", [], sequence_items=["흡착", "침입", "복제"], correct_order=["흡착", "침입", "복제"]),
         _q("O1", "ox", "O", ["O"]),
         {**_q("M1", "mcq", "A"), "options": [{"id": "A", "text": "x"}, {"id": "B", "text": "y"}], "correct_option_ids": ["A"]},
     ]}}
 
 
-def _w(text="", parts=(), kind="subtle", basis="Fe2+→Fe3+"):
-    return {"text": text, "parts": list(parts), "kind": kind, "basis": basis, "why_wrong": "틀림"}
+NO_JOKBO = {k: "" for k in contract.JOKBO_KEYS}
+
+
+def _w(text="", parts=(), source="made", basis="Fe2+→Fe3+", jokbo=None):
+    return {"text": text, "parts": list(parts), "source": source, "basis": basis, "why_tempting": "헷갈림",
+            "why_wrong": "틀림", "jokbo": jokbo or NO_JOKBO}
 
 
 def _good(qid):
     return {
-        "B1": [_w("Fe3+"), _w("Cu2+", kind="block", basis="Wilson"), _w("Zn2+", kind="block", basis="다른 균"), _w("Mg2+")],
-        "L1": [_w("털진드기", kind="block", basis="쯔쯔가무시"), _w("모기", kind="block", basis="말라리아"), _w("참진드기")],
-        "C1": [{**_w(parts=["Fe3+", "산화"])}, _w(parts=["Fe2+", "환원"]), _w(parts=["Fe3+", "환원"])],
+        "B1": [_w("Fe3+"), _w("Cu2+", source="block", basis="Wilson"), _w("Zn2+", source="lecture", basis="다른 균"),
+               _w("Mg2+"), _w("Ca2+"), _w("Mn2+", source="jokbo", basis="2022 족보 45번 ②",
+                                           jokbo={**NO_JOKBO, "year": "2022", "number": "45", "professor": "김"})],
+        "L1": [_w("털진드기", source="block", basis="쯔쯔가무시"), _w("모기", source="block", basis="말라리아"), _w("참진드기")],
+        "C1": [{**_w("Fe3+"), "group": 0}, {**_w("Cu2+"), "group": 0}, {**_w("환원"), "group": 1}, {**_w("가수분해"), "group": 1}],
         "C2": [_w("Fe3+"), _w("Cu2+"), _w("Zn2+")],
-        "S1": [_w(parts=["침입", "흡착", "복제"]), _w(parts=["흡착", "복제", "침입"]), _w(parts=["복제", "흡착", "침입"])],
+        "S1": [_w(parts=["침입", "흡착", "복제"]), _w(parts=["흡착", "복제", "침입"])],
     }[qid]
 
 
@@ -44,7 +53,8 @@ def _fake(write, review=None, seen=None):
         rows = json.loads((work / "input.json").read_text(encoding="utf-8"))
         if "reviews" in schema["properties"]:
             text = json.dumps(rows, ensure_ascii=False)
-            assert "basis" not in text and "why_wrong" not in text and "kind" not in text  # 쓴 쪽의 근거는 주지 않는다
+            for hidden in ("basis", "why_wrong", "why_tempting", "source", "jokbo"):
+                assert hidden not in text   # 쓴 쪽의 출처·근거·이유는 검토자에게 주지 않는다
             qs = rows["questions"]
             return (review(qs) if review else {"reviews": [{"question_id": q["question_id"], "invalid": []} for q in qs]}), {}
         if seen is not None:
@@ -53,58 +63,151 @@ def _fake(write, review=None, seen=None):
     return call
 
 
-def test_형식별_대상과_정답_선지():
+def _all_good(rows):
+    return {"proposals": [{"question_id": q["question_id"], "wrong": _good(q["question_id"]), "skip_reason": ""}
+                          for q in rows["questions"]]}
+
+
+# ── 대상·정답 선지 ──────────────────────────────────────────────────────────
+
+def test_형식별_대상과_정답_선지_cloze는_게시본의_중괄호_빈칸도_센다():
     doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
     assert [qid for qid, q in doc.items() if contract.eligible(q)] == ["B1", "L1", "C1", "C2", "S1"]
+    assert contract.blank_count(doc["C2"]) == 1   # 게시된 판의 `{답}` 꼴(2026-11-14 전에는 0으로 세어 cloze가 모두 빠졌다)
+    assert contract.blank_count(_q("X", "cloze", question="{HSV-1} 와 {HSV-2}")) == 2
     assert contract.correct_texts(doc["C1"]) == ["Fe2+ / 산화"]
-    assert contract.correct_texts(doc["C2"]) == ["Fe2+"]
     assert contract.correct_texts(doc["S1"]) == ["흡착 → 침입 → 복제"]
-    assert contract.parts_needed(doc["C1"]) == 2 and contract.parts_needed(doc["C2"]) == 0
-    entry = contract.entry(doc["L1"], _good("L1"))
-    assert len(entry["choices"]) == 5 and len(entry["correct_ids"]) == 2
-    assert {m["kind"] for m in entry["wrong"].values()} == {"block", "subtle"}
-    assert contract.entry_errors(doc["L1"], entry) == []
 
 
-def test_종류_근거_없는_오답과_순서_아닌_오답은_거절():
+@pytest.mark.parametrize("fmt", ["ox", "mcq"])
+def test_자체_선지_형식은_대상이_아니다(fmt):
     doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
-    assert any("종류" in e for e in contract.wrong_errors(doc["B1"], [_w("Fe3+", kind="other"), _w("a"), _w("b")]))
-    assert any("근거" in e for e in contract.wrong_errors(doc["B1"], [_w("Fe3+", basis=""), _w("a"), _w("b")]))
-    assert contract.wrong_errors(doc["S1"], [_w(parts=["흡착", "침입", "X"]), *_good("S1")[1:]])
-    assert any("칸" in e for e in contract.wrong_errors(doc["C1"], [_w(parts=["Fe3+"]), *_good("C1")[1:]]))
+    assert not contract.eligible(doc["O1" if fmt == "ox" else "M1"])
 
 
-def test_모두_통과하면_전부_싣는다(tmp_path):
+# ── 표기 단서(사용자 「4는 문체가 다른 경우 … 영어 vs 한국어」, 「1 적용」) ──────────────
+
+def test_정답과_언어가_다른_오답은_뺀다():
+    q = _q("Q", "list", "a", ["Necrotizing bronchitis", "Interstitial pneumonia"])
+    assert contract.cue_errors(contract.correct_texts(q), "간질 보존을 동반한 기관지 점액 과다") == ["표기 언어가 정답과 다름"]
+    assert contract.cue_errors(contract.correct_texts(q), "Diffuse alveolar damage") == []
+    # 한국어 문장 속 영어 용어 하나, 짧은 한국어+약어는 언어가 다른 것이 아니다.
+    assert contract.cue_errors(contract.correct_texts(_q("K", answer="바이러스 변이가 많다")), "핵 내 cccDNA가 남는다") == []
+    assert contract.cue_errors(contract.correct_texts(_q("T", answer="TSST-1 독소")), "혈중으로 퍼진 균 자체") == []
+
+
+def test_정답이_한글_영문_병기면_오답도_병기해야_한다():
+    q = _q("Q", answer="폐렴사슬알균(S. pneumoniae)")
+    assert contract.cue_errors(contract.correct_texts(q), "S. dysgalactiae") == ["표기 방식이 정답과 다름(정답은 한글·영문 병기)"]
+    assert contract.cue_errors(contract.correct_texts(q), "고름사슬알균(S. pyogenes)") == []
+
+
+def test_길이와_단정_표현_단서():
+    q = _q("Q", answer="숙주세포에 대사적으로 의존한다")
+    assert "길이가 정답과 크게 다름" in contract.cue_errors(contract.correct_texts(q), "독립")
+    assert contract.cue_errors(contract.correct_texts(_q("S", answer="EBV")), "Cytomegalovirus") == []   # 짧은 정답은 길이를 보지 않는다
+    assert contract.cue_errors(contract.correct_texts(q), "숙주세포 없이 항상 독립적으로 증식한다") == ["오답에만 단정 표현"]
+    assert contract.cue_errors(contract.correct_texts(_q("B", answer="항상 숙주세포에 의존한다")), "항상 숙주세포 밖에서 증식한다") == []
+    assert contract.cue_errors(contract.correct_texts(_q("A", answer="미호기성 세균")), "절대혐기성 세균") == []   # 용어 속 「절대」는 단정 표현이 아니다
+
+
+# ── 오답 줄 검사·칸 ─────────────────────────────────────────────────────────
+
+def test_출처·이유·족보_연도번호가_없으면_거절():
+    doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
+    assert contract.row_errors(doc["B1"], {**_w("Fe3+"), "source": "other"})
+    assert contract.row_errors(doc["B1"], {**_w("Fe3+"), "why_tempting": ""})
+    assert contract.row_errors(doc["B1"], _w("Fe3+", source="jokbo"))   # 연도·번호 없음
+    assert contract.row_errors(doc["S1"], _w(parts=["흡착", "침입", "X"]))
+    assert contract.row_errors(doc["C1"], _w(parts=["Fe3+"]))
+    assert contract.row_errors(doc["B1"], _w("Fe2+")) == ["정답과 같은 오답"]
+
+
+def test_괜찮은_오답이_2개_미만이면_칸을_만들지_않고_ID로는_정답을_알_수_없다():
+    """사용자 2026-11-14 「해도 0개이거나 1개이면 그냥 선택지가 안 보이게 해줘」."""
+    doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
+    with pytest.raises(ValueError, match="최소 2개"):
+        contract.entry_v2(doc["B1"], [_w("Fe3+"), _w("Fe3+"), _w("x", source="other")])   # 중복·결함을 빼면 1개
+    entry = contract.entry_v2(doc["B1"], [_w("Fe3+"), _w("Cu2+")])
+    assert contract.entry_errors_v2(doc["B1"], entry) == []
+    assert contract.entry_errors_v2(doc["B1"], {**entry, "wrong": entry["wrong"][:1]}) == ["오답 부족"]
+    picked = contract.select(doc["B1"], entry, "seed")
+    assert len(picked["choices"]) == 3 and all(c["id"].startswith("k") and len(c["id"]) == 9 for c in picked["choices"])
+    # 묶음 문항은 한 묶음이라도 2개 미만이면 문항 전체가 선지 없이 나간다.
+    with pytest.raises(ValueError, match="빈칸 2"):
+        contract.entry_v2(doc["C1"], [{**_w("Fe3+"), "group": 0}, {**_w("Cu2+"), "group": 0}, {**_w("환원"), "group": 1}])
+
+
+# ── 회전(사용자 「5 4-5개 정도 … 괜찮은 오답이 나오는 만큼」) ─────────────────────
+
+def test_같은_씨앗이면_같은_선지_다른_씨앗이면_다른_조합_정답은_늘_전부():
+    doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
+    entry = contract.entry_v2(doc["B1"], _good("B1"))
+    assert len(entry["wrong"]) == 6
+    first = contract.select(doc["B1"], entry, "u1|B1|2026-11-14")
+    assert first == contract.select(doc["B1"], entry, "u1|B1|2026-11-14")
+    assert len(first["choices"]) == 1 + contract.SHOW["basic"]
+    combos = {frozenset(c["id"] for c in contract.select(doc["B1"], entry, f"u1|B1|day{d}")["choices"]) for d in range(20)}
+    assert len(combos) > 1
+    correct = contract.choice_id("B1", "Fe2+")
+    assert all(correct in combo for combo in combos)
+    assert set(first["notes"]) == {c["id"] for c in first["choices"]} - {correct}
+    jokbo = next(w for w in entry["wrong"] if w["source"] == "jokbo")
+    assert contract.source_label(jokbo) == "2022 족보 45번"
+
+
+def test_list는_정답_단위_전부와_오답_4개까지():
+    doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
+    entry = contract.entry_v2(doc["L1"], _good("L1"))
+    picked = contract.select(doc["L1"], entry, "s")
+    assert len(picked["correct_ids"]) == 2 and len(picked["choices"]) == 5
+
+
+# ── 생성기 ──────────────────────────────────────────────────────────────────
+
+def test_모두_통과하면_전부_싣고_v2로_검증된다(tmp_path):
     document, seen = _document(), []
-    write = lambda rows: {"proposals": [{"question_id": q["question_id"], "wrong": _good(q["question_id"]),
-                                         "skip_reason": ""} for q in rows["questions"]]}
     context = {"block": "감염과 면역", "lectures": [{"title": "포도알균", "facts": ["coagulase"]}]}
-    asset = root_mcq.build(document, tmp_path, "261110_03", context=context, call=_fake(write, seen=seen))
+    asset = root_mcq.build(document, tmp_path, "261110_03", context=context, call=_fake(_all_good, seen=seen))
+    assert asset["schema"] == "root-mcq/2"
     assert sorted(asset["questions"]) == ["B1", "C1", "C2", "L1", "S1"]
     assert asset["counts"]["written"] == 5 and asset["skipped"] == {}
-    assert seen[0]["block_pool"] == context["lectures"] and seen[0]["block"] == "감염과 면역"
-    contract.validate(json.loads((tmp_path / "mcq.json").read_text(encoding="utf-8")), document)
+    assert asset["counts"]["sources"]["jokbo"] == 1
+    assert seen[0]["block_pool"] == context["lectures"]
+    contract.validate_v2(json.loads((tmp_path / "mcq.json").read_text(encoding="utf-8")), document)
 
 
-def test_검토가_뺀_문항은_이유를_주고_한_번_더_쓴다(tmp_path):
+def test_표기_단서로_빠진_오답은_기록되고_남은_오답이_없으면_이유를_주고_다시_쓴다(tmp_path):
     document, seen = _document(), []
-    calls = {"n": 0}
 
     def write(rows):
-        calls["n"] += 1
-        return {"proposals": [{"question_id": q["question_id"], "wrong": _good(q["question_id"]), "skip_reason": ""}
-                              for q in rows["questions"]]}
+        second = len(seen) > 1
+        out = []
+        for q in rows["questions"]:
+            wrong = _good(q["question_id"])
+            if q["question_id"] == "L1" and not second:
+                wrong = [_w("Mosquito"), _w("Flea")]   # 정답은 한국어인데 영어 → 모두 빠진다
+            out.append({"question_id": q["question_id"], "wrong": wrong, "skip_reason": ""})
+        return {"proposals": out}
+
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, seen=seen))
+    assert [q["question_id"] for q in seen[1]["questions"]] == ["L1"]
+    assert {r["reason"] for r in seen[1]["questions"][0]["previous_rejected"]} == {"표기 언어가 정답과 다름"}
+    assert "L1" in asset["questions"] and asset["counts"]["removedByStyle"] == 2
+
+
+def test_검토가_전부_뺀_문항만_다시_쓰고_일부만_뺀_문항은_남은_오답으로_싣는다(tmp_path):
+    document, seen = _document(), []
 
     def review(qs):
-        first = calls["n"] == 1
+        first = len(seen) == 1
         return {"reviews": [{"question_id": q["question_id"], "invalid": (
-            [{"text": "Fe3+", "reason": "정답일 수 있음"}, {"text": "Mg2+", "reason": "불확실"}]
-            if first and q["question_id"] == "B1" else [])} for q in qs]}
+            [{"text": t, "reason": "정답일 수 있음"} for t in q["wrong"]] if first and q["question_id"] == "C2"
+            else [{"text": "Fe3+", "reason": "불확실"}] if q["question_id"] == "B1" else [])} for q in qs]}
 
-    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, review, seen))
-    assert len(seen) == 2 and [q["question_id"] for q in seen[1]["questions"]] == ["B1"]
-    assert {r["text"] for r in seen[1]["questions"][0]["previous_rejected"]} == {"Fe3+", "Mg2+"}
-    assert "B1" in asset["questions"]
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(_all_good, review, seen))
+    assert [q["question_id"] for q in seen[1]["questions"]] == ["C2"]
+    assert "Fe3+" not in [w["text"] for w in asset["questions"]["B1"]["wrong"]] and len(asset["questions"]["B1"]["wrong"]) == 5
 
 
 def test_실패한_묶음은_빠지고_나머지는_싣는다(tmp_path):
@@ -114,17 +217,130 @@ def test_실패한_묶음은_빠지고_나머지는_싣는다(tmp_path):
     assert asset["questions"] == {} and asset["counts"]["failedBatches"] == 1
 
 
-def test_서버용_attachable은_지문이_다르면_None():
+def test_족보는_직접_연결_이_강의_다른_강의_순으로_입력에_들어간다():
+    item = {"year": "2022", "professor": "김", "number": "45", "answer": "②", "stem": "Fe2+ 이온 매개체는?",
+            "options": [{"mark": "①", "text": "Fe3+"}, {"mark": "②", "text": "Fe2+"}]}
+    other = {"run_id": "261113_01", "title": "헤르페스", "items": [{**item, "number": "7", "stem": "Fe2+ 매개체는 무엇인가"}]}
+    context = {"jokbo": [item], "other_jokbo": [other], "links": {"B1": [("2022", "45")]}}
     document = _document()
-    doc = {q["question_id"]: q for q in document["bank_snapshot"]["questions"]}
-    asset = {"schema": contract.SCHEMA, "revision": "rev-1", "questions": {"B1": contract.entry(doc["B1"], _good("B1"))},
-             "skipped": {}}
+    data = root_mcq.batch_input(document, document["bank_snapshot"]["questions"][:1], context, {})
+    q = data["questions"][0]
+    assert q["linked_jokbo"][0]["number"] == "45" and q["linked_jokbo"][0]["options"] == ["① Fe3+", "② Fe2+"]
+    assert q["other_jokbo"][0]["run_id"] == "261113_01" and data["jokbo"][0]["year"] == "2022"
+
+
+def test_근거_asset의_족보_연결을_연도_번호로_읽는다():
+    evidence = {"jokboPages": {"questions": {"H060": {"locators": {"physical PDF p.5": [
+        {"year": "2022", "number": "45", "page": 5}, {"year": "2022", "number": "45", "page": 6}]}}}}}
+    assert root_mcq.jokbo_links(evidence) == {"H060": [("2022", "45")]}
+
+
+def test_족보_쪽_글에서_머리_정답_발문_보기를_읽는다():
+    text = ("감염과 면역 | 헤르페스바이러스과\n2022 | 김동현 | 45번\n참고 기출 | 원본 p.39\n정답: 원본 표기 기준 | 우선순위: 올해\n5\n정답 2\n"
+            "45. 병원체에 감염된 환자의 혈액에서 Atypical lymphocyte 가 관찰되는 병원체는? \n"
+            "① Cytomegalovirus \n② Epstein-Barr virus \n③ Varicella-zoster virus")
+    item = jokbo_pool.page_item(text)
+    assert (item["year"], item["professor"], item["number"], item["answer"]) == ("2022", "김동현", "45", "②")
+    assert item["stem"].startswith("병원체에 감염된") and [o["text"] for o in item["options"]] == [
+        "Cytomegalovirus", "Epstein-Barr virus", "Varicella-zoster virus"]
+    assert jokbo_pool.page_item("머리 없는 쪽") is None
+
+
+# ── v1(이미 올라간 asset 읽기) ────────────────────────────────────────────────
+
+def _w1(text="", parts=(), kind="subtle"):
+    return {"text": text, "parts": list(parts), "kind": kind, "basis": "b", "why_wrong": "틀림"}
+
+
+def test_v1_칸은_그대로_읽힌다():
+    doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
+    entry = contract.entry(doc["B1"], [_w1("Fe3+"), _w1("Cu2+", kind="block"), _w1("Zn2+")])
+    asset = {"schema": contract.SCHEMA, "revision": "rev-1", "questions": {"B1": entry}, "skipped": {}}
     assert contract.attachable(asset, "rev-1", doc["B1"]) is not None
     assert contract.attachable(asset, "rev-2", doc["B1"]) is None
     assert contract.attachable(asset, "rev-1", {**doc["B1"], "question": "바뀜"}) is None
+    assert contract.attachable_v2(asset, "rev-1", doc["B1"]) is None
 
 
-@pytest.mark.parametrize("fmt", ["ox", "mcq"])
-def test_자체_선지_형식은_대상이_아니다(fmt):
+# ── 나눠 묻는 문항(사용자 「묻는 게 여러개이면 선지를 나눠서 제시」) ──
+
+def _bal():
+    return _q("G1", "list", "일반적 기준: 10^3~10^4 CFU/mL; 서울대병원: 10^3 CFU/mL",
+              ["일반적 기준: 10^3~10^4 CFU/mL", "서울대병원: 10^3 CFU/mL"],
+              question="급성 세균성 폐렴의 BAL 정량 배양 판독에 제시된 일반적 농도 범위와 서울대병원의 기준은?")
+
+
+def _gw(group, text, source="made"):
+    return {**_w(text, source=source), "group": group}
+
+
+def test_항목별_정답이면_묶음으로_나누고_빈칸_여럿도_빈칸마다_나눈다():
+    assert contract.groups(_bal()) == [{"label": "일반적 기준", "correct": "10^3~10^4 CFU/mL"},
+                                       {"label": "서울대병원", "correct": "10^3 CFU/mL"}]
     doc = {q["question_id"]: q for q in _document()["bank_snapshot"]["questions"]}
-    assert not contract.eligible(doc["O1" if fmt == "ox" else "M1"])
+    assert [g["label"] for g in contract.groups(doc["C1"])] == ["빈칸 1", "빈칸 2"]
+    assert contract.groups(doc["L1"]) is None and contract.groups(doc["C2"]) is None   # 같은 종류 나열·빈칸 하나는 한 묶음
+    assert contract.groups(_q("X", "list", "a", ["감염: x", "감염: y"])) is None          # 항목 이름이 겹치면 나누지 않는다
+
+
+def test_묶음_문항은_오답마다_묶음이_필요하고_묶음_정답과_견준다():
+    q = _bal()
+    assert contract.row_errors(q, _w("10^5 CFU/mL")) == ["나눠 묻는 문항은 오답마다 묶음 번호(group) 필요"]
+    assert contract.row_errors(q, _gw(1, "10^3 CFU/mL")) == ["정답과 같은 오답"]
+    assert contract.row_errors(q, _gw(0, "10^3 CFU/mL")) == []   # 다른 묶음의 정답은 좋은 오답이다
+    entry = contract.entry_v2(q, [_gw(0, "10^1~10^2 CFU/mL"), _gw(0, "10^5~10^6 CFU/mL"), _gw(1, "10^5 CFU/mL"), _gw(1, "10^2 CFU/mL")])
+    assert contract.entry_errors_v2(q, entry) == []
+    picked = contract.select(q, entry, "s")
+    assert [g["label"] for g in picked["groups"]] == ["일반적 기준", "서울대병원"]
+    assert [len(g["ids"]) for g in picked["groups"]] == [3, 3] and len(picked["correct_ids"]) == 2
+    first = {c["id"]: c["text"] for c in picked["choices"] if c["id"] in picked["groups"][0]["ids"]}
+    assert "10^3~10^4 CFU/mL" in first.values() and "10^5 CFU/mL" not in first.values()
+    assert [c["id"] for c in picked["choices"]] == picked["groups"][0]["ids"] + picked["groups"][1]["ids"]
+
+
+def test_생성기는_묶음을_입력에_주고_검토에는_묶음_이름을_붙인다(tmp_path):
+    document = {"revision": "rev-g", "title": "폐렴", "bank_snapshot": {"questions": [_bal()]}}
+    seen, reviewed = [], []
+
+    def write(rows):
+        assert rows["questions"][0]["groups"][1] == {"group": 1, "label": "서울대병원", "correct": "10^3 CFU/mL"}
+        return {"proposals": [{"question_id": "G1", "skip_reason": "", "wrong": [
+            _gw(0, "10^1~10^2 CFU/mL"), _gw(0, "10^5~10^6 CFU/mL"), _gw(1, "10^5 CFU/mL"), _gw(1, "10^2 CFU/mL"), _gw(1, "10^4 CFU/mL")]}]}
+
+    def review(qs):
+        reviewed.append(qs[0])
+        return {"reviews": [{"question_id": "G1", "invalid": [{"text": "[서울대병원] 10^2 CFU/mL", "reason": "불확실"}]}]}
+
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, review, seen))
+    assert reviewed[0]["correct"] == ["[일반적 기준] 10^3~10^4 CFU/mL", "[서울대병원] 10^3 CFU/mL"]
+    assert [(w["group"], w["text"]) for w in asset["questions"]["G1"]["wrong"]] == [
+        (0, "10^1~10^2 CFU/mL"), (0, "10^5~10^6 CFU/mL"), (1, "10^5 CFU/mL"), (1, "10^4 CFU/mL")]
+    contract.validate_v2(asset, document)
+
+
+def test_한_회차에_1개만_통과하면_다음_회차에_그것을_주고_더_받아_합친다(tmp_path):
+    document, seen = _document(), []
+
+    def write(rows):
+        second = len(seen) > 1
+        out = []
+        for q in rows["questions"]:
+            wrong = _good(q["question_id"])
+            if q["question_id"] == "C2":
+                wrong = [_w("Cu2+")] if second else [_w("Fe3+")]
+            out.append({"question_id": q["question_id"], "wrong": wrong, "skip_reason": ""})
+        return {"proposals": out}
+
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, seen=seen))
+    assert [q["question_id"] for q in seen[1]["questions"]] == ["C2"]
+    assert seen[1]["questions"][0]["previous_kept"] == ["Fe3+"]
+    assert [w["text"] for w in asset["questions"]["C2"]["wrong"]] == ["Fe3+", "Cu2+"]
+
+
+def test_두_회차_뒤에도_1개면_선지_없이_둔다(tmp_path):
+    def write(rows):
+        return {"proposals": [{"question_id": q["question_id"], "skip_reason": "",
+                               "wrong": [_w("Fe3+")] if q["question_id"] == "C2" else _good(q["question_id"])} for q in rows["questions"]]}
+
+    asset = root_mcq.build(_document(), tmp_path, "r", call=_fake(write))
+    assert "C2" not in asset["questions"] and "최소 2개" in asset["skipped"]["C2"]

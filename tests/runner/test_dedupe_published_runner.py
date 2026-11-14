@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from runner import connection_generation as worker
-from runner import root_choices, root_evidence
+from runner import root_choices, root_evidence, root_mcq
 from studyez_contracts.roots import map_tree
 
 OLD, NEW = 'a' * 32, 'b' * 32
@@ -87,7 +87,7 @@ def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_r
     monkeypatch.setattr(root_evidence, 'upload', lambda client, subject, run_id, path: uploads.append(path))
     monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: pytest.fail('the evidence is not built again'))
     choices = []   # the new revision still gets its recall choices (2026-11-14 choices-by-default)
-    monkeypatch.setattr(root_choices, 'publish', lambda client, subject, run_id, folder, payload, **k: choices.append(payload['document']['revision']))
+    monkeypatch.setattr(root_mcq, 'publish', lambda client, subject, run_id, folder, payload, **k: choices.append(payload['document']['revision']))
     client = SimpleNamespace(call=lambda method, path, payload=None: {'status': 'ready', 'revision': 'auto-' + NEW})
     packet = request()
     assert worker._generate(client, 'S', 'R', '/api/x', packet, out / 'packet.json', out) == 0

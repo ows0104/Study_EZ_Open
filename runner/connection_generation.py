@@ -243,8 +243,9 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     if previous is None or not reuse_evidence(client, subject, run_id, previous, gen_out, payload):
         from .root_evidence import publish as publish_evidence
         publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
-    # 단답·나열 「선지 보기」 선지도 게시 직후 기본으로 붙인다(2026-11-14 사용자 「기본으로 설정해줘」,
-    # docs/changes/2026-11-14-choices-by-default). 판 문서의 글만 보내며, 실패해도 게시 결과는 그대로다.
-    from .root_choices import publish as publish_choices
+    # 선지도 게시 직후 기본으로 붙인다(2026-11-14 사용자 「기본으로 설정해줘」, docs/changes/2026-11-14-choices-by-default).
+    # 같은 날 주관식 「선지 보기」와 객관식 모드의 선지를 하나로 합쳐(docs/changes/2026-11-14-choices-merge)
+    # root_choices 대신 root_mcq(`root-mcq/2`)를 부른다. 실패해도 게시 결과는 그대로다.
+    from .root_mcq import publish as publish_choices
     publish_choices(client, subject, run_id, out, payload, model=model, run=run_forwarded)
     return 0

@@ -81,8 +81,10 @@ export type BankQuestion = {
   mcq_mode?: "recall_first" | "comparison" | "none";
   /** Main-Quiz 단답·나열 「선지 보기」(2026-11-12). 문항의 options와 별개이며 사용자가 펼 때만 보인다. */
   recall_choices?: { id: string; text: string }[];
-  /** Main-Quiz 객관식 모드 선지(2026-11-14). 객관식 모드에서만 보인다. */
+  /** Main-Quiz 선지(2026-11-14). 객관식 모드는 처음부터, 주관식은 「선지 보기」(V)로 편다(choices-merge). */
   mcq_choices?: { id: string; text: string }[];
+  /** 나눠 묻는 문항의 묶음(빈칸마다·「항목: 값」마다). mcq_choices를 이 순서로 나눠 제목과 함께 보인다. */
+  mcq_groups?: { label: string; ids: string[] }[];
   personalEdited?: boolean;
   question_id: string;
   personalTier?: boolean;
@@ -121,6 +123,8 @@ export type BankAnswer = {
   recallCorrectIds?: string[];
   /** mcq_choices의 정답 ID. 답을 편 응답에만 온다. */
   mcqCorrectIds?: string[];
+  /** mcq_choices 오답마다 왜 틀렸나·족보 출처(root-mcq/2, 2026-11-14 choices-merge). 답을 편 응답에만 온다. */
+  mcqWrongNotes?: Record<string, { why: string; source: string }>;
   answerPairs: { left: string; right: string }[];
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
