@@ -1,0 +1,104 @@
+{
+  "id": "2026-11-14-root-claude-fixes",
+  "title": "Claude 출제 경로 보완: 실제 모델 기록·제한 시간·모델 전환 재개",
+  "area": "generation",
+  "created_at": "2026-11-14T11:49:02.479465+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T11:49:02.726433+00:00",
+      "evidence": "사용자 채팅 2026-11-14: 「지금 어떤 모델을 쓰고 있어? 그리고 왜 이렇게 느리지?」 → 자동 모델 전환·시간 초과 보고 뒤 「5로 쭉 이어서 가자.」",
+      "scope": "plan.md 1~5: Claude 실제 모델 기록·파일 입력·제한 시간 배수, 재개 시 다른 모델 단계 보관, 검사·PR·병합·러너 재설치, 261109_02를 claude-opus-5로 재개",
+      "evidence_version": 2,
+      "source_hash": "48291b79e32db41086f60dbb6b1baa77693add8d8b0dff3215c78d9245121bb0",
+      "plan_hash": "677cc39676e9ecc18d8be0b114f0d14849cf23f3751dfd3830f9bd049b8a027e",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "e16d076b00be9bdfdec40631e377f8f863c5d4b384b2bdd728f7171b00cdc840"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-14T11:57:43.582673+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "tests/runner",
+        "tests/studyez_llm",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "48291b79e32db41086f60dbb6b1baa77693add8d8b0dff3215c78d9245121bb0",
+      "plan_hash": "677cc39676e9ecc18d8be0b114f0d14849cf23f3751dfd3830f9bd049b8a027e",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-14-root-claude-fixes/1794656944591087000-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-14T12:15:16.834346+00:00",
+    "summary": "Codex 경로 불변(run_process stdin 기본 None), 모델 전환 세션 거절·파일 입력·제한 배수·재개 보관 검사, 회귀 2352 통과, 실제 CLI 연기 검사 통과",
+    "evidence_version": 2,
+    "source_hash": "48291b79e32db41086f60dbb6b1baa77693add8d8b0dff3215c78d9245121bb0",
+    "plan_hash": "677cc39676e9ecc18d8be0b114f0d14849cf23f3751dfd3830f9bd049b8a027e",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T12:15:17.029172+00:00"
+}

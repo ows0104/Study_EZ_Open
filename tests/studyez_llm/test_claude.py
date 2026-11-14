@@ -29,8 +29,9 @@ def stream(result=None, *, assistant_stop="end_turn", extra=()):
 
 
 def fake_process(stdout, calls, code=0):
-    def run(argv, *, input, cwd, timeout, **kw):
-        calls.append({"argv": argv, "input": input, "cwd": cwd})
+    def run(argv, *, input, cwd, timeout, stdin=None, **kw):
+        assert input is None and stdin is not None   # 첫 메시지는 파일로 넘긴다
+        calls.append({"argv": argv, "input": stdin.read().decode("utf-8"), "cwd": cwd})
         return subprocess.CompletedProcess(argv, code, stdout, "")
     return run
 
@@ -165,3 +166,41 @@ def test_claude는_codex와_다른_자리를_쓴다(monkeypatch, tmp_path):
     monkeypatch.setenv("STUDYEZ_CLAUDE_SLOTS", "3")
     codex.run("task", blind=False, cwd=tmp_path, model=MODEL)
     assert seen == [(3, "claude")]
+
+
+def test_요청하지_않은_모델이_답하면_받지_않는다(monkeypatch, tmp_path):
+    usage = {MODEL: {"outputTokens": 0}, "claude-opus-5": {"outputTokens": 8000}}
+    monkeypatch.setattr(claude, "run_process", fake_process(stream({"modelUsage": usage}), []))
+    with pytest.raises(codex.SessionError) as caught:
+        codex.run("task", blind=False, cwd=tmp_path, model=MODEL)
+    assert claude.FALLBACK_MARKER in str(caught.value) and "claude-opus-5" in str(caught.value)
+    same = {"claude-opus-5": {"outputTokens": 9}}
+    monkeypatch.setattr(claude, "run_process", fake_process(stream({"modelUsage": same}), []))
+    info = codex.run("task", blind=False, cwd=tmp_path, model="claude-opus-5")
+    assert info["models"] == {"claude-opus-5": 9}
+
+
+def test_첫_메시지는_파일로_넘기고_제한_시간은_배수를_곱한다(monkeypatch, tmp_path):
+    seen = {}
+
+    def run(argv, *, input, stdin, cwd, timeout, **kw):
+        seen.update(input=input, body=stdin.read().decode("utf-8"), timeout=timeout)
+        return subprocess.CompletedProcess(argv, 0, stream(), "")
+    monkeypatch.setattr(claude, "run_process", run)
+    codex.run("task", blind=False, cwd=tmp_path, model=MODEL, timeout=100)
+    assert seen["input"] is None and json.loads(seen["body"])["message"]["content"][0]["text"] == "task"
+    assert seen["timeout"] == 300
+    monkeypatch.setenv("STUDYEZ_CLAUDE_TIMEOUT_FACTOR", "1")
+    codex.run("task", blind=False, cwd=tmp_path, model=MODEL, timeout=100)
+    assert seen["timeout"] == 100
+
+
+def test_run_process는_파일_입력을_받는다(tmp_path):
+    import sys
+    from studyez_llm.execution import run_process
+    src = tmp_path / "in.txt"
+    src.write_text("hello", encoding="utf-8")
+    with src.open("rb") as handle:
+        done = run_process([sys.executable, "-c", "import sys;print(sys.stdin.read().upper())"], input=None,
+                           stdin=handle, cwd=tmp_path, timeout=30)
+    assert done.stdout.strip() == "HELLO"
