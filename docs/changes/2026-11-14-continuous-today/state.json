@@ -1,0 +1,260 @@
+{
+  "id": "2026-11-14-continuous-today",
+  "title": "Main-Quiz 오늘 학습 이어 풀기",
+  "area": "site",
+  "created_at": "2026-11-14T03:17:28.535114+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T03:43:17.131439+00:00",
+      "evidence": "사용자 2026-11-14 채팅: 「나는 회차 개념보다는 그냥 연속적으로 계속 푸는 느낌을 생각하긴 했어. 그래서 Optional을 껐다 켜는게 어차피 영향을 안 주게. 회차는 그냥 오늘 풀 학습량을 제안해주는 느낌?」, 제안량 뒤 「계속 풀기」 선택, 겹침 「진행, 나중 병합 쪽이 rebase」, 계획 제시 뒤 「승인, 구현해」. 구현 중 R2 계산 방식을 같은 목표(껐다 켜도 영향 없음) 안에서 바꿈(spec·release.md에 기록)",
+      "scope": "plan.md 범위(planning.py·routes/root_learning.py·types/rootLearning.ts·RootToday.tsx·RootLearning.tsx·GuidePage.tsx·test_root_focus.py·test_root_planning.py)의 로컬 구현·검사·Draft PR. master 병합(배포)·DB 스키마·운영 데이터·문항 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "4030a178aefc57709c0dcf6590ea16ee19a49e64821d08c78163f39f66069e57",
+      "plan_hash": "ae309e492ac27f3ae45c31c14c3a635b4fb8998df02d00b20e0629b9513c6b9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "58563d9819b8d6507bf0b44c9ac9af2aef5dd458ce4d1164590692d6830878aa"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-14T03:30:27.260179+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe','-m','tests','root','main_quiz'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "6ec49aeea790a00026f3b4eb142458512986ae811b80538d5ec9b19e85da0335",
+      "plan_hash": "8b0f626e683a4f519909798c0ec1847d20ab77b63432f4371eef821f5f76f0b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-continuous-today/1794626916878606200-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-14T03:31:47.622170+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "fc38149a0b2020035fd491f156ca614ecdaf0299f9d3e98bee209f079cad1dee",
+      "plan_hash": "8b0f626e683a4f519909798c0ec1847d20ab77b63432f4371eef821f5f76f0b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-continuous-today/1794627095965695900-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-14T03:32:11.179992+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4030a178aefc57709c0dcf6590ea16ee19a49e64821d08c78163f39f66069e57",
+      "plan_hash": "8b0f626e683a4f519909798c0ec1847d20ab77b63432f4371eef821f5f76f0b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-continuous-today/1794627121337034100-web.log",
+      "web_artifact": "9e2df29aba1b8239e4febf0891d4ce9c5dfea8b448786dbb097f9e86c95ec6fa",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-14T03:41:19.316326+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe','-m','tests'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "4030a178aefc57709c0dcf6590ea16ee19a49e64821d08c78163f39f66069e57",
+      "plan_hash": "8b0f626e683a4f519909798c0ec1847d20ab77b63432f4371eef821f5f76f0b2",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-continuous-today/1794627307459014200-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-14T03:49:42.578114+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe','-m','tests'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "4030a178aefc57709c0dcf6590ea16ee19a49e64821d08c78163f39f66069e57",
+      "plan_hash": "ae309e492ac27f3ae45c31c14c3a635b4fb8998df02d00b20e0629b9513c6b9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-continuous-today/1794627797648600300-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-14T03:49:56.495049+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4030a178aefc57709c0dcf6590ea16ee19a49e64821d08c78163f39f66069e57",
+      "plan_hash": "ae309e492ac27f3ae45c31c14c3a635b4fb8998df02d00b20e0629b9513c6b9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-continuous-today/1794628182974852800-web.log",
+      "web_artifact": "9e2df29aba1b8239e4febf0891d4ce9c5dfea8b448786dbb097f9e86c95ec6fa",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-14T03:50:14.299306+00:00",
+    "summary": "경계: 서버 overview_data·start·save_focus와 planning.new_goals만, 풀이 화면(RootSolve, #162)·이벤트 기록·요약 분모 불변. 발견·수정: 처음 R2(뒷부분 미학습 새 목표 수로 몫 고정)는 칩을 껐다 켤 때 목표가 빠짐 → 학습일 시작 상태로 다시 계획하는 방식으로 교체. 칩 저장 뒤 미리 받은 프레임이 옛 뒷부분을 그릴 수 있어 forget 추가. 남은 위험: 다른 탭이 풀던 중 칩을 바꾸면 그 탭의 다음 저장은 409(기존 복구 경로). 근거: test_root_focus·planning, 전체 server 150/152(2개는 PyMuPDF 미설치 환경), web build, check_main_quiz_ui browser 9/9, 수동 브라우저 확인",
+    "evidence_version": 2,
+    "source_hash": "4030a178aefc57709c0dcf6590ea16ee19a49e64821d08c78163f39f66069e57",
+    "plan_hash": "ae309e492ac27f3ae45c31c14c3a635b4fb8998df02d00b20e0629b9513c6b9c",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T03:50:14.492117+00:00"
+}

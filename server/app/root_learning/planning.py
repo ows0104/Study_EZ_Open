@@ -8,13 +8,16 @@ from .policy import instant, study_day
 from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
-def plan(doc, events, available, now, policy, focus=None):
+def plan(doc, events, available, now, policy, focus=None, new_goals=None):
     """`available` is closed under prerequisites (content.availability). `focus`, a subset of it, narrows the
     candidates only (오늘 학습 중요도 필터): an unassessed prerequisite of a focused task that lies outside the
     focus is still brought forward by order_plan, which checks against `available`. Without a focus every
-    available task is a candidate, as before (docs/changes/2026-11-12-plan-prereq-closure)."""
+    available task is a candidate, as before (docs/changes/2026-11-12-plan-prereq-closure).
+
+    오늘 학습 이어 풀기(docs/changes/2026-11-14-continuous-today): `new_goals` fixes the new-goal quota (capped by
+    the prepared unseen goals) for a stream that 「더 풀기」 lengthened. Without it the quota is the former one."""
     if per_task(doc):
-        return plan_tasks(doc, events, available, now, policy, focus)
+        return plan_tasks(doc, events, available, now, policy, focus, new_goals)
     pool = available if focus is None else focus
     rows, states = replay(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
@@ -34,6 +37,8 @@ def plan(doc, events, available, now, policy, focus=None):
     unseen = [t['target_id'] for t in target_list if not by_target[t['target_id']]['learned']
               and any(owners[d] == t['target_id'] for d in candidates)]
     quota = min(len(unseen), ceil(len(unseen) / days)) if days is not None and days > 0 else len(unseen)
+    if new_goals is not None:
+        quota = min(len(unseen), max(0, new_goals))
     def priority(tid):
         return (not by_target[tid]['important'], order[tid])
     unseen.sort(key=priority)
@@ -136,7 +141,7 @@ def spread_directions(tasks):
     return [task for _, _, task in sorted(ranked, key=lambda row: row[:2])]
 
 
-def plan_tasks(doc, events, available, now, policy, focus=None):
+def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
     """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
 
     Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
@@ -164,6 +169,8 @@ def plan_tasks(doc, events, available, now, policy, focus=None):
     prepared = {owner(t) for t in candidates}
     unseen = [t['target_id'] for t in target_list if not by_target[t['target_id']]['learned'] and t['target_id'] in prepared]
     quota = min(len(unseen), ceil(len(unseen) / days)) if days is not None and days > 0 else len(unseen)
+    if new_goals is not None:
+        quota = min(len(unseen), max(0, new_goals))
     def priority(tid):
         return (not by_target[tid]['important'], order[tid])
     unseen.sort(key=priority)
