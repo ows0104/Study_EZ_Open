@@ -95,16 +95,14 @@ def overview_data(db, row, user, when):
                 'message': '초기 추천·복습 정책 선택 대기', 'summary': None, 'plan': None, 'sessionId': None}
     events = content.events_for(db, row.subject, row.run_id, user.id)
     available, problems = content.availability(db, row, user.id)
-    sessions = db.scalars(select(RootSession).where(RootSession.user_id == user.id,
-        RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
-        RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
+    stream = today_stream(db, row, user, when, configured)
     # 오늘 학습 중요도 필터(2026-11-12): only today's plan is filtered; summary and progress keep every task.
     document = {**row.document, 'exam_date': current_exam_date(db, row)}
     chosen = content.focus_for(db, row.subject, user.id)
     tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
     narrowed = len(chosen) < len(policy.TIERS)
-    pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)
-                    and s.state.get('focus', list(policy.TIERS)) == chosen), None)
+    # 오늘 학습 이어 풀기(2026-11-14): 칩 조합과 상관없이 오늘 흐름 하나를 이어 푼다. 끝났으면 「더 풀기」(start)가 뒤에 붙인다.
+    pending = stream if stream is not None and stream.state['index'] < len(stream.tasks) else None
     focused = {t for t in available if tiers[t] in chosen} if narrowed else None
     planned = planning.plan(document, events, available, when, configured, focus=focused)
     # Optional 계산 제외(2026-11-13): 집계만 거른다. available·계획은 그대로다(선행 문항 500 재발 방지).
@@ -114,7 +112,70 @@ def overview_data(db, row, user, when):
             'plan': planned,
             'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
             'questionProgress': state.question_progress(document, events, available, when, configured, planned, skip),
-            'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
+            'sessionId': pending.id if pending else None, 'todayDone': stream.state['index'] if stream is not None else 0,
+            'preparationProblems': len(problems)}
+
+
+def today_stream(db, row, user, when, configured):
+    """오늘 학습 흐름(docs/changes/2026-11-14-continuous-today R1): 같은 사용자·강의·판·학습일·정책의 가장 최근 회차.
+    칩(focus)을 바꿔도 이 회차의 뒷부분만 다시 고르고, 다 풀면 뒤에 이어 붙인다. 그 전의 오늘 회차들은 기록으로 남는다."""
+    sessions = db.scalars(select(RootSession).where(RootSession.user_id == user.id,
+        RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
+        RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
+    return next((s for s in sessions if s.policy == configured), None)
+
+
+def replace_tasks(db, stream, tasks, session_state=None):
+    """흐름의 과제 목록(과 상태)을 바꾸고 version을 올린다. 평가 저장과 같은 낙관적 잠금이다. 커밋은 부르는 쪽이 한다."""
+    values = {'tasks': tasks, 'version': stream.version + 1}
+    if session_state is not None:
+        values['state'] = session_state
+    changed = db.execute(update(RootSession).where(RootSession.id == stream.id, RootSession.version == stream.version)
+                         .values(**values))
+    if changed.rowcount != 1:
+        db.rollback()
+        raise HTTPException(409, '다른 탭에서 오늘 학습이 바뀌었습니다. 다시 불러오세요.')
+    return stream.version + 1
+
+
+TOUCHED = ('reveal', 'rate', 'skip', 'undo')
+
+
+def refocus_stream(db, doc, user, when):
+    """칩을 바꾸면 오늘 흐름의 안 푼 뒷부분만 새 칩으로 다시 고른다(R2).
+
+    뒷부분은 「오늘 처음부터 이 칩이었다면」의 계획이다: 오늘 푼·연·넘긴 기록을 빼고(학습일 시작 상태) 새 칩으로 계획하고,
+    오늘 건드린 과제를 뺀다. 그래서 칩을 껐다 켜면 안 바꾼 것과 같은 목록이 되고, 새 목표 몫도 늘지 않는다.
+    앞부분·번호·되돌리기 위치, 답을 연 지금 과제는 그대로다. 「더 풀기」로 늘린 새 목표 몫(extraGoals)은 더한다."""
+    configured = policy.configured_policy()
+    if configured is None:
+        return
+    stream = today_stream(db, doc, user, when, configured)
+    if stream is None:
+        return
+    # 다 푼 흐름도 같다: 칩을 줄여 끝났던 흐름은 다시 켜면 남은 것이 돌아오고, 남은 것이 없으면 그대로 끝난 상태다.
+    index = stream.state['index']
+    keep = list(stream.tasks[:index])
+    if index < len(stream.tasks) and stream.tasks[index]['task_id'] in stream.state['reveals']:
+        keep.append(stream.tasks[index])
+    today = policy.study_day(when, configured)
+    events = content.events_for(db, doc.subject, doc.run_id, user.id)
+    touched_today = [e for e in events if e['kind'] in TOUCHED and policy.study_day(policy.instant(e['at']), configured) == today]
+    touched_ids = {e['id'] for e in touched_today}
+    morning = [e for e in events if e['id'] not in touched_ids]
+    seen = {t['task_id'] for t in keep} | {e['payload'].get('task_id') for e in touched_today if e['revision'] == doc.revision}
+    document = {**doc.document, 'exam_date': current_exam_date(db, doc)}
+    available, _ = content.availability(db, doc, user.id)
+    chosen = content.focus_for(db, doc.subject, user.id)
+    tiers = content.task_tiers(doc.document, state.personal_tiers(doc.document, events))
+    focused = {t for t in available if tiers[t] in chosen} if len(chosen) < len(policy.TIERS) else None
+    planned = planning.plan(document, morning, available, when, configured, focus=focused)
+    if stream.state.get('extraGoals'):
+        planned = planning.plan(document, morning, available, when, configured, focus=focused,
+                                new_goals=planned['newGoalQuota'] + stream.state['extraGoals'])
+    tasks = keep + [t for t in planned['tasks'] if t['task_id'] not in seen]
+    if tasks != stream.tasks:
+        replace_tasks(db, stream, tasks)
 
 
 @router.get('/main-quiz/lectures/{subject}/{run_id}/entry')
@@ -297,8 +358,19 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
     if not info['policyReady']:
         raise HTTPException(409, info['message'])
     existing = db.get(RootSession, info['sessionId']) if info['sessionId'] else None
+    stream = None if existing else today_stream(db, row, user, when, info['policy'])
+    version = None
     if existing:
         session = existing
+    elif stream is not None:
+        # 더 풀기(R3): 다 푼 오늘 흐름 뒤에 지금 칩의 새 계획을 붙인다. 이미 흐름에 있는 과제는 다시 넣지 않는다.
+        seen = {t['task_id'] for t in stream.tasks}
+        extra = [t for t in info['plan']['tasks'] if t['task_id'] not in seen]
+        if not extra:
+            raise HTTPException(409, '오늘 더 풀 과제가 없습니다.')
+        session = stream
+        grown = {**stream.state, 'extraGoals': stream.state.get('extraGoals', 0) + info['plan']['newGoalQuota']}
+        version = replace_tasks(db, stream, stream.tasks + extra, grown)
     else:
         tasks = info['plan']['tasks']
         if not tasks:
@@ -320,7 +392,7 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
             db.add(session)
         elif session.state['index'] >= len(session.tasks):
             raise HTTPException(409, '같은 오늘 목록은 이미 끝났습니다. 추가 과제가 생기면 다시 계획합니다.')
-    result = {'sessionId': session.id, 'version': session.version}
+    result = {'sessionId': session.id, 'version': session.version if version is None else version}
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id=session.id,
         subject=subject, run_id=run_id, revision=row.revision, kind='start', payload={'_request': request}, result=result, created_at=when))
     try:
@@ -570,6 +642,7 @@ def save_optional(payload: RootOptional, user: CurrentUser = Depends(require_app
 # ── 오늘 학습 중요도 필터 (2026-11-12) ─────────────────────────────────────────
 # 과목마다 마지막 선택을 append-only root_event(kind='focus')로 남긴다(표 추가 없음).
 # 오늘 계획만 거른다. 학습 목표·진척·기록·복습 일정은 그대로다(docs/changes/2026-11-12-tier-filter).
+# 2026-11-14부터 칩을 바꾸면 오늘 흐름의 안 푼 뒷부분만 다시 고른다(docs/changes/2026-11-14-continuous-today).
 
 class RootFocus(Start):
     tiers: list[Literal['Essential', 'Core', 'Important', 'Optional']] = Field(min_length=1, max_length=4)
@@ -589,9 +662,12 @@ def save_focus(subject: str, run_id: str, payload: RootFocus,
         return overview_data(db, doc, user, now())
     tiers = [t for t in policy.TIERS if t in payload.tiers]
     seq = 1 + max((e.payload.get('seq', 0) for e in content.focus_events(db, subject, user.id)), default=0)
+    when = now()
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
                      revision=doc.revision, kind='focus', payload={'_request': request, 'tiers': tiers, 'seq': seq},
-                     result={'tiers': tiers}, created_at=now()))
+                     result={'tiers': tiers}, created_at=when))
+    db.flush()
+    refocus_stream(db, doc, user, when)
     try:
         db.commit()
     except IntegrityError:

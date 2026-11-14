@@ -26,6 +26,8 @@ export type RootOverview = {revision:string; title:string; policyReady:boolean; 
   questionProgress?:RootQuestionProgress;
   /** 오늘 학습 중요도 필터(2026-11-12). plan은 tiers로 거른 결과, counts는 준비된 과제 수(거르기 전). */
   focus?:RootFocus;
+  /** 오늘 학습 흐름에서 지나간 자리 수(2026-11-14 이어 풀기). sessionId가 없고 0보다 크면 오늘 목록을 다 푼 것 → 「더 풀기」. */
+  todayDone?:number;
   scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;

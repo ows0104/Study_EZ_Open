@@ -11,6 +11,11 @@ assert p['newGoalQuota']==1 and [x['task_id'] for x in p['tasks']]==['task1','ta
 assert p['habitualTasks'] is None and p['unpreparedGoals']==1
 assert p==plan(doc,[],available,NOW,POLICY)
 assert plan(doc,[],set(),NOW,POLICY)['tasks']==[]
+# 더 풀기로 늘린 흐름의 새 목표 몫(2026-11-14 continuous-today): 주면 그 수, 준비된 미학습 목표 수를 넘지 않는다.
+assert plan(doc,[],available,NOW,POLICY,new_goals=None)==p
+assert plan(doc,[],available,NOW,POLICY,new_goals=0)['tasks']==[]
+assert plan(doc,[],available,NOW,POLICY,new_goals=2)['newGoalQuota']==2
+assert plan(doc,[],available,NOW,POLICY,new_goals=9)['newGoalQuota']==2
 boundary=datetime(2026,11,2,19,tzinfo=UTC)
 assert study_day(boundary-timedelta(seconds=1),POLICY).isoformat()=='2026-11-02'
 assert study_day(boundary,POLICY).isoformat()=='2026-11-03'

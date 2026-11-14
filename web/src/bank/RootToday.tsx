@@ -92,7 +92,7 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
           </div>
         </div>
         <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart} aria-busy={starting}>
-          <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}
+          <Icon.play/>{info.sessionId?'오늘 학습 재개':info.todayDone?'더 풀기':'오늘 학습 시작'}
           {count!==undefined&&<span className="mq-card-count" aria-label={`카드 ${count}개`} aria-live="polite"
             data-busy={focusing&&!info.sessionId||undefined}>{count.toLocaleString('ko-KR')}</span>}</button>
         {starting&&<span className="sr-only" role="status">첫 문항을 여는 중…</span>}
