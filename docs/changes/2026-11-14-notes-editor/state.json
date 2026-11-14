@@ -1,0 +1,202 @@
+{
+  "id": "2026-11-14-notes-editor",
+  "title": "자유 노트 편집기 보완(들여쓰기·표·붙여넣기·토글)",
+  "area": "site",
+  "created_at": "2026-11-14T07:36:25.029583+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T07:38:56.370347+00:00",
+      "evidence": "2026-11-14 Claude Code 채팅 사용자 발언: 「Yes, start」(직전 제안: 고칠 것 4개 + 토글·Ctrl+D 복제·Ctrl+Shift+↑↓ 이동·실행 취소, 서버 indent·table 허용, master 병합은 별도 승인)",
+      "scope": "plan.md 파일 범위의 로컬 구현·검사·PR 생성. master 병합(운영 배포) 제외",
+      "evidence_version": 2,
+      "source_hash": "b6a247bf7e02474b754bc57e9ad51d582aaa691ca71364c415d1d425e4914eb3",
+      "plan_hash": "7818788d4591a1a57cd9865cbdf0d2b29ae897f5d11883e28d8beef68706b631",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "7a46c60c325e82616653b92254cfe2b41bba0c50141071fe65feca75cc3ae62b"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-14T07:51:01.969265+00:00",
+      "command": [
+        "C:/Program Files/nodejs/npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "15baa69e6b90902e59ec93d3516f26745ad72a356a7f11af3f65050b2c9dd0cb",
+      "plan_hash": "7818788d4591a1a57cd9865cbdf0d2b29ae897f5d11883e28d8beef68706b631",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-notes-editor/1794642650006237800-web.log",
+      "web_artifact": "90ff4dbeaba40538653073b0552158102c42cfad3c3ade5de22055dc04f2ab15",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-14T07:51:14.689158+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_quiz-back/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,runpy,sys; os.chdir('server'); sys.argv=['tests','test_notes']; runpy.run_module('tests', run_name='__main__')"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "15baa69e6b90902e59ec93d3516f26745ad72a356a7f11af3f65050b2c9dd0cb",
+      "plan_hash": "7818788d4591a1a57cd9865cbdf0d2b29ae897f5d11883e28d8beef68706b631",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-notes-editor/1794642671003115800-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-14T07:51:50.184144+00:00",
+      "command": [
+        "C:/Program Files/nodejs/npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4ef0c95e194928754b17bedf1e70128137b976d7be280d92402191dcd9a7db32",
+      "plan_hash": "7818788d4591a1a57cd9865cbdf0d2b29ae897f5d11883e28d8beef68706b631",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-notes-editor/1794642698070010900-web.log",
+      "web_artifact": "ba19731bbd942aa463094d461f4f45e109977200b05a5c12a74e290901a72bb1",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-14T07:52:27.107676+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_quiz-back/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,runpy,sys; os.chdir('server'); sys.argv=['tests','test_notes']; runpy.run_module('tests', run_name='__main__')"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4ef0c95e194928754b17bedf1e70128137b976d7be280d92402191dcd9a7db32",
+      "plan_hash": "7818788d4591a1a57cd9865cbdf0d2b29ae897f5d11883e28d8beef68706b631",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-notes-editor/1794642743862538200-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-14T07:52:16.517473+00:00",
+    "summary": "경계: 서버는 노트 JSON 필드 검증만(새 표 칸 HTML도 길이 제한, 웹이 그리기 전 sanitizeNoteHtml). 웹은 평평한 블록 배열+indent로 하위를 표현해 저장 형식 호환 유지. 발견·수정: +버튼·/삽입이 하위 블록 사이에 끼던 것→하위 뒤로, 표 칸 입력이 실행 취소 항목을 글자마다 쌓던 것→rows만 patch해 묶음, 표 막대가 위 줄을 가리던 것→오른쪽 정렬. 남은 위험: 한글 IME 조합 중 키 처리 실기기 미확인, 이전 웹 탭 저장 시 새 필드 손실.",
+    "evidence_version": 2,
+    "source_hash": "4ef0c95e194928754b17bedf1e70128137b976d7be280d92402191dcd9a7db32",
+    "plan_hash": "7818788d4591a1a57cd9865cbdf0d2b29ae897f5d11883e28d8beef68706b631",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T07:52:27.109092+00:00"
+}
