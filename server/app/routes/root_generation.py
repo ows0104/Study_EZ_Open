@@ -181,6 +181,8 @@ def build_report(result):
         if meta['pipelineVersion'] == 'root-generation/4':
             extra.update(mergedDuplicates=len(meta['mergedDuplicates']), unplacedQuestions=len(meta['unplacedQuestions']),
                          importanceNotes=len(meta['importanceNotes']))
+            if 'coverageFallback' in meta:   # review-relations/2 (docs/changes/2026-11-14-map-relation-guard)
+                extra['coverageFallback'] = len(meta['coverageFallback'])
         return {'repairRounds': 0, **extra, 'taskCount': len(result['document']['tasks']), 'targetCount': len(result['brief']['targets']),
                 'issues': result['validation']['errors'] + result['validation']['warnings'],
                 'questionNotes': [{'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('의학 검토', result['medical'])]

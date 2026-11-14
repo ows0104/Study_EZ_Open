@@ -156,13 +156,18 @@ def run(packet, out, model, invoke, resume=None):
     evidence_notes = v4.evidence_source(sources)
     # review-relations/1 (docs/changes/2026-11-11-place-by-review): a new run places each question by the map relations
     # its item review names; the goal coverage judgment only finds what is not asked yet.
-    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES}}
+    # review-relations/2 (docs/changes/2026-11-14-map-relation-guard): a new run also checks the map's content relations
+    # after normalize (A), places a question its review ties to nothing by its coverage evidence (B), sends what is
+    # still unplaced to the supplement once more after the review (C) and stops if any ok question is left (D).
+    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
     ledger = st.ledger
     evidence_on = ledger.get('reviewEvidence', {}).get('policy') == v4.REVIEW_EVIDENCE
-    placement = 'review' if ledger.get('placement') == {'policy': v4.REVIEW_PLACEMENT} else 'evidence'
+    placement = {v4.REVIEW_PLACEMENT: 'review', v4.REVIEW_PLACEMENT2: 'review-coverage'}.get(
+        (ledger.get('placement') or {}).get('policy'), 'evidence')
+    guarded = placement == 'review-coverage'
     # goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): a ledger made without it keeps its add and re-check inputs.
     goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
 
@@ -188,10 +193,19 @@ def run(packet, out, model, invoke, resume=None):
     brief = st.run('normalize', base, accept_brief)
     initial_brief = brief
     findings = v2.brief_findings(brief)
+    if guarded:
+        findings = [*findings, *v4.relation_findings(brief)]
     if findings:
         fixed = st.run(X + 'brief-fix', {'brief': brief, 'errors': findings, 'pages': []},
                        lambda raw: v3.check_brief_fix(raw, {'brief': brief}))
         brief = v2.blank_target_importance(fixed['brief'])
+    if guarded:
+        share = v4.relation_defect_share(brief)
+        left = v4.relation_findings(brief)
+        print(f"── 지도 관계 검사: 결함 방향 {len(left)}개 ({share:.0%})", flush=True)
+        v3.require(share <= v4.RELATION_DEFECT_LIMIT,
+                   f'지도 관계 검사: 지도 교정 뒤에도 방향 {share:.0%}({len(left)}개)에 내용 관계가 없거나 여러 방향이 같은 관계 묶음을 씁니다. '
+                   f'문항을 지도에 붙일 수 없어 범위 점검 전에 멈춥니다. 예: {"; ".join(left[:3])}')
 
     def judge(name, ctx, stages=None):
         return (stages or st).judged(name, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
@@ -210,47 +224,56 @@ def run(packet, out, model, invoke, resume=None):
     map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points (no basis) ------------------
-    off_goal = v4.off_goal(bank, rows.values(), placement)
-    supplement, out_of_scope = [], []
-    if off_goal:
-        ctx = v3.supplement_input(bank, off_goal, points_doc, page_counts)
+    supplement, out_of_scope, off_questions = [], [], []
+
+    def supplement_round(off_ids, tag=''):
+        """Off-map questions → new points and goals, duplicates of a point, or out of scope (2a; again after the
+        review as C with tag '-late'). Updates the brief, points, coverage rows and map checks in place."""
+        nonlocal brief, points_doc, bank, stimuli, basis
+        ctx = v3.supplement_input(bank, off_ids, points_doc, page_counts)
         state = {'points_doc': points_doc}
-        value = st.run(X + 'supplement', ctx, lambda raw: check_stage('supplement', raw, ctx, state, None), state)
-        points_doc, supplement = v4.attach_points(points_doc, value, off_goal, page_counts,
-                                                  [p['point_id'] for p in brief['points']])
-        new_points = [p for p in points_doc['points'] if p['point_id'] in {d['point_id'] for d in supplement if d['decision'] == 'point'}]
-        dup = [d for d in supplement if d['decision'] == 'duplicate_of']
-        out_of_scope = [d for d in supplement if d['decision'] == 'out_of_scope']
+        value = st.run(X + 'supplement' + tag, ctx, lambda raw: check_stage('supplement', raw, ctx, state, None), state)
+        points_doc, decided = v4.attach_points(points_doc, value, off_ids, page_counts,
+                                               [p['point_id'] for p in brief['points']])
+        supplement.extend(decided)
+        new_points = [p for p in points_doc['points'] if p['point_id'] in {d['point_id'] for d in decided if d['decision'] == 'point'}]
+        dup = [d for d in decided if d['decision'] == 'duplicate_of']
+        gone_now = [d for d in decided if d['decision'] == 'out_of_scope']
+        out_of_scope.extend(gone_now)
         if new_points:
             allowed = v3.supplement_ids(brief, len(new_points))
             ctx = v3.supplement_normalize_input(brief, new_points, allowed)
             state = {'brief': brief, 'blank': True}
-            addition = st.run(X + 'supplement-normalize', ctx, lambda raw: check_stage('supplement-normalize', raw, ctx, state, None), state)
+            addition = st.run(X + 'supplement-normalize' + tag, ctx, lambda raw: check_stage('supplement-normalize', raw, ctx, state, None), state)
             brief, new_tids = v3.extend_brief(brief, v3.supplement_addition(brief, addition, True), [p['point_id'] for p in new_points])
             new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
             origins = [p['origin_question_id'] for p in new_points]
-            value = judge(X + 'coverage-supplement', v3.coverage_input(brief, bank, new_dids, origins))
+            value = judge(X + 'coverage-supplement' + tag, v3.coverage_input(brief, bank, new_dids, origins))
             rows.update({r['direction_id']: r for r in value['rows']})
             ctx = v4.map_check_input(brief, new_tids)
-            map_checks.append(st.judged(X + 'map-check-1', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+            map_checks.append(st.judged(X + ('map-check-1' if not tag else 'map-check' + tag), ctx,
+                                        lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
         if dup:
             owner = {d['direction_id']: t for t in brief['targets'] for d in t['directions']}
             goal_ids = sorted({did for d in dup for did, t in owner.items()
                                if any(d['point_id'] in p['point_id'] and t['target_id'] in p['target_ids'] for p in brief['points'])})
             if goal_ids:
-                value = judge(X + 'coverage-duplicate', v3.coverage_input(brief, bank, goal_ids, [d['question_id'] for d in dup]))
+                value = judge(X + 'coverage-duplicate' + tag, v3.coverage_input(brief, bank, goal_ids, [d['question_id'] for d in dup]))
                 for r in value['rows']:
                     rows[r['direction_id']] = merge_row(rows.get(r['direction_id']), r, _goals(brief)[r['direction_id']])
-        gone = {d['question_id'] for d in out_of_scope}
-        off_questions = [q for q in bank['questions'] if q['question_id'] in gone]
+        gone = {d['question_id'] for d in gone_now}
+        off_questions.extend(q for q in bank['questions'] if q['question_id'] in gone)
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in gone]
         for q in bank['questions']:
             if set(q.get('prerequisites', [])) & gone:
                 q['prerequisites'] = [p for p in q['prerequisites'] if p not in gone]
         stimuli = [s for s in stimuli if s['question_id'] not in gone]
         basis = {q: b for q, b in basis.items() if q not in gone}
-    else:
-        off_questions = []
+        return gone
+
+    off_goal = v4.off_goal(bank, rows.values(), placement)
+    if off_goal:
+        supplement_round(off_goal)
     bank = _join_points(bank, brief, rows)
 
     def review_ctx(bank_, conflicts_, basis_, qids):
@@ -258,7 +281,7 @@ def run(packet, out, model, invoke, resume=None):
         ctx = v4.with_importance(v3.review_input(bank_, qids, conflicts_), basis_)
         if evidence_on:
             ctx['evidence_source'] = evidence_notes
-        if placement == 'review':
+        if placement in v4.REVIEW_RULES:
             ctx['map_relations'] = v4.map_relations(brief, map_checks)
         return ctx
 
@@ -445,6 +468,30 @@ def run(packet, out, model, invoke, resume=None):
     bank, conflicts, stimuli, basis, rows = S.bank, S.conflicts, S.stimuli, S.basis, S.rows
     reviews, fixes, attempts, restated = S.reviews, S.fixes, S.attempts, S.restated
 
+    # C (review-relations/2): ok questions neither their review nor their coverage evidence ties to a goal go to the
+    # supplement once more, now that the review has spoken; a new goal of theirs is judged and placed by B --------
+    def merged_map_check():
+        value = {k: [x for m in map_checks for x in m[k]] for k in ('relation_checks', 'target_checks', 'direction_checks', 'issues')}
+        seen = {}
+        for r in value['relation_checks']:
+            seen.setdefault(r['relation_id'], r)
+        value['relation_checks'] = list(seen.values())
+        return value
+
+    if guarded:
+        left = v4.provisional_unplaced(brief, bank, [rows[did] for did in _goals(brief)], merged_map_check(),
+                                       [reviews[q['question_id']] for q in bank['questions']],
+                                       {q['question_id']: basis[q['question_id']] for q in bank['questions']}, profile,
+                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
+                                       placement=placement)
+        # a question left only because its prerequisite is left follows that prerequisite
+        late = [u['question_id'] for u in left if not u['reason'].startswith('dependency')]
+        if late:
+            print(f"── 늦은 보충: 검토 뒤에도 지도에 못 붙은 문항 {len(late)}개 → 보충 포인트", flush=True)
+            gone = supplement_round(late, '-late')
+            reviews = {q: r for q, r in reviews.items() if q not in gone}
+            bank = _join_points(bank, brief, rows)
+
     # context per conflict record (+ one repair), as /3 -------------------------
     def context_judgment(name, conflict_ids=None, question_ids=None):
         nonlocal bank, conflicts
@@ -485,11 +532,7 @@ def run(packet, out, model, invoke, resume=None):
     # assembly (before the medical review) ----------------------------------------
     coverage_rows = [rows[d['direction_id']] for t in brief['targets'] for d in t['directions']]
     review_rows = [reviews[q['question_id']] for q in bank['questions']]
-    map_check = {k: [x for m in map_checks for x in m[k]] for k in ('relation_checks', 'target_checks', 'direction_checks', 'issues')}
-    relation_seen = {}
-    for r in map_check['relation_checks']:
-        relation_seen.setdefault(r['relation_id'], r)
-    map_check['relation_checks'] = list(relation_seen.values())
+    map_check = merged_map_check()
     summary = ('root-generation/4: coverage (union of answered components), map check without importance, item review and '
                'per-conflict context judgments gathered by studyez_contracts.roots.generation_v4.assessment_raw; no judgment is filled in.')
     raw = v4.assessment_raw(brief, bank, coverage_rows, map_check, review_rows, v3.context_summary(context), summary, placement)
@@ -504,6 +547,13 @@ def run(packet, out, model, invoke, resume=None):
           f"중복으로 합침 {len(placed['mergedDuplicates'])}개 · 목표 없음 {len(placed['unplacedQuestions'])}개", flush=True)
     g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
     v3.require(doc['tasks'], '학습 가능한 과제가 0개입니다. 의학 검토 전에 멈춥니다. readiness.json을 보세요.')
+    if guarded:
+        # D: every ok question that is not a merged duplicate is a task, or the run stops before the medical review.
+        left = placed['unplacedQuestions']
+        print(f"── 검토 밖 배치(범위 점검 판정) {len(placed['coverageFallback'])}개 · 남은 문항 {len(left)}개", flush=True)
+        v3.require(not left, f'지도에 못 붙은 문항 {len(left)}개가 남아 의학 검토 전에 멈춥니다(검수 ok 문항은 모두 과제여야 함). '
+                             f'readiness.json의 unplacedQuestions를 보세요: '
+                             + ', '.join(f"{u['question_id']}({u['reason'].split(':')[0]})" for u in left[:20]))
 
     # medical (once, medical-final/1) ----------------------------------------------
     clinical_input, _ = v3.medical_parts(bank, v3.context_sent(conflicts, context))
@@ -542,7 +592,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'contextRepairs': ledger['contextRepairs']} if ledger.get('contextRepairs') else {}),
                   **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
                   **({'reviewEvidence': ledger['reviewEvidence'], 'citationAlignments': alignments} if evidence_on else {}),
-                  **({'placement': ledger['placement']} if placement == 'review' else {}),
+                  **({'placement': ledger['placement']} if placement in v4.REVIEW_RULES else {}),
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
     v4.validate_result(result, packet)

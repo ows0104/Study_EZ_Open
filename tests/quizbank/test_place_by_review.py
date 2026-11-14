@@ -10,7 +10,7 @@ def test_a_new_run_reviews_with_the_supported_map_relations_and_places_by_them(t
     p, model, result = run(tmp_path)
     reviews = [ctx for stage, ctx in model.inputs.items() if stage.startswith('v4-review')]
     assert reviews and all([r['relation_id'] for r in ctx['map_relations']] == ['R1', 'R2'] for ctx in reviews)
-    assert result['manifest']['placement'] == {'policy': v4.REVIEW_PLACEMENT}
+    assert result['manifest']['placement'] == {'policy': v4.REVIEW_PLACEMENT2}
     assert all('relations' in r for r in result['manifest']['itemReviews'])
     assert consume(result, p) == result['document']
     assert tasks(result) == [('Q003', 'D2'), ('Q1', 'D1'), ('Q2', 'D1')]
@@ -24,11 +24,29 @@ def test_the_review_not_the_coverage_judgment_decides_the_goal(tmp_path):
     assert dict(tasks(result))['Q2'] == 'D2'
 
 
-def test_a_question_the_review_finds_no_relation_for_stays_off_the_map(tmp_path):
-    p, model, result = run(tmp_path, Model(relations={'Q1': [('R1', 'whole')], 'Q2': [], 'Q003': [('R2', 'whole')]}))
+def run_v1(tmp_path, model):
+    """A ledger made under review-relations/1 (before docs/changes/2026-11-14-map-relation-guard) keeps that rule."""
+    from quizbank import connection_generate_v4 as gen
+    from quizbank.connection_generate_v3 import Stages
+    current = gen.Stages
+
+    class V1(Stages):
+        def __init__(self, *a, fresh=None, **kw):
+            super().__init__(*a, fresh={**(fresh or {}), 'placement': {'policy': v4.REVIEW_PLACEMENT}}, **kw)
+    gen.Stages = V1
+    try:
+        return run(tmp_path, model)
+    finally:
+        gen.Stages = current
+
+
+def test_a_question_the_review_finds_no_relation_for_stays_off_the_map_under_v1(tmp_path):
+    p, model, result = run_v1(tmp_path, Model(relations={'Q1': [('R1', 'whole')], 'Q2': [], 'Q003': [('R2', 'whole')]}))
+    assert result['manifest']['placement'] == {'policy': v4.REVIEW_PLACEMENT}
     assert consume(result, p) == result['document']
     assert [u['question_id'] for u in result['manifest']['unplacedQuestions']] == ['Q2']
     assert result['manifest']['unplacedQuestions'][0]['reason'].startswith('no-relation')
+    assert 'coverageFallback' not in result['manifest']
 
 
 def test_an_unknown_relation_stops_the_review_stage(tmp_path):
