@@ -77,28 +77,3 @@ export type JokboSummary = {
 };
 
 export type JokboResponse = JokboSummary & { uploadedAt?: string; doc: JokboDoc };
-
-/** 오답노트 표시(2026-11-14). high 틀림 · mid 좁혀서 · low 헷갈림. */
-export type JokboBand = "high" | "mid" | "low";
-
-export type JokboMark = {
-  itemId: string;
-  eventId: string;
-  band: JokboBand | null;
-  wrongCount: number;
-  rightCount: number;
-  lastResult: "correct" | "wrong" | "ungraded" | null;
-  answeredAt: string | null;
-  markedAt: string | null;
-};
-
-/** 오답노트 한 줄. 강의를 가리지 않고 모은다(`GET /api/jokbo/wrong-notes`). */
-export type JokboNoteEntry = {
-  mark: JokboMark;
-  lecture: { eventId: string; number: string; title: string; date: string };
-  kind: JokboSectionKind;
-  professors: string[];
-  item: JokboItem;
-};
-
-export type JokboNotes = { items: JokboNoteEntry[]; missing: number };
