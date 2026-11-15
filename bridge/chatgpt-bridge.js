@@ -106,30 +106,64 @@ function base64ToBytes(value) {
   return bytes;
 }
 
-/** 자료는 배경이 받아 조각으로 넘겨준다. 콘텐츠 스크립트는 R2에 직접 못 간다. */
-function fetchFile(file, status, signal) {
+/** 이 시간 동안 아무 조각도 오지 않으면 멈춘다. 큰 파일이 진행 중이면 끊지 않는다. */
+const FILE_STALL_MS = 120000;
+/** 연결이 끊기면 그 파일만 새 연결로 한 번 더 받는다. 첨부 전 단계라 중복 위험이 없다. */
+const FILE_ATTEMPTS = 2;
+
+class FileStreamDisconnected extends Error {
+  constructor(received) {
+    super("자료 다운로드 연결이 끊겼습니다.");
+    this.received = received;
+  }
+}
+
+function megabytes(bytes) {
+  return `${(bytes / 1048576).toFixed(1)}MB`;
+}
+
+/**
+ * 자료는 배경이 받아 조각으로 넘겨준다. 콘텐츠 스크립트는 R2에 직접 못 간다.
+ * 조각마다 FILE_ACK로 답한다. 배경 서비스 워커는 받는 메시지가 있어야 확실히 살아 있다.
+ */
+function streamFile(file, status, signal, attempt) {
   return new Promise((resolve, reject) => {
     const chunks = [];
+    let received = 0;
     const port = chrome.runtime.connect({ name: "studyez-file-stream" });
     let settled = false;
-    const timer = setTimeout(() => finish(new Error("자료 다운로드 시간이 초과되었습니다. Study EZ에서 새 대화로 시작해 주세요.")), 120000);
+    let timer = null;
+    const label = attempt > 1 ? `${file.filename} 다시 받는 중…` : `${file.filename} 받는 중…`;
+    const restartTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => finish(new Error(
+        `자료 다운로드가 ${FILE_STALL_MS / 1000}초 동안 진행되지 않았습니다(${file.filename}, ${megabytes(received)} 받음). Study EZ에서 새 대화로 시작해 주세요.`,
+      )), FILE_STALL_MS);
+    };
     const abort = () => finish(new Error("자동 진행을 중지했습니다."));
     function finish(error, result) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       signal.removeEventListener("abort", abort);
-      port.disconnect();
+      try { port.disconnect(); } catch { /* already gone */ }
       if (error) reject(error);
       else resolve(result);
     }
     signal.addEventListener("abort", abort, { once: true });
-    port.onDisconnect.addListener(() => finish(new Error("자료 다운로드 연결이 끊겼습니다. Study EZ에서 새 대화로 시작해 주세요.")));
+    port.onDisconnect.addListener(() => finish(new FileStreamDisconnected(received)));
     port.onMessage.addListener((message) => {
       if (settled) return;
       if (message.fileId !== file.id) return;
-      if (message.type === "FILE_START") status.textContent = `${file.filename} 받는 중…`;
-      if (message.type === "FILE_CHUNK") chunks.push(base64ToBytes(message.chunk));
+      restartTimer();
+      if (message.type === "FILE_START") status.textContent = label;
+      if (message.type === "FILE_CHUNK") {
+        const bytes = base64ToBytes(message.chunk);
+        chunks.push(bytes);
+        received += bytes.length;
+        status.textContent = `${label} ${megabytes(received)}`;
+        try { port.postMessage({ type: "FILE_ACK", fileId: file.id }); } catch { /* onDisconnect reports it */ }
+      }
       if (message.type === "FILE_ERROR") {
         finish(new Error(message.error));
       }
@@ -139,9 +173,25 @@ function fetchFile(file, status, signal) {
         finish(null, new File(chunks, file.filename, { type }));
       }
     });
+    restartTimer();
     if (signal.aborted) abort();
     else port.postMessage({ type: "DOWNLOAD_FILE", fileId: file.id, filename: file.filename, downloadUrl: file.downloadUrl });
   });
+}
+
+async function fetchFile(file, status, signal) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await streamFile(file, status, signal, attempt);
+    } catch (error) {
+      if (!(error instanceof FileStreamDisconnected)) throw error;
+      if (attempt >= FILE_ATTEMPTS || signal.aborted) {
+        throw new Error(
+          `자료 다운로드 연결이 끊겼습니다(${file.filename}, ${megabytes(error.received)} 받은 뒤, ${attempt}번 시도). Study EZ에서 새 대화로 시작해 주세요.`,
+        );
+      }
+    }
+  }
 }
 
 function visible(element) {
