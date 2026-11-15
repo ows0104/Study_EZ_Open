@@ -19,3 +19,8 @@ Claude(`claude-opus-5-5`)로 출제하는 중 `v4-add-0`이 2400초 시한을 �
 ## 배포·적용
 master 병합 → 러너 `.runtime` 재설치 → job 620(generation 2bcdcf1f…)을 같은 requestId로 resume.
 기록: `runs/_development/2026-11-15-261109_02-v2-claude/`.
+
+## 후속: 편 전체 시한 (같은 날)
+resume 뒤 단계는 v4-add-0·add-1·coverage-2·fix-0-0까지 통과했지만, 러너의 편 시한 `BUILD_TIMEOUT`(180분)이 10:21에
+v4-review-0-1 도중 편을 끊었다. `runner/agent.py`: `--model claude-…`로 띄운 편만 8시간(`CLAUDE_BUILD_TIMEOUT`).
+다른 편은 180분 그대로. 검사 `test_claude_편만_전체_시한이_길다`.

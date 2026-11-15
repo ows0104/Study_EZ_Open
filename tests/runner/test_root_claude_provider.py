@@ -112,3 +112,11 @@ def test_claude_단계만_시한이_길다(tmp_path):
     assert native.timeout_for(CLAUDE) == n.CLAUDE_TIMEOUT == 7200
     assert native.timeout_for('gpt-6.1-sol') == 2400
     assert n.NativeJson(tmp_path, timeout=9000).timeout_for(CLAUDE) == 9000
+
+
+def test_claude_편만_전체_시한이_길다():
+    bank = ['python', '-m', 'runner', 'bank', '감염과 면역', '--run-id', '261109_02']
+    assert agent.build_timeout(bank + ['--model', CLAUDE], agent.BUILD_TIMEOUT) == agent.CLAUDE_BUILD_TIMEOUT == 8 * 3600
+    assert agent.build_timeout(bank + ['--model', 'gpt-6.1-sol'], agent.BUILD_TIMEOUT) == agent.BUILD_TIMEOUT
+    assert agent.build_timeout(bank, agent.BUILD_TIMEOUT) == agent.BUILD_TIMEOUT
+    assert agent.build_timeout(bank + ['--model'], 60) == 60
