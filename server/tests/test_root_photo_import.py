@@ -6,6 +6,7 @@ import struct
 from tests.root_support import setup, publish, start, view, document, ADMIN
 from studyez_contracts.learning_links.validate import question_hash
 from studyez_contracts.roots import document_hash
+from studyez_contracts.roots.media import PHOTO_MAX_COUNT
 
 client, user, SessionLocal = setup()
 
@@ -43,7 +44,7 @@ def photo_document(method, count):
 user('admin', True)
 # Not a photo-import revision: JPEG and more than 64 images stay rejected.
 assert client.post(ADMIN, json=photo_document('manual', 1)).status_code == 422
-assert client.post(ADMIN, json=photo_document('photo-import/1', 201)).status_code == 422
+assert client.post(ADMIN, json=photo_document('photo-import/1', PHOTO_MAX_COUNT + 1)).status_code == 422
 doc = photo_document('photo-import/1', 70)
 publish(client, user, doc)
 sid = start(client)
