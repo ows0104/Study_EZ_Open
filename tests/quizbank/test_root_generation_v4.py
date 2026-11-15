@@ -236,3 +236,75 @@ def test_a_question_reviewed_without_a_relation_gets_a_supplement_goal(tmp_path)
     assert 'v4-supplement' in model.calls and [d['decision'] for d in result['manifest']['supplement']] == ['point']
     placed = {t['question_id']: t['direction_id'] for t in result['document']['tasks']}
     assert placed['Q2'].startswith('DQ') and result['manifest']['unplacedQuestions'] == []
+
+
+def exclude(tmp_path, *qids):
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / 'operator-exclusions.json').write_text(json.dumps({
+        'version': 1, 'questions': list(qids), 'reason': 'Synthetic: the provider refused to write the fix',
+        'approval': 'Synthetic approval', 'at': '2026-11-15T16:00:00+09:00'}, ensure_ascii=False), encoding='utf-8')
+
+
+def test_an_excluded_question_gets_no_fix_and_leaves_the_bank(tmp_path):
+    """operator-exclusions/1 (docs/changes/2026-11-15-operator-exclusions)."""
+    exclude(tmp_path, 'Q1')
+    p, model, result = run(tmp_path)
+    assert consume(result, p) == result['document']
+    meta = result['manifest']
+    assert not any(c.startswith('v4-fix') for c in model.calls) and meta['fixes'] == []
+    assert 'Q1' not in {q['question_id'] for q in result['document']['bank_snapshot']['questions']}
+    assert 'Q1' not in {t['question_id'] for t in result['document']['tasks']}
+    off = {r['question_id']: r['reason'] for r in meta['offGoalQuestions']}
+    assert off['Q1'].startswith('operator-exclusion: Synthetic')
+    assert meta['operatorExclusions']['questions'] == ['Q1']
+    assert all(e['question_id'] != 'Q1' for r in meta['coverage'] for e in r['evidence'])
+
+
+def test_an_invalid_exclusion_file_stops_the_run(tmp_path):
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / 'operator-exclusions.json').write_text('{"version": 1, "questions": []}', encoding='utf-8')
+    with pytest.raises(ValueError, match='operator-exclusions.json'):
+        run(tmp_path)
+
+
+class Failing(Model):
+    def __init__(self, stage, **kw):
+        super().__init__(**kw)
+        self.fail = stage
+
+    def __call__(self, stage, ctx, material, model):
+        if stage == self.fail:
+            self.calls.append(stage)
+            from studyez_llm import codex
+            raise codex.SessionError(stage + ': synthetic refusal')
+        return super().__call__(stage, ctx, material, model)
+
+
+def test_a_resumed_run_drops_the_question_whose_fix_failed(tmp_path):
+    """The 261109_02 case: the fix stage of a listed question failed; the resumed run skips it and removes the question."""
+    from studyez_llm import codex
+    tmp_path.mkdir(exist_ok=True)
+    p = packet(tmp_path)
+    with pytest.raises(codex.SessionError):
+        g.run(p, tmp_path / 'out', invoke=Failing('v4-fix-0-0'))
+    exclude(tmp_path, 'Q1')
+    again = Model()
+    result = g.run(p, tmp_path / 'out', invoke=again, resume='synthetic: drop the question the provider would not fix')
+    assert consume(result, p) == result['document']
+    assert not any(c.startswith('v4-fix') for c in again.calls)
+    assert 'Q1' in {r['question_id'] for r in result['manifest']['offGoalQuestions']}
+
+
+def test_a_completed_fix_round_replays_with_its_recorded_targets(tmp_path):
+    from studyez_llm import codex
+    tmp_path.mkdir(exist_ok=True)
+    p = packet(tmp_path)
+    with pytest.raises(codex.SessionError):
+        g.run(p, tmp_path / 'out', invoke=Failing('medical-0'))
+    exclude(tmp_path, 'Q1')
+    again = Model()
+    result = g.run(p, tmp_path / 'out', invoke=again, resume='synthetic: exclude after the fix ran')
+    assert consume(result, p) == result['document']
+    assert not any(c.startswith('v4-fix') or c.startswith('v4-review') for c in again.calls)
+    assert [x['question_id'] for x in result['manifest']['fixes']] == ['Q1']
+    assert 'Q1' not in {q['question_id'] for q in result['document']['bank_snapshot']['questions']}

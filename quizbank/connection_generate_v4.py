@@ -145,6 +145,47 @@ def normalize_input(packet, sources):
 
 
 # ---------------------------------------------------------------- run
+OPERATOR_EXCLUSIONS = 'operator-exclusions.json'
+
+
+def operator_exclusions(out):
+    """operator-exclusions/1 (docs/changes/2026-11-15-operator-exclusions): questions a person took out of one run.
+
+    The file sits beside the generation folder (`<generation id>/operator-exclusions.json`), like operator-resumes.json.
+    A listed question gets no further fix round and leaves the bank after the item review; the manifest lists it with
+    the reason. Fix rounds already completed in the ledger keep their recorded targets, so a resumed run replays them."""
+    path = Path(out).parent / OPERATOR_EXCLUSIONS
+    if not path.exists():
+        return None
+    doc = json.loads(path.read_text(encoding='utf-8'))
+    v3.require(doc.get('version') == 1 and isinstance(doc.get('questions'), list) and doc['questions']
+               and all(isinstance(q, str) and q for q in doc['questions'])
+               and all(isinstance(doc.get(k), str) and doc[k].strip() for k in ('reason', 'approval', 'at')),
+               f'{OPERATOR_EXCLUSIONS}: version 1 with questions, reason, approval and at is required')
+    return doc
+
+
+def remove_questions(bank, stimuli, basis, reviews, rows, goals, gone):
+    """Take questions out of the bank and of everything that names them; a goal's status follows its evidence."""
+    bank = {**bank, 'questions': [dict(q) for q in bank['questions'] if q['question_id'] not in gone]}
+    for q in bank['questions']:
+        if set(q.get('prerequisites', [])) & gone:
+            q['prerequisites'] = [p for p in q['prerequisites'] if p not in gone]
+    stimuli = [s for s in stimuli if s['question_id'] not in gone]
+    basis = {q: b for q, b in basis.items() if q not in gone}
+    reviews = {q: r for q, r in reviews.items() if q not in gone}
+    for did, r in list(rows.items()):
+        if not any(e['question_id'] in gone for e in r['evidence']) and not any(set(g['question_ids']) & gone for g in r.get('duplicates', [])):
+            continue
+        row = {**r, 'evidence': [e for e in r['evidence'] if e['question_id'] not in gone]}
+        groups = [{**g, 'question_ids': [q for q in g['question_ids'] if q not in gone]} for g in r.get('duplicates', [])]
+        row['duplicates'] = [g for g in groups if len(g['question_ids']) >= 2]
+        if row['status'] != 'unknown':
+            row['status'] = 'covered' if v4.full(row, goals[did]) else 'missing'
+        rows[did] = row
+    return bank, stimuli, basis, reviews
+
+
 def run(packet, out, model, invoke, resume=None):
     from . import connection_generate as g
     out = Path(out)
@@ -164,6 +205,8 @@ def run(packet, out, model, invoke, resume=None):
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
     ledger = st.ledger
+    exclusions = operator_exclusions(out)
+    excluded = set(exclusions['questions']) if exclusions else set()
     evidence_on = ledger.get('reviewEvidence', {}).get('policy') == v4.REVIEW_EVIDENCE
     placement = {v4.REVIEW_PLACEMENT: 'review', v4.REVIEW_PLACEMENT2: 'review-coverage'}.get(
         (ledger.get('placement') or {}).get('policy'), 'evidence')
@@ -438,6 +481,15 @@ def run(packet, out, model, invoke, resume=None):
         for k in range(v3.FIX_LIMIT):
             code = _bank_findings(S.bank, source_ids, S.attempts)
             targets = [q for q in batch if (v3.needs_fix(S.reviews[q]) or q in code) and S.attempts.get(q, 0) < v3.FIX_LIMIT]
+            if excluded and (ledger['stages'].get(f'{X}fix-{b}-{k}') or {}).get('status') != 'completed':
+                targets = [q for q in targets if q not in excluded]
+                if not targets and f'{X}fix-{b}-{k}' in ledger['stages']:
+                    # Its earlier attempt failed and only excluded questions were left in it: the record goes to the
+                    # resume archive like any superseded stage, so the manifest lists only stages this result carries.
+                    with st.lock:
+                        v3.require(st.resume_row is not None, f'{X}fix-{b}-{k}: 이어 가려면 --resume <이유>.')
+                        st._archive(f'{X}fix-{b}-{k}')
+                        st.save()
             if not targets:
                 break
             count_attempts(S, targets)
@@ -467,6 +519,14 @@ def run(packet, out, model, invoke, resume=None):
             apply_coverage(S.rows, got['rows'], judged_ids)
     bank, conflicts, stimuli, basis, rows = S.bank, S.conflicts, S.stimuli, S.basis, S.rows
     reviews, fixes, attempts, restated = S.reviews, S.fixes, S.attempts, S.restated
+    if excluded:
+        gone = {q['question_id'] for q in bank['questions']} & excluded
+        if gone:
+            reason = 'operator-exclusion: ' + exclusions['reason']
+            off_questions.extend(q for q in bank['questions'] if q['question_id'] in gone)
+            out_of_scope.extend({'question_id': q, 'decision': 'operator_exclusion', 'point_id': None, 'reason': reason} for q in sorted(gone))
+            bank, stimuli, basis, reviews = remove_questions(bank, stimuli, basis, reviews, rows, _goals(brief), gone)
+            print(f"── 사람이 뺀 문항 {len(gone)}개 ({OPERATOR_EXCLUSIONS}): {', '.join(sorted(gone))}", flush=True)
 
     # C (review-relations/2): ok questions neither their review nor their coverage evidence ties to a goal go to the
     # supplement once more, now that the review has spoken; a new goal of theirs is judged and placed by B --------
@@ -575,6 +635,7 @@ def run(packet, out, model, invoke, resume=None):
                   'offGoalQuestions': [{'question_id': q['question_id'], 'question': q,
                                         'reason': next(d['reason'] for d in out_of_scope if d['question_id'] == q['question_id'])}
                                        for q in off_questions],
+                  **({'operatorExclusions': exclusions} if exclusions else {}),
                   'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedIgnored': restated,
                   **({'intakeClozeUnits': intake_cloze} if intake_cloze else {}),
                   'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
