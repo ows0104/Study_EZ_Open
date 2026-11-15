@@ -9,7 +9,8 @@ Input is a local spec JSON kept OUTSIDE the repository (it holds lecture and jok
      "questions": [{"id", "topic", "tier", "question", "clue", "answer", "explanation", "exam",
                     "choices": [...] | null, "correct": "A".."E" | null, "learning_page",
                     "order": [..] (optional task sort key; default [learning_page]),
-                    "images": [{"file", "source_id", "page", "crop": [x0,y0,x1,y1]}]}]}
+                    "images": [{"file", "source_id", "page", "crop": [x0,y0,x1,y1]}]}],
+     "carry_from": "../import_r2/document.json" (optional)}
 
 `learning_page` is the page in the question's own source; when one quiz holds several lectures (병리 1, then
 병리 2, then the practical), `order` puts the lectures in sequence, e.g. [lecture_index, learning_page].
@@ -18,6 +19,11 @@ Image files are the original pictures at those page positions (embedded photos, 
 note-taker's circles, jokbo figures), already encoded as JPEG or PNG. The document has no generation_policy:
 it is not a pipeline result and carries no review ledger. `review.provenance.method` is `photo-import/1`, which
 is the only thing that unlocks JPEG and the photo image limits (studyez_contracts.roots.media.photo_import).
+
+`carry_from` names the published document this one replaces (docs/changes/2026-11-16-photo-quiz-r3). Question n
+keeps its IDs (Q/T/D/R n), so a revision that edits some questions and appends new ones at the end links every
+direction whose `direction_hash` is unchanged (same question, relation, answer scope, sources) to the same direction
+of that document. Learning history follows only those links; an edited question starts fresh.
 
     python scripts/photo_quiz_import.py SPEC.json OUT.json
 """
@@ -32,7 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from studyez_contracts.learning_links.validate import question_hash  # noqa: E402
-from studyez_contracts.roots import document_hash  # noqa: E402
+from studyez_contracts.roots import direction_hash, document_hash  # noqa: E402
 from studyez_contracts.roots.media import PHOTO_METHOD, JPEG, jpeg_size  # noqa: E402
 from studyez_contracts.roots.validate import validate_document  # noqa: E402
 
@@ -187,8 +193,24 @@ def build(spec, base):
            'tasks': [{'task_id': f'K{i + 1:03d}', 'question_id': questions[i]['question_id'],
                       'direction_id': f'D{i + 1:03d}'} for i in order],
            'exam_date': spec.get('exam_date'), 'equivalences': [], 'prerequisites': []}
+    if spec.get('carry_from'):
+        previous = json.loads((base / spec['carry_from']).read_text(encoding='utf-8'))
+        doc['equivalences'] = carry_links(doc, previous)
     validate_document(doc)
     return doc
+
+
+def carry_links(doc, previous):
+    """Same-ID directions whose identity hash did not change. Never links by ID alone."""
+    old = {d['direction_id'] for t in previous['review']['targets'] for d in t['directions']}
+    links = []
+    for target in doc['review']['targets']:
+        for d in target['directions']:
+            did = d['direction_id']
+            if did in old and direction_hash(previous, did) == direction_hash(doc, did):
+                links.append({'revision': previous['revision'], 'from_direction': did, 'to_direction': did,
+                              'reason': '사진 판 개정: 문항·관계·답 범위·출처가 이전 판과 같다(direction_hash 일치).'})
+    return links
 
 
 def main(argv):
@@ -197,7 +219,8 @@ def main(argv):
     text = json.dumps(doc, ensure_ascii=False, separators=(',', ':'))
     out_path.write_text(text, encoding='utf-8')
     images = sum(len(q.get('stimuli', [])) for q in doc['bank_snapshot']['questions'])
-    print(f"{len(doc['tasks'])} tasks, {images} images, {len(text.encode()) / 1e6:.1f} MB -> {out_path}")
+    print(f"{len(doc['tasks'])} tasks, {images} images, {len(doc['equivalences'])} carried directions, "
+          f"{len(text.encode()) / 1e6:.1f} MB -> {out_path}")
 
 
 if __name__ == '__main__':
