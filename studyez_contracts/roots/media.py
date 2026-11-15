@@ -22,9 +22,10 @@ MAX_IMAGE=1024*1024
 MAX_TOTAL=8*1024*1024
 MAX_COUNT=64
 # Photo-heavy practicals (one histology photo per figure). Per image stays 1 MB.
-PHOTO_MAX_TOTAL=24*1024*1024
-PHOTO_MAX_COUNT=200
-PHOTO_MAX_PIXELS=64*1024*1024
+# 2026-11-15: 261104_05 carries the practical plus the 병리 1·2 photos (267 figures, 16.4 MB, ~150M pixels).
+PHOTO_MAX_TOTAL=32*1024*1024
+PHOTO_MAX_COUNT=400
+PHOTO_MAX_PIXELS=256*1024*1024
 JPEG=b'\xff\xd8\xff'
 
 # A hand-authored photo revision names this method in review.provenance (no generation_policy; the pipeline
