@@ -3,7 +3,10 @@
 2026-11-14 객관식 모드(docs/changes/2026-11-14-mcq-mode, `root-mcq/1`)로 시작해, 같은 날 주관식 「선지 보기」와
 합쳤다(docs/changes/2026-11-14-choices-merge, `root-mcq/2`). 두 모드가 같은 `mcq_choices`를 쓴다.
 asset 종류 `root_mcq`, 파일명 `<revision>.json`(`quizbank/root_mcq.py`). 문항·판·학습 기록은 읽기만 한다.
-판이 다르거나 문항 글이 달라졌거나(개인 수정본 포함) 파일이 깨졌으면 그 문항은 선지 없이 보인다.
+판이 다르거나 판의 문항 글이 달라졌거나 파일이 깨졌으면 그 문항은 선지 없이 보인다.
+개인 수정본(2026-11-15, docs/changes/2026-11-15-edited-question-choices)은 판의 원문으로 짝을 찾는다:
+발문만 고쳤으면 원문의 선지 그대로, 단답의 정답을 고쳤으면 고친 정답을 정답 선지로 쓴다.
+정답을 고친 나열·빈칸·순서·묶음 문항은 칸을 나눌 수 없어 선지 없이 둔다.
 
 v2: asset에는 오답 풀만 있다. 앞면에 보일 선지(정답 전부 + 오답 4~5개)와 순서는 씨앗(사용자·문항·학습일)으로 고른다 —
 같은 날은 늘 같고, 다음 복습 날엔 다른 조합이다. 선지 ID는 글에서 만든 해시라 앞면만으로는 정답을 알 수 없다.
@@ -53,16 +56,42 @@ def current(db, doc) -> bool:
     return isinstance(asset, dict) and asset.get('schema') == contract.SCHEMA_V2 and asset.get('revision') == getattr(doc, 'revision', None)
 
 
-def entry(db, doc, question):
-    """이 판·이 문항 글에 맞는 (판 형식, 칸) 또는 None."""
-    if question.get('format') not in contract.FORMATS:
+def _authored(doc, question):
+    """선지 짝을 찾을 판의 원문. 개인 수정본이 아니면 받은 문항 그대로."""
+    if not question.get('personalEdited'):
+        return question
+    return next((q for q in doc.document['bank_snapshot']['questions']
+                 if q['question_id'] == question.get('question_id')), None)
+
+
+def _resolve(db, doc, question):
+    """(판 형식, 칸, 선지를 만들 문항) 또는 None."""
+    original = _authored(doc, question)
+    if original is None or original.get('format') not in contract.FORMATS:
         return None
     asset = stored(db, doc)
-    row = contract.attachable_v2(asset, doc.revision, question)
+    row = contract.attachable_v2(asset, doc.revision, original)
+    edited_answer = question is not original and question.get('answer') != original.get('answer')
     if row is not None:
-        return 2, row
-    row = contract.attachable(asset, doc.revision, question)
-    return (1, row) if row is not None else None
+        if not edited_answer:
+            return 2, row, original
+        # 고친 정답이 새 정답 선지. 원문의 정답 단위·묶음이 없는 단답만 — 나머지는 칸을 다시 나눌 수 없다.
+        if original['format'] != 'basic' or contract.groups(original) or question.get('format') != 'basic':
+            return None
+        mine = contract.normalized(question.get('answer', ''))
+        wrong = [w for w in row['wrong'] if contract.normalized(w['text']) != mine]
+        if not mine or contract.shortfall(question, wrong):
+            return None
+        return 2, {**row, 'wrong': wrong}, question
+    row = contract.attachable(asset, doc.revision, original)
+    # v1 칸은 정답 ID가 고정이라 고친 정답과 맞출 수 없다.
+    return (1, row, original) if row is not None and not edited_answer else None
+
+
+def entry(db, doc, question):
+    """이 판·이 문항 글에 맞는 (판 형식, 칸) 또는 None."""
+    found = _resolve(db, doc, question)
+    return found[:2] if found else None
 
 
 def seed(user_id, question, when) -> str:
@@ -71,10 +100,10 @@ def seed(user_id, question, when) -> str:
 
 
 def attach_front(db, doc, question, front, *, user_id=None, when=None):
-    found = entry(db, doc, question)
+    found = _resolve(db, doc, question)
     if not found:
         return front
-    version, row = found
+    version, row, question = found
     if version == 2:
         picked = contract.select(question, row, seed(user_id, question, when or datetime.now(UTC)))
         front['mcq_choices'] = picked['choices']
@@ -87,10 +116,10 @@ def attach_front(db, doc, question, front, *, user_id=None, when=None):
 
 
 def attach_answer(db, doc, question, answer):
-    found = entry(db, doc, question)
+    found = _resolve(db, doc, question)
     if not found:
         return answer
-    version, row = found
+    version, row, question = found
     if version == 2:
         answer['mcqCorrectIds'] = [contract.choice_id(question['question_id'], t, g) for g, t in contract.answer_choices(question)]
         # 오답 풀 전부(많아야 10개). 화면은 이번에 보인 선지의 것만 쓴다 — 답면이 씨앗을 몰라도 된다.
