@@ -78,8 +78,8 @@ def validate_document(doc):
         date.fromisoformat(doc['exam_date'])
     review, bank = doc['review'], doc['bank_snapshot']
     if any(q.get('stimuli')for q in bank.get('questions',[])):
-        from .media import validate_images
-        validate_images(bank,review['sources'])
+        from .media import validate_images, photo_import
+        validate_images(bank,review['sources'],photo=photo_import(doc))
     require(type(review) is dict and type(review.get('sources')) is list, 'roots: review required')
     validate_review(review, bank, bank_sha256=document_hash(bank),
                     source_hashes={s['source_id']: s['sha256'] for s in review['sources']})

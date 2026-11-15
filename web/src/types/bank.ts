@@ -74,6 +74,8 @@ export type BankTier = "Essential" | "Core" | "Important" | "Optional";
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
   stimuli?: {sha256:string; width:number; height:number; url:string; alt:string}[];
+  /** 사진 반입 문항의 힌트(발문에서 뺀 부위·염색·임상 단서). 답 보기 전에 펼쳐 볼 수 있다. */
+  clue?: string;
   personalAdded?: boolean;
   presentationSeed?: string;
   /** The API has placed the ordered matching column on the left. */

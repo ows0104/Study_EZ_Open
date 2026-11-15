@@ -47,6 +47,11 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const choicesSeen=choiceState.key===key&&choiceState.seen;
   const setChoices=(shown:boolean,seen=shown)=>setChoiceState({key,shown,seen});
   const [imageState,setImageState]=useState<{taskId:string;ready:boolean}|null>(null);
+  // 힌트(2026-11-15 photo-quiz-import): 발문에서 뺀 부위·염색·임상 단서. 펼친 문항의 key만 기억한다(다음 문항은 접힌 채).
+  const [clueKey,setClueKey]=useState('');
+  const clue=task?.question.clue??'';
+  const clueOpen=!!clue&&clueKey===key;
+  function toggleClue(){setClueKey(clueOpen?'':key);heading.current?.focus({preventScroll:true});}
   const [editing,setEditing]=useState(false);
   const [editNote,setEditNote]=useState('');
   const [tierBusy,setTierBusy]=useState(false);
@@ -158,6 +163,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       }
       if(target.closest('a,summary')||target.closest('button')&&!number&&event.key!=='5')return;
       if((event.code==='Space'||event.key==='Enter')&&!task.answer){event.preventDefault();reveal();}
+      if(event.code==='KeyH'&&clue){event.preventDefault();toggleClue();}
       if(event.code==='KeyV'&&recallClosed){event.preventDefault();showChoices();}
       else if(event.code==='KeyV'&&recallOpen){event.preventDefault();hideChoices();}
       if(task.answer&&number){event.preventDefault();rate(RATINGS[Number(event.key)-1]);}
@@ -170,7 +176,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(event.key==='5'){event.preventDefault();exclude();}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
-  },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,recallOpen,choices,choicesSeen,view.mapSeen,view.canUndo,timerOn,timer.togglePause,mcq]);
+  },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,recallOpen,choices,choicesSeen,view.mapSeen,view.canUndo,timerOn,timer.togglePause,mcq,clue,clueOpen]);
   const done=Math.min(view.position,view.count);
   const head=<header className="mq-solve-head">
     <p className="mq-kicker">
@@ -235,6 +241,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
       recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
       choiceNotes={task.answer?.mcqWrongNotes} choiceGroups={(mcq??recallSet)?.groups}/>
+      {clue&&<div className="mq-clue"><button className="is-quiet" disabled={locked} onClick={toggleClue} aria-expanded={clueOpen}
+        aria-keyshortcuts="H">{clueOpen?'힌트 접기':'힌트 보기'} <kbd>H</kbd></button>{clueOpen&&<p>{clue}</p>}</div>}
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
