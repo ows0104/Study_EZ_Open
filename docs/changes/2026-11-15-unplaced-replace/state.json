@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-15T04:36:03.334405+00:00",
-      "evidence": "사용자 채팅 2026-11-15: 「승인, 구현해」 (R1 늦은 보충 기존 포인트 비움·R2 unplaced-only/1 재배치 실행·R3 관리자 요청 버튼 계획 보고 직후; 앞서 「고치고 재배치」)",
-      "scope": "plan.md 1~7: connection_generate_v4.py·새 connection_replace.py·connection_generate.py·root_native_json.py·connection_generation.py·server root_generation.py·RootGenerationPanel.tsx·tests; 로컬 구현·검사·피코르나 로컬 사본 실측(운영 쓰기 없음)·Draft PR. 병합·러너 재설치·운영 공개판 교체 제외",
+      "at": "2026-11-15T06:43:00.200040+00:00",
+      "evidence": "사용자 채팅 2026-11-15: 「관계 수선 더해」 (피코르나 실측 13개 중 1개 배치·원인 unknown/conflict 관계 보고 직후)",
+      "scope": "spec.md R4: connection_replace.py에 결함 관계 수선(v4-brief-fix-late·v4-map-check-fix-late)·검사·테스트, 로컬 실측(운영 쓰기 없음)·Draft PR. 병합·러너 재설치·운영 공개판 교체 제외",
       "evidence_version": 2,
-      "source_hash": "7aefc50b57009642df3724e797e0d22b73a1509ba8152a6911426b68c77f44b1",
-      "plan_hash": "53f0415efd3b0ad4c0a300207e44a1409bf42e67fb810363b9763da156d593f4",
+      "source_hash": "56636c67d9b217143b7cf1a46c61eed9efbe6ce2bf8d01ef451a8e5aedb904d8",
+      "plan_hash": "a2dccbdc8747810534536e4d9e437d386c0f5f9659e04b0afd37bfb19548d2f3",
       "inputs": [
         ".github",
         "content",
@@ -30,7 +30,7 @@
         "tests/quizgen",
         "uv.lock"
       ],
-      "release_hash": "b9c1f47609fdbcd741c9daba4e2a9a3ab6974b39243d54a1fd50ab103173547c"
+      "release_hash": "3c11a5058061f58d3386b9ddd6e9e510bb96ca1e66f70c191842214c88e184c9"
     }
   },
   "checks": [],
@@ -40,5 +40,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-15T04:36:11.052180+00:00"
+  "updated_at": "2026-11-15T06:43:00.347667+00:00"
 }
