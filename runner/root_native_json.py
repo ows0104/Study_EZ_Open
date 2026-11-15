@@ -221,7 +221,7 @@ def redact(body):
 
 def remember_restriction(out,stage,evidence):
     """Bind a provider refusal to this immutable input; never resubmit it."""
-    out=Path(out);require(re.fullmatch(r'(normalize|generate|(?:source|medical|repair)-[0-3])',stage),'Invalid restricted stage')
+    out=Path(out);require(re.fullmatch(r'(normalize|generate|(?:source|medical|repair)-[0-3]|medical-presuppose)',stage),'Invalid restricted stage')
     classification=classify_error(ValueError(evidence))
     require(classification['kind']=='model_content_restricted','Evidence is not a provider content restriction')
     ledger=read(out/'ledger.json');packet=read(out/'packet.json');entry=ledger['stages'][stage]
@@ -488,7 +488,8 @@ class NativeJson:
         state=ctx.get('_check')   # P6: host check state, not stage input
         if '_check'in ctx:ctx={k:v for k,v in ctx.items()if k!='_check'}
         if stage.startswith('medical-'):
-            require(re.fullmatch(r'medical-[0-3]',stage),'Unsupported medical stage')
+            # medical-presuppose: presuppose-only/1 reviews only the questions it added (docs/changes/2026-11-15-tree-edge-goals).
+            require(re.fullmatch(r'medical-(?:[0-3]|presuppose)',stage),'Unsupported medical stage')
             try:return producer.call_model(stage,ctx,material,model)
             except BaseException as error:
                 failure(self.out/'.native'/stage,error);raise
@@ -678,7 +679,9 @@ def main():
     # duplicates-only/1 (docs/changes/2026-11-12-dedupe-published): the published /4 run this request judges again for duplicates only.
     p.add_argument('--duplicates-of',type=Path,metavar='GENERATION_DIR')
     # unplaced-only/1 (docs/changes/2026-11-15-unplaced-replace): the published /4 run whose unplaced questions this request places again.
-    p.add_argument('--unplaced-of',type=Path,metavar='GENERATION_DIR');a=p.parse_args()
+    p.add_argument('--unplaced-of',type=Path,metavar='GENERATION_DIR')
+    # presuppose-only/1 (docs/changes/2026-11-15-tree-edge-goals): the published /4 run this request adds existence goals to.
+    p.add_argument('--presuppose-of',type=Path,metavar='GENERATION_DIR');a=p.parse_args()
     if a.rerun and not a.resume:p.error('--rerun needs --resume <reason>')
     try:
         require_unblocked(a.out,model=g.codex.model_name(a.model))
@@ -689,7 +692,7 @@ def main():
             # 259 characters. A copy of 261102_02 in a deeper folder failed in the middle of a late stage.
             deepest=a.out.resolve()/'.resume-99'/'.native'/'v3-coverage-fix-context-0'/'work'/'material'/('stimulus-'+'0'*64+'.png')
             require(os.name!='nt'or len(str(deepest))<260,f'실행 폴더 경로가 너무 깁니다({len(str(a.out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
-        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun),duplicates_of=a.duplicates_of,unplaced_of=a.unplaced_of)
+        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun),duplicates_of=a.duplicates_of,unplaced_of=a.unplaced_of,presuppose_of=a.presuppose_of)
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

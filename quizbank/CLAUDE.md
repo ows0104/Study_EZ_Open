@@ -34,6 +34,11 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
 - 아무도 묻지 않는 연결은 출처 `presupposition`의 포인트가 되고, `v4-supplement-normalize-presuppose`가 존재 목표로 정규화한다. 이 단계만 새 내용 관계(association, `RQP…`)를 더할 수 있다. 부모-자식 소속은 지도 관계가 아니라서다. 그 뒤 `v4-coverage-presuppose`·`v4-map-check-presuppose`를 거쳐 빈 목표 추가(기존 ≤2 회차)가 문항을 쓴다.
 - 조립(`make_document`)은 판정 기록에서 선행 연결을 결정적으로 만든다. 존재 목표 → 전제를 가진 문항의 목표이고, 관계 종류는 `prerequisite`, ID는 `PRE-…`다. 순환·개념 공유·과제 없는 목표는 건너뛴다.
 - manifest `presuppositions`(선택 키)에 남는다. 표시가 없는 ledger는 이전 그대로다. 측정은 `python -m quizbank.presuppose_report <생성 폴더>`, 검사는 `tests/quizbank/test_presuppose.py`.
+- 이미 공개된 판은 presuppose-only/1(`connection_presuppose.py`, `--presuppose-of`, 요청 `presupposeOnly`)로 보강한다. 사용자 「옛날꺼는 보강만」에 따른 것이다.
+  - 공개 실행을 이어받아 전제 판정 → 존재 목표 → 그 문항만 추가·검토·고치기 → 새 문항만 의학 검토(`medical-presuppose`) → 선행 연결 순서로 돈다.
+  - 기존 문항·과제·검토·의학 판정은 그대로다. 새 문항은 임상 충돌 기록을 더하지 않는다.
+  - 결과 계약은 presupposeOnly 기록이 있을 때만 의학 검토를 「이전 검토 + 새 문항 검토」로 증명한다.
+  - 검사: `tests/quizbank/test_connection_presuppose.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
 새 실행 정책(2026-11-09 사용자 설계 결정, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)은 새 ledger가 `runPolicies`로 적는다.
