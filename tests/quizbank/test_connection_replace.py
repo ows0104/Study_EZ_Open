@@ -90,7 +90,8 @@ class UnknownR1Model(Model):
     """The first map check leaves R1 unknown (its condition misses the subject), so neither D1 question is a task;
     the repair rewrites R1's condition and the re-check supports it. `bad_fix`: the repair also edits a goal."""
 
-    def __init__(self, bad_fix=False):
+    def __init__(self, bad_fix=False, condition='Synthetic subject named'):
+        self.condition = condition
         # The item reviews name no relation for Q1/Q2 (R1 is not a supported relation they may name).
         super().__init__(relations={'Q1': [], 'Q2': [], 'Q003': [('R2', 'whole')]})
         self.bad_fix = bad_fix
@@ -101,7 +102,7 @@ class UnknownR1Model(Model):
             self.inputs[stage] = ctx
             fixed = copy.deepcopy(ctx['brief'])
             fixed['provenance']['independent_points'] = 'derived'
-            next(r for r in fixed['relations'] if r['relation_id'] == 'R1')['condition'] = 'Synthetic subject named'
+            next(r for r in fixed['relations'] if r['relation_id'] == 'R1')['condition'] = self.condition
             if self.bad_fix:
                 t = fixed['targets'][0]
                 key = next(k for k, v in t.items() if type(v) is str and k != 'target_id')
@@ -135,3 +136,24 @@ def test_a_repair_that_changes_a_goal_is_refused(tmp_path):
     previous, _, packet = published(tmp_path, UnknownR1Model())
     with pytest.raises(ValueError, match='관계 수선: targets'):
         g.run(packet, tmp_path / 'new', invoke=UnknownR1Model(bad_fix=True), unplaced_of=previous)
+
+
+def test_a_repair_that_drops_the_korean_of_a_relation_is_refused(tmp_path):
+    previous, old, packet = published(tmp_path, UnknownR1Model())
+    rel = next(r for r in old['brief']['relations'] if r['relation_id'] == 'R1')
+    if not any('가' <= ch <= '힣' for ch in str(rel.get('condition') or '')):
+        pytest.skip('the synthetic R1 condition has no Korean')
+    with pytest.raises(ValueError, match='한국어'):
+        g.run(packet, tmp_path / 'new', invoke=UnknownR1Model(condition='English only'), unplaced_of=previous)
+
+
+def test_korean_check():
+    from quizbank.connection_replace import _check_repair
+    before = {'relations': [{'relation_id': 'R1', 'from_id': 'C1', 'to_id': 'C2', 'condition': '리노바이러스 수용체'}],
+              'concepts': [{'concept_id': 'C1', 'label': '수용체', 'parent_ids': []}, {'concept_id': 'C2', 'label': 'ICAM-1 이용', 'parent_ids': []}]}
+    after = copy.deepcopy(before)
+    after['relations'][0]['condition'] = 'Rhinovirus binds ICAM-1.'
+    with pytest.raises(ValueError, match='한국어'):
+        _check_repair(before, {'brief': after}, {'R1'})
+    after['relations'][0]['condition'] = 'Rhinovirus의 80% 초과가 ICAM-1에 결합'
+    assert _check_repair(before, {'brief': after}, {'R1'})['brief'] == after

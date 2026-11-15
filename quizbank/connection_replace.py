@@ -74,7 +74,17 @@ def _check_repair(before, value, bad):
     used |= {cid for c in after['concepts'] for cid in c.get('parent_ids', []) if cid in old_con and c['concept_id'] not in old_con}
     touched = [cid for cid in old_con if new_con[cid] != old_con[cid] and cid in used]
     v3.require(not touched, f'관계 수선: 다른 관계가 쓰는 개념은 바꾸지 않습니다: {touched[:5]}')
+    # The map is shown to students in the lecture's Korean (261111_02 repair rewrote labels as English sentences).
+    english = [rid for rid in bad if _hangul(old_rel[rid].get('condition')) and not _hangul(new_rel[rid].get('condition'))]
+    english += [cid for cid in old_con if new_con[cid] != old_con[cid] and _hangul(old_con[cid]['label']) and not _hangul(new_con[cid]['label'])]
+    english += [cid for cid in new_con if cid not in old_con and not _hangul(new_con[cid]['label'])
+                and any(_hangul(c['label']) for c in before['concepts'])]
+    v3.require(not english, f'관계 수선: 지도는 한국어로 씁니다(고유명사만 원문 표기). 한국어가 빠진 것: {english[:8]}')
     return value
+
+
+def _hangul(text):
+    return any('가' <= ch <= '힣' for ch in str(text or ''))
 
 
 def run(packet, out, model, invoke, previous, resume=None):
@@ -137,7 +147,9 @@ def run(packet, out, model, invoke, previous, resume=None):
         rel = {r['relation_id']: r for r in brief['relations']}
         errors = [f"{rid}: 지도 점검 {c['status']} — {c['reason']} 현재 관계: {json.dumps(rel[rid], ensure_ascii=False)}. "
                   '원본에 맞게 이 관계의 끝점·condition(필요하면 새 세부 개념)을 고쳐 원본이 말하는 주장을 그대로 담게 한다. '
-                  '관계 ID·kind, 목표·방향·포인트·선행 관계는 바꾸지 않는다.' for rid, c in bad.items()]
+                  '관계 ID·kind, 목표·방향·포인트·선행 관계는 바꾸지 않는다. 고친 condition과 개념 이름은 기존 지도처럼 '
+                  '한국어로 쓴다(균·바이러스 이름·약어 등 고유명사는 원문 표기 그대로, 영어 원문 문장을 옮겨 적지 않는다).'
+                  for rid, c in bad.items()]
         pages = v3.cited_pages([e for rid in bad for e in rel[rid]['evidence']])
         old_brief = brief
         fixed = st.run(X + 'brief-fix' + TAG, {'brief': brief, 'errors': errors, 'pages': pages},
