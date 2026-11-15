@@ -1,0 +1,168 @@
+"""unplaced-only/1: the questions of a published root-generation/4 revision that no goal took, placed again
+(docs/changes/2026-11-15-unplaced-replace).
+
+The published lectures were assembled under review-relations/1: a question its item review tied to no map relation
+was left off the map, and nothing sent it anywhere after the review. On 2026-11-15 125 such questions of 27 lectures
+were compared with the tasks: 9 were asked the same way by another task, the rest were not (or only the other way
+round). This run starts from that published run (`previous`, its generation folder), as duplicates-only/1 does, and
+changes nothing but the placement of those questions:
+
+- the stage receipts of the previous run are linked into `out` and its ledger is pointed at this packet;
+- the previous result is assembled again under review-relations/2 (B: a question its review ties to nothing is
+  placed by the relations its coverage evidence names);
+- what is still off the map (not because of a prerequisite) goes to the late supplement (`v4-supplement-late`), which
+  sees no existing point (late-new-points): each question becomes a new point and goal, or stays off the map when it
+  is judged out of scope. The new goals are normalized, judged for coverage and map-checked as in a new run;
+- the result is assembled under this packet's revision. Questions, item reviews, importance, the medical review and
+  the context judgments are the previous result's; no question leaves the bank, so none of them changes.
+
+The map is not checked again (review-relations/2's A): a published map changed now would change every judgment.
+The result is an ordinary /4 result (`generation_v4.validate_result`); the server takes it as the restart that
+replaces the published revision."""
+import copy
+import json
+from pathlib import Path
+
+from studyez_llm import codex
+from studyez_contracts.roots import document_hash
+from studyez_contracts.roots import generation_v2 as v2
+from studyez_contracts.roots import generation_v3 as v3
+from studyez_contracts.roots import generation_v4 as v4
+from studyez_contracts.roots import map_tree
+from . import connection_dedupe as dedupe
+from .connection_generate_v3 import Stages
+from .connection_generate_v4 import _goals, check_stage
+
+POLICY = 'unplaced-only/1'
+X = 'v4-'
+TAG = '-late'
+LABEL = '못 붙은 문항 재배치'
+
+
+def _merged_map_check(checks):
+    value = {k: [x for m in checks for x in m[k]] for k in ('relation_checks', 'target_checks', 'direction_checks', 'issues')}
+    seen = {}
+    for r in value['relation_checks']:
+        seen.setdefault(r['relation_id'], r)
+    value['relation_checks'] = list(seen.values())
+    return value
+
+
+def run(packet, out, model, invoke, previous, resume=None):
+    from . import connection_generate as g
+    out, previous = Path(out), Path(previous)
+    v3.require(packet.get('generationPolicy') == v4.POLICY, f'{LABEL}은 root-generation/4 packet만 받습니다.')
+    old_packet = json.loads((previous / 'packet.json').read_text(encoding='utf-8'))
+    old = json.loads((previous / 'result.json').read_text(encoding='utf-8'))
+    v4.validate_result(old, old_packet)
+    v3.require(dedupe.lecture_input(old_packet) == dedupe.lecture_input(packet), f'{LABEL}: 이전 실행과 강의 입력이 다릅니다.')
+    v3.require(old['document']['revision'] != packet['revision'], f'{LABEL}: 새 판 이름이 이전 판과 같습니다.')
+    v3.require(codex.model_name(model) == old['manifest']['model'],
+               f"{LABEL}: 이전 실행의 모델({old['manifest']['model']})과 지금 모델({codex.model_name(model)})이 다릅니다.")
+    meta, brief = old['manifest'], old['brief']
+    v3.require(meta.get('placement') in ({'policy': v4.REVIEW_PLACEMENT}, {'policy': v4.REVIEW_PLACEMENT2}),
+               f'{LABEL}: 문항 검토 배치(review-relations) 실행만 받습니다.')
+    dedupe.seed(previous, out, packet, model, old, key='unplacedOnly', policy=POLICY, label=LABEL,
+                extra={'placement': {'policy': v4.REVIEW_PLACEMENT2}})
+    # A late stage of a previous /2 run had another input (it was offered the existing points): it runs again, recorded.
+    st = Stages(packet, out, model, invoke, resume or packet.get('restartReason') or LABEL, policy=v4.POLICY, prompts=('v3', 'v4'))
+    ledger = st.ledger
+    v3.require(ledger.get('unplacedOnly', {}).get('previousRevision') == old['document']['revision'],
+               f'{LABEL}: 이 폴더는 다른 판에서 시작했습니다.')
+
+    placement = 'review-coverage'
+    bank = v2.restore_container_concepts(v2.restore_importance(old['document']['bank_snapshot'], meta.get('importanceProjection')),
+                                         meta.get('bankProjection'))
+    order = [q['question_id'] for q in bank['questions']]
+    rows = {r['direction_id']: copy.deepcopy(r) for r in meta['coverage']}
+    map_checks = [meta['mapCheck']]
+    reviews = meta['itemReviews']
+    basis = meta['questionImportance']
+    profile = v4.notebook_profile(packet, meta)
+    context = v3.context_summary(meta['clinicalContext'])
+    page_counts = {s['source_id']: s['page_count'] for s in brief['sources']}
+    points_doc = meta.get('supplementPoints') or v4.check_points(json.loads(packet['points']))
+    supplement = copy.deepcopy(meta.get('supplement') or [])
+
+    def coverage_rows():
+        return [rows[d['direction_id']] for t in brief['targets'] for d in t['directions']]
+
+    def assemble():
+        map_check = _merged_map_check(map_checks)
+        raw = v4.assessment_raw(brief, bank, coverage_rows(), map_check, reviews, context, meta['sourceAssessment']['summary'], placement)
+        audit = v4.compile_assessment(brief, bank, v2.envelope(brief, bank, raw), placement)
+        doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows(), basis, profile, revision=packet['revision'],
+                                          title=packet['title'], exam_date=packet['examDate'], placement=placement)
+        return map_check, raw, audit, doc, placed, proofs
+
+    before = len(meta['unplacedQuestions'])
+    placed = assemble()[4]
+    late = [u['question_id'] for u in placed['unplacedQuestions'] if not u['reason'].startswith('dependency')]
+    print(f"── {LABEL}: 이전 판 지도에 못 붙은 문항 {before}개 → 범위 점검 판정 뒤 {len(placed['unplacedQuestions'])}개 · "
+          f"늦은 보충 {len(late)}개", flush=True)
+    if late:
+        ctx = v3.supplement_input(bank, late, points_doc, page_counts)
+        ctx['points'] = []   # late-new-points: no existing point to name as a duplicate
+        state = {'points_doc': points_doc}
+
+        def accept(raw):
+            rows_ = raw.get('rows') if type(raw) is dict else None
+            v3.require(type(rows_) is not list or all(type(r) is not dict or r.get('decision') != 'duplicate_of' for r in rows_),
+                       'late supplement: input.points is empty; decide point or out_of_scope, not duplicate_of')
+            return check_stage('supplement', raw, ctx, state, None)
+        value = st.run(X + 'supplement' + TAG, ctx, accept, state)
+        points_doc, decided = v4.attach_points(points_doc, value, late, page_counts, [p['point_id'] for p in brief['points']])
+        supplement.extend(decided)
+        fresh = {d['point_id'] for d in decided if d['decision'] == 'point'}
+        new_points = [p for p in points_doc['points'] if p['point_id'] in fresh]
+        if new_points:
+            allowed = v3.supplement_ids(brief, len(new_points))
+            ctx = v3.supplement_normalize_input(brief, new_points, allowed)
+            state = {'brief': brief, 'blank': True}
+            addition = st.run(X + 'supplement-normalize' + TAG, ctx,
+                              lambda raw: check_stage('supplement-normalize', raw, ctx, state, None), state)
+            brief, new_tids = v3.extend_brief(brief, v3.supplement_addition(brief, addition, True), [p['point_id'] for p in new_points])
+            new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
+            ctx = v3.coverage_input(brief, bank, new_dids, [p['origin_question_id'] for p in new_points])
+            got = st.judged(X + 'coverage-supplement' + TAG, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
+            rows.update({r['direction_id']: r for r in got['rows']})
+            ctx = v4.map_check_input(brief, new_tids)
+            map_checks.append(st.judged(X + 'map-check' + TAG, ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+        st.save()
+
+    map_check, raw, audit, doc, placed, proofs = assemble()
+    rows_now = coverage_rows()
+    ready_rows = v4.readiness(brief, rows_now, doc)
+    record = {**ledger['unplacedOnly'], 'unplacedBefore': before, 'unplacedAfter': len(placed['unplacedQuestions']),
+              'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']), 'lateQuestions': late}
+    print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 지도에 못 붙은 문항 {before} → "
+          f"{record['unplacedAfter']} · 범위 점검 판정 {len(placed['coverageFallback'])}개", flush=True)
+    kept = {t['question_id'] for t in old['document']['tasks']}
+    v3.require(kept <= {t['question_id'] for t in doc['tasks']} | {m['question_id'] for m in placed['mergedDuplicates']},
+               f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
+    g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
+
+    manifest = copy.deepcopy(meta)
+    for key in ('coverageFallback',):
+        manifest.pop(key, None)
+    manifest.update(inputHash=packet['inputHash'], runtimeHash=ledger['identity'], briefHash=document_hash(brief),
+                    bankHash=document_hash(doc['bank_snapshot']), stages=[{'name': k, **v} for k, v in ledger['stages'].items()],
+                    verdictLedger=ledger['verdictLedger'], verdictLedgerHash=document_hash(ledger['verdictLedger']),
+                    notReady=v4.not_ready(brief, rows_now, reviews), coverage=rows_now, mapCheck=map_check,
+                    sourceAssessment=raw, readiness=ready_rows, importanceWarnings=proofs['importanceWarnings'],
+                    importanceProjection=proofs['importanceProjection'], supplement=supplement,
+                    supplementPoints=points_doc if supplement else None, placement={'policy': v4.REVIEW_PLACEMENT2},
+                    unplacedOnly=record, **placed)
+    if ledger.get('stageResumes'):
+        manifest['stageResumes'] = ledger['stageResumes']
+    if proofs['bankProjection']:
+        manifest['bankProjection'] = proofs['bankProjection']
+    else:
+        manifest.pop('bankProjection', None)
+    if 'derivedFrom' in packet:
+        manifest.update(derivedPacket=map_tree.public(packet), auditOpen=packet['frontStages']['openPoints'])
+    result = {'brief': brief, 'document': doc, 'sourceAudit': audit, 'medical': old['medical'],
+              'validation': old['validation'], 'manifest': manifest}
+    v4.validate_result(result, packet)
+    g.write(out / 'result.json', result)
+    return result
