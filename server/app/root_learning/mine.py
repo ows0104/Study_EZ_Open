@@ -112,8 +112,8 @@ def with_mine(row, live):
 def overlay(row, events, available, problems):
     """계획·풀이용 (덧붙인 사본, 준비된 과제, 준비 안 된 까닭). 집계용 값은 부르는 쪽이 원래 것을 그대로 쓴다.
 
-    기준 과제가 준비된 내 문제만 준비된다. 목표 선행이 내 문제를 끌어올 수 있으므로 덧붙인 사본으로 선행을 다시 닫는다
-    (준비 안 된 과제가 계획에 들어가면 order_plan이 500을 낸다)."""
+    기준 과제가 준비된 내 문제만 준비된다. 선행이 준비되지 않았다고 막지는 않는다 — order_plan이 그 선행을 건너뛴다
+    (docs/changes/2026-11-16-prereq-question-only)."""
     problems = dict(problems)
     if not per_task(row.document):
         return row, set(available), problems
@@ -124,7 +124,7 @@ def overlay(row, events, available, problems):
         return row, set(available), problems
     mine_row = with_mine(row, live)
     extra = {m for m, p in live.items() if p['anchor_task_id'] in available}
-    ready, problems = content.close_prerequisites(mine_row.document, set(available) | extra, problems)
+    ready = set(available) | extra
     for mine_id in live:
         if mine_id not in ready:
             problems.setdefault(mine_id, UNANCHORED)

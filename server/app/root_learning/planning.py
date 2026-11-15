@@ -9,10 +9,11 @@ from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
 def plan(doc, events, available, now, policy, focus=None, new_goals=None):
-    """`available` is closed under prerequisites (content.availability). `focus`, a subset of it, narrows the
-    candidates only (오늘 학습 중요도 필터): an unassessed prerequisite of a focused task that lies outside the
-    focus is still brought forward by order_plan, which checks against `available`. Without a focus every
-    available task is a candidate, as before (docs/changes/2026-11-12-plan-prereq-closure).
+    """`focus`, a subset of `available`, narrows the candidates only (오늘 학습 중요도 필터). An unassessed question
+    prerequisite of a planned task is brought forward by order_plan even outside the focus; one that is not available
+    is passed over. A target prerequisite brings in (「명시적 선행 연결」) an existence goal from `available` and any other
+    prior goal only from the candidates (inside the focus), and otherwise just orders. Without a focus every available task is a candidate
+    (docs/changes/2026-11-12-plan-prereq-closure, 2026-11-16-prereq-question-only).
 
     오늘 학습 이어 풀기(docs/changes/2026-11-14-continuous-today): `new_goals` fixes the new-goal quota (capped by
     the prepared unseen goals) for a stream that 「더 풀기」 lengthened. Without it the quota is the former one."""
@@ -183,7 +184,11 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
         for direction in authored[tid]['directions']:
             for task in tasks[direction['direction_id']]:
                 add(task, reason)
-    # 선행 목표는 중요도 필터 밖에 있어도 끌어온다(spec R2). 그래서 끌어올 과제는 pool이 아니라 available에서 찾는다.
+    # 존재 목표(presuppose/1)는 중요도 필터 밖에 있어도 끌어온다(tree-edge-goals spec R2). 그래서 끌어올 과제는 pool이 아니라
+    # available에서 찾는다. 지도 관계에서 온 목표 선행은 필터 안(pool)에서만 끌어온다 — 앞 목표 전체가 뒤 목표 전체의 선행이라
+    # 261109_02에서 Essential만 고른 목록에 35과제가 끌려왔다(docs/changes/2026-11-16-prereq-question-only).
+    from studyez_contracts.roots.presuppose import is_existence_edge
+    existence = {(e['before_target'], e['after_target']) for e in doc['prerequisites'] if is_existence_edge(e)}
     prepared_tasks = defaultdict(list)
     for task in doc['tasks']:
         if task['task_id'] in available and task['direction_id'] in owners:
@@ -222,8 +227,9 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
         if habitual is None or len(selected) >= habitual:
             break
         add_target(tid, '새 범위 보완')
-    # Explicit prerequisite relations reorder already-selected tasks and may bring a prepared
-    # prerequisite forward. Failure on it never locks the following direction.
+    # Explicit target prerequisites reorder already-selected tasks and bring a prepared prior goal forward: an
+    # existence goal from every prepared task, another target only from today's candidates. Question prerequisites
+    # come in by order_plan. Failure on one never locks the following direction.
     chosen_targets = {owner(t) for t in selected}
     prereqs = defaultdict(set)
     for edge in doc['prerequisites']:
@@ -235,7 +241,7 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
         for parent in sorted(prereqs[tid], key=lambda p: order[p]):
             prerequisites(parent, visiting | {tid})
             if pull(parent):
-                add_target(parent, '명시적 선행 연결', prepared_tasks)
+                add_target(parent, '명시적 선행 연결', prepared_tasks if (parent, tid) in existence else by_direction)
         expanded.add(tid)
     for tid in sorted(chosen_targets, key=lambda t: order[t]):
         prerequisites(tid, set())

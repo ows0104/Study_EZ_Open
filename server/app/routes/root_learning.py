@@ -492,8 +492,15 @@ def project_session(db, row, doc, user, when):
                        'answer': with_memo(revealed_answer(db, doc, shown), mine.memos(events, doc.revision), q) if reveal else None,
                        'response': reveal['response'] if reveal else None,
                        'attempted': reveal['attempted'] if reveal else None,
-                       'helped': row.state['mapSeen'] or (reveal['helped'] if reveal else prior_exposure(doc.document, task, q, row.state))}
+                       'helped': row.state['mapSeen'] or (reveal['helped'] if reveal else prior_exposure(doc.document, task, q, row.state)),
+                       'prerequisite': is_prerequisite(task)}
     return out
+
+
+def is_prerequisite(task):
+    """이 과제가 뒤 과제의 선행이라 오늘 목록에 들어왔는가(order_plan의 「명시적 선행 문항」). 풀이 화면에 「선행 문항」으로 보인다
+    (docs/changes/2026-11-16-prereq-question-only)."""
+    return task.get('reason') == '명시적 선행 문항'
 
 
 def active_generation(db, doc, *, light=True):
@@ -993,7 +1000,8 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
             shown = content.with_tier(with_personal(q, edits), tiers)
             frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
                              'answer': with_memo(revealed_answer(db, doc, shown, generation), notes, q),
-                             'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}
+                             'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state),
+                             'prerequisite': is_prerequisite(task)}
         out['frames'].append(frame)
     return out
 

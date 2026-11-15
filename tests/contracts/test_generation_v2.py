@@ -113,6 +113,20 @@ def test_combined_target_and_question_cycle_is_rejected_even_when_each_graph_is_
     with pytest.raises(ValueError,match='combined'):
         c.order_plan(doc,doc['tasks'],{t['task_id']for t in doc['tasks']},set())
 
+def test_target_edge_only_orders_selected_tasks_and_question_prerequisite_is_brought_in():
+    """docs/changes/2026-11-16-prereq-question-only: 261109_02 brought every task of a prior target in for one task."""
+    from root_fixture import document
+    doc=document();every={t['task_id']for t in doc['tasks']};task={t['task_id']:t for t in doc['tasks']}
+    ids=lambda got:[t['task_id']for t in got]
+    assert ids(c.order_plan(doc,doc['tasks'],every,set()))==ids(doc['tasks'])  # authoring/validation: unchanged
+    assert ids(c.order_plan(doc,[task['task3']],every,set()))==['task3']  # T1 -> T2 alone brings nothing in
+    assert ids(c.order_plan(doc,[task['task3'],task['task1']],every,set()))==['task1','task3']  # but orders
+    doc['bank_snapshot']['questions'][2]['prerequisites']=['Q2']
+    got=c.order_plan(doc,[task['task3']],every,set())
+    assert ids(got)==['task2','task3']and got[0]['reason']=='명시적 선행 문항'
+    assert ids(c.order_plan(doc,[task['task3']],every,{'Q2'}))==['task3']  # assessed: not served again
+    assert ids(c.order_plan(doc,[task['task3']],every-{'task2'},set()))==['task3']  # not available: passed over
+
 def test_optional_direction_cannot_be_misclassified_as_required_repair():
     b=f.brief();bank=f.old.bank();b['targets'][0]['directions'][0]['requirement']='optional';a=f.assessment(b,bank)
     a['issues']=[{'issue_id':'bad-required','kind':'required_gap','text':'Synthetic mislabeled optional','question_ids':[],'direction_ids':['D1']}]

@@ -1,4 +1,4 @@
-"""The plan never receives a task whose prerequisite is missing (docs/changes/2026-11-12-plan-prereq-closure).
+"""Prerequisites in today's plan (docs/changes/2026-11-12-plan-prereq-closure, 2026-11-16-prereq-question-only).
 
 Production 2026-11-12: `GET /api/root-learning` and `…/focus` answered 500 with `order_plan` →
 「Prepared prerequisite became unavailable」. Main-Quiz documents are standalone, and `availability` returned
@@ -6,10 +6,13 @@ before the /2·/4 dependency rule, so a personally excluded prerequisite left it
 importance filter then narrowed the set given to `plan` without any rule at all.
 
 Rules checked here:
-- A prerequisite that is not available (personal exclude) drops its dependents, as for /2·/4 bank sources.
-- A prerequisite that is available but outside today's chosen tiers is brought forward as 「명시적 선행 문항」
-  when it is not yet assessed (order_plan's own rule); an assessed one is not served again.
-- Learner records are not changed by either."""
+- A prerequisite that is not available (personal exclude) is passed over: its dependent stays available and is
+  served without it (2026-11-16, user: an excluded prerequisite blocked a whole following target).
+- A question prerequisite that is available but outside today's chosen tiers is brought forward as 「명시적 선행 문항」
+  when it is not yet assessed (order_plan's own rule), marked `prerequisite` on the solve screen; an assessed one is
+  not served again.
+- A target prerequisite never brings a task in; it only orders selected tasks.
+- Learner records are not changed by any of these."""
 import copy
 import json
 from datetime import timedelta
@@ -75,22 +78,23 @@ user('a')
 first = planned(overview())
 assert set(first) == ALL and first.index('task-q2') < first.index('task-q4'), first
 
-# ── 1. Personal exclude of the prerequisite drops its dependent from availability, plan and every entry point ──
+# ── 1. Personal exclude of the prerequisite leaves its dependent available, in the plan and at every entry point ──
 with SessionLocal() as db:
     db.add(RootEvent(user_id='a', request_id='x-q2', session_id="", subject='test', run_id='demo', revision=REVISION,
                      kind='exclude', payload={'question_id': 'Q2'}, result={}, created_at=NOW - timedelta(hours=1)))
     db.commit()
     row = db.get(RootContent, ('test', 'demo', REVISION))
     available, problems = content.availability(db, row, 'a')
-assert available == {'task-q1', 'task-q3'}, available
-assert problems == {'task-q2': '개인 제외', 'task-q4': '명시적 선행 문항이 준비되지 않음'}, problems
+assert available == {'task-q1', 'task-q3', 'task-q4'}, available
+assert problems == {'task-q2': '개인 제외'}, problems
 before = records('a')
 info = overview()
-assert sorted(planned(info)) == ['task-q1', 'task-q3'], info['plan']['tasks']
-assert info['preparationProblems'] == 2
+assert sorted(planned(info)) == ['task-q1', 'task-q3', 'task-q4'], info['plan']['tasks']
+assert info['preparationProblems'] == 1
 for path in ('/api/root-learning', '/api/main-quiz/lectures/test/demo/entry'):
     r = client.get(path); assert r.status_code == 200, (path, r.text)
-assert view(client, start(client, 'a-start'))['count'] == 2
+served = view(client, start(client, 'a-start'))
+assert served['count'] == 3 and served['blocked'] is None, served
 assert [r for r in records('a') if r[1] != 'start'] == [r for r in before if r[1] != 'start']
 
 # ── 2. Importance filter leaving out an unassessed prerequisite brings it forward instead of failing ──
@@ -122,8 +126,23 @@ assert 'task-q2' not in [t['task_id'] for t in later] and 'task-q4' in [t['task_
 # Without a filter, plan is called as before.
 assert plan(doc, [], ALL, NOW, POLICY) == plan(doc, [], ALL, NOW, POLICY, focus=ALL)
 
-# ── 3. Older documents without /2·/4 dependencies are unchanged by the closure ──
-legacy = document()
-assert content.close_prerequisites(legacy, {'task1'}, {}) == ({'task1'}, {})
-print('PASS: an excluded prerequisite drops its dependents, a filtered-out unassessed prerequisite is brought forward, '
-      'catalog/overview/entry answer 200, learner records unchanged')
+# The brought-in prerequisite is marked on the solve screen; a task chosen for itself is not.
+sid = start(client, 'b-start')
+r = client.get(f'/api/root-learning/sessions/{sid}/prepare', params={'start': 0, 'count': 4}); assert r.status_code == 200, r.text
+marks = {f['taskId']: f['task']['prerequisite'] for f in r.json()['frames']}
+assert marks == {'task-q2': True, 'task-q1': False, 'task-q3': False, 'task-q4': False}, marks
+first = view(client, sid)['task']
+assert first['prerequisite'] is marks[first['id']], first
+assert [r for r in records('b') if r[1] != 'start'] == [r for r in before if r[1] != 'start']
+
+# ── 3. A target prerequisite brings in only tasks inside today's chosen tiers ──
+# root fixture: T1 (task1·task2) → T2 (task3). Before 2026-11-16 order_plan pulled all of T1 in for task3 whatever the
+# filter (261109_02: 35 of 52 tasks in an Essential-only list). Inside the filter the plan still brings T1 forward.
+targets = document()
+both = {'task1', 'task2', 'task3'}
+assert [t['task_id'] for t in plan(targets, [], both, NOW, POLICY, focus={'task3'})['tasks']] == ['task3']
+assert [t['task_id'] for t in plan(targets, [], both, NOW, POLICY)['tasks']] == ['task1', 'task2', 'task3']
+assert [t['task_id'] for t in plan(targets, [], both - {'task1'}, NOW, POLICY)['tasks']] == ['task2', 'task3']
+
+print('PASS: an excluded prerequisite is passed over (its dependent stays), a filtered-out unassessed question '
+      'prerequisite is brought forward and marked, catalog/overview/entry answer 200, learner records unchanged')
