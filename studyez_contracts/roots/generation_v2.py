@@ -750,16 +750,29 @@ def task_dependencies(doc):
                 deps[t['task_id']]+=before
     return {k:list(dict.fromkeys(v))for k,v in deps.items()}
 
+def question_dependencies(doc):
+    """Only the question prerequisites (`questions[].prerequisites`) of each task, without target edges."""
+    qs={q['question_id']:q for q in doc['bank_snapshot']['questions']};by_question={}
+    for t in doc['tasks']:by_question.setdefault(t['question_id'],t['task_id'])
+    return {t['task_id']:list(dict.fromkeys(by_question[q]for q in qs[t['question_id']].get('prerequisites',[])
+                                            if q in by_question))for t in doc['tasks']}
+
 def order_plan(doc,selected,available,assessed):
-    """Combine question and target prerequisites; a prior miss still opens the next step."""
-    deps=task_dependencies(doc);tasks={t['task_id']:t for t in doc['tasks']};chosen={t['task_id']:t for t in selected}
+    """Combine question and target prerequisites; a prior miss still opens the next step.
+
+    docs/changes/2026-11-16-prereq-question-only: a target edge only orders tasks that are already selected. Only a
+    question prerequisite is brought in when it is not selected (prepared and not yet assessed). A prerequisite that
+    is not available (personal exclude …) is passed over and never holds back the task after it. With every task
+    selected and available — document authoring and validation — the result is unchanged."""
+    deps=task_dependencies(doc);hard=question_dependencies(doc)
+    tasks={t['task_id']:t for t in doc['tasks']};chosen={t['task_id']:t for t in selected}
     done=set();visiting=set();result=[]
     def emit(tid):
         require(tid not in visiting,'prerequisites: combined target/question cycle')
         if tid in done:return
         require(tid in available,'Prepared prerequisite became unavailable: '+tid);visiting.add(tid)
         for pre in deps[tid]:
-            if tasks[pre]['question_id']not in assessed or pre in chosen:emit(pre)
+            if pre in chosen or(pre in hard[tid]and pre in available and tasks[pre]['question_id']not in assessed):emit(pre)
         visiting.remove(tid);done.add(tid)
         result.append(chosen.get(tid,{**tasks[tid],'reason':'명시적 선행 문항'}))
     for t in selected:emit(t['task_id'])

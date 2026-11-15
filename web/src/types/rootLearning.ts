@@ -33,7 +33,9 @@ export type RootOverview = {revision:string; title:string; policyReady:boolean; 
   scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;
-  task:{id:string; question:BankQuestion; answer:RootAnswer|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
+  task:{id:string; question:BankQuestion; answer:RootAnswer|null; response:string|null; attempted:boolean|null; helped:boolean;
+    /** 뒤 과제의 문항 선행이라 오늘 목록에 들어왔다(2026-11-16). 옛 서버는 보내지 않는다. */
+    prerequisite?:boolean}|null};
 export type RootAnswer = BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
   reviewIssues?:string[];sourceLinks?:{label:string;url:string}[];pdfSlides?:RootPdfSlide[];
   /** 족보(exam) 원본의 지면. 강의록 슬라이드와 따로 그린다. */
@@ -42,7 +44,7 @@ export type RootAnswer = BankAnswer&{reviewNotes?:{source:string;verdict:string;
   slideFocusKnown?:boolean};
 /** Read-only look-ahead of one session position (GET …/prepare). Records nothing; display only until /events confirms. */
 export type RootFrame = {position:number; taskId:string; blocked:string|null;
-  task:{id:string; question:BankQuestion; answer:RootAnswer; helped:boolean}|null};
+  task:{id:string; question:BankQuestion; answer:RootAnswer; helped:boolean; prerequisite?:boolean}|null};
 export type RootAction = {kind:'reveal'|'rate'|'skip'|'exclude'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
   choicesShown?:boolean;
   grade?:'missed'|'partial'|'independent';selfRating?:BankRating};

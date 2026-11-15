@@ -229,6 +229,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       </span>}</div>
     {view.blocked&&<p role="alert">{view.blocked}</p>}
     {editNote&&<p className="bank-note mq-edit-note" role="status">{editNote}</p>}
+    {task&&task.prerequisite&&<p className="mq-edited mq-prerequisite"><span className="tag">선행 문항</span> 뒤에 나올 문제를 풀기 전에 먼저 확인하는 문제라, 고른 중요도와 상관없이 함께 나왔습니다. 제외해도 뒤 문제는 그대로 나옵니다.</p>}
     {task&&task.question.personalEdited&&<p className="mq-edited"><span className="tag">내 수정본</span></p>}
     {editing&&task&&editPath&&<PersonalQuestionDialog path={editPath(task.question.question_id)} questionId={task.question.question_id}
       answerVisible={!!task.answer} onClose={()=>setEditing(false)} onSaved={(result,reset)=>{

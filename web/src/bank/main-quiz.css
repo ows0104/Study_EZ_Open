@@ -281,6 +281,7 @@
 .main-quiz-solve .mq-card.is-answered .bank-stimuli img{max-height:min(28vh,300px)}
 .mq-help-note{margin:10px 0 0;font-size:12px}
 .mq-edited{margin:0 0 8px;text-align:left}
+.mq-prerequisite{color:var(--ink-3);font-size:13px}
 .mq-edit-note{margin:0 0 8px;text-align:left}
 /* 문항 타이머(2026-11-11): 오른쪽 위에 남은 초와 켜기/끄기만. 5초 이하·일시정지는 눈에 띄게. */
 .mq-timer{display:inline-flex;align-items:center;gap:8px;margin-right:4px}

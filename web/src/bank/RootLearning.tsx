@@ -89,7 +89,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
       // 막힌 과제(제외 등)는 서버가 건너뛸 수 있다 — 서버 기록을 받아 그린다.
       if(!frame||frame.blocked)return null;
       return {...moved,blocked:frame.blocked,task:frame.task?{id:frame.task.id,question:frame.task.question,answer:null,response:null,
-        attempted:null,helped:current.mapSeen||frame.task.helped}:null};
+        attempted:null,helped:current.mapSeen||frame.task.helped,prerequisite:frame.task.prerequisite}:null};
     }
     if(action.kind==='undo') {
       const before=undoSnapshots.current.at(-1);

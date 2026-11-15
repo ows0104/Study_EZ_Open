@@ -1,0 +1,298 @@
+{
+  "id": "2026-11-16-prereq-question-only",
+  "title": "Main-Quiz 선행: 끌어오기·막기는 문항 사이 선행만",
+  "area": "site",
+  "created_at": "2026-11-15T15:05:01.059325+00:00",
+  "required_checks": [
+    "contracts",
+    "server",
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-15T15:18:01.571554+00:00",
+      "evidence": "사용자 2026-11-15 채팅: 「1+2+3 다 고치기」 / 2026-11-16 채팅: 「단원 사이 선행연결이 뭔 말이야? 문제간 선행연결이 있어야하는거 아니야?」 → 「응 그 방향으로 진행해줘」",
+      "scope": "plan.md 범위: generation_v2 order_plan·question_dependencies, content.py availability, planning.py 설명, routes/root_learning.py prerequisite 필드, RootSolve·RootLearning·types·css 표시, 관련 검사. DB 스키마·운영 데이터·학습 기록 변경 제외. master 병합은 따로 확인",
+      "evidence_version": 2,
+      "source_hash": "94bb7a2aaacd563c2ca4d7208be43d3f28029e7c2df53348c282111793f9c175",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "7ef5772711a866d7f69ce538604bcbb6854899ef76289b61ddee9a6175886931"
+    }
+  },
+  "checks": [
+    {
+      "name": "contracts",
+      "at": "2026-11-15T15:18:17.870288+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "-q"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "94bb7a2aaacd563c2ca4d7208be43d3f28029e7c2df53348c282111793f9c175",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794755882173792000-contracts.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-15T15:21:09.977048+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8'); py=r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe'; sys.exit(max(subprocess.run([py,'-m','tests',f],cwd=os.path.join(root,'server'),env=env).returncode for f in ('prereq_closure','root','main_quiz','route_contract')))"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "94bb7a2aaacd563c2ca4d7208be43d3f28029e7c2df53348c282111793f9c175",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794755902673296600-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-15T15:21:49.893072+00:00",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "94bb7a2aaacd563c2ca4d7208be43d3f28029e7c2df53348c282111793f9c175",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794756097178211400-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-15T15:22:30.490813+00:00",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "94bb7a2aaacd563c2ca4d7208be43d3f28029e7c2df53348c282111793f9c175",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794756142491707500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-15T15:24:03.988600+00:00",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0f1b27a25063e8cb261ecf268768f703b823f198e0d6d181b4a00f1ec4442de4",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794756232561281800-web.log"
+    },
+    {
+      "name": "contracts",
+      "at": "2026-11-15T15:24:54.135628+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "-q"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0f1b27a25063e8cb261ecf268768f703b823f198e0d6d181b4a00f1ec4442de4",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794756254951252000-contracts.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-15T15:27:45.735602+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8'); py=r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe'; sys.exit(max(subprocess.run([py,'-m','tests',f],cwd=os.path.join(root,'server'),env=env).returncode for f in ('prereq_closure','root','main_quiz','route_contract')))"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "0f1b27a25063e8cb261ecf268768f703b823f198e0d6d181b4a00f1ec4442de4",
+      "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794756294533881200-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-15T15:24:04.295948+00:00",
+    "summary": "경계: order_plan은 목표 선행으로 고르지 않은 과제를 따라가지 않고, 문항 선행만 끌어오며, 준비 안 된 선행은 건너뛴다. availability는 과제 자신의 이유만. planning의 후보 안 「명시적 선행 연결」은 유지(spec R1). 응답에 task.prerequisite 추가(삭제 없음). 확인: contracts 전부, server는 master와 같은 결과(map_tree 2개는 로컬 pymupdf 없음), web typecheck·고정물 ALL PASSED, 운영 사본 재현 Essential만 52→18·막힘 0. 남은 위험: #190·#194의 존재 목표 선행은 고른 중요도 밖이면 끌려오지 않는다.",
+    "evidence_version": 2,
+    "source_hash": "0f1b27a25063e8cb261ecf268768f703b823f198e0d6d181b4a00f1ec4442de4",
+    "plan_hash": "969f79a1ec4e595c52594353a06ff2e890696bba04d2f74bee1f6a88f2c02dca",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-15T15:27:45.738696+00:00"
+}

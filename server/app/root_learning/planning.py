@@ -9,10 +9,11 @@ from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
 def plan(doc, events, available, now, policy, focus=None, new_goals=None):
-    """`available` is closed under prerequisites (content.availability). `focus`, a subset of it, narrows the
-    candidates only (오늘 학습 중요도 필터): an unassessed prerequisite of a focused task that lies outside the
-    focus is still brought forward by order_plan, which checks against `available`. Without a focus every
-    available task is a candidate, as before (docs/changes/2026-11-12-plan-prereq-closure).
+    """`focus`, a subset of `available`, narrows the candidates only (오늘 학습 중요도 필터). An unassessed question
+    prerequisite of a planned task is brought forward by order_plan even outside the focus; one that is not available
+    is passed over. A target prerequisite brings in only candidates (「명시적 선행 연결」, inside the focus) and
+    otherwise just orders. Without a focus every available task is a candidate
+    (docs/changes/2026-11-12-plan-prereq-closure, 2026-11-16-prereq-question-only).
 
     오늘 학습 이어 풀기(docs/changes/2026-11-14-continuous-today): `new_goals` fixes the new-goal quota (capped by
     the prepared unseen goals) for a stream that 「더 풀기」 lengthened. Without it the quota is the former one."""
