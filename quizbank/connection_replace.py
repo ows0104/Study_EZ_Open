@@ -31,6 +31,7 @@ from studyez_contracts.roots import generation_v3 as v3
 from studyez_contracts.roots import generation_v4 as v4
 from studyez_contracts.roots import map_tree
 from . import connection_dedupe as dedupe
+from . import source_update
 from .connection_generate_v3 import Stages
 from .connection_generate_v4 import _goals, check_stage
 
@@ -110,7 +111,9 @@ def run(packet, out, model, invoke, previous, resume=None):
     old_packet = json.loads((previous / 'packet.json').read_text(encoding='utf-8'))
     old = json.loads((previous / 'result.json').read_text(encoding='utf-8'))
     v4.validate_result(old, old_packet)
-    v3.require(dedupe.lecture_input(old_packet) == dedupe.lecture_input(packet), f'{LABEL}: 이전 실행과 강의 입력이 다릅니다.')
+    # notes-update/1 (docs/changes/2026-11-16-replace-updated-notes): only a source file may differ, with the same pages.
+    changed = source_update.changed_sources(dedupe.lecture_input(old_packet), dedupe.lecture_input(packet), LABEL)
+    update = source_update.compare(old_packet, packet, changed, LABEL) if changed else None
     v3.require(old['document']['revision'] != packet['revision'], f'{LABEL}: 새 판 이름이 이전 판과 같습니다.')
     v3.require(codex.model_name(model) == old['manifest']['model'],
                f"{LABEL}: 이전 실행의 모델({old['manifest']['model']})과 지금 모델({codex.model_name(model)})이 다릅니다.")
@@ -124,6 +127,12 @@ def run(packet, out, model, invoke, previous, resume=None):
     ledger = st.ledger
     v3.require(ledger.get('unplacedOnly', {}).get('previousRevision') == old['document']['revision'],
                f'{LABEL}: 이 폴더는 다른 판에서 시작했습니다.')
+
+    if update:
+        # The brief, the material the stages read and every judgment stay the earlier file's (the stage receipts are
+        # checked against them); only the published document names the corrected file (spec R3).
+        for r in update['sources']:
+            print(f"── 필기 교체: {r['source_id']} {r['fromFilename']} → {r['toFilename']} · 바뀐 쪽 {r['changedPages']}", flush=True)
 
     placement = 'review-coverage'
     bank = v2.restore_container_concepts(v2.restore_importance(old['document']['bank_snapshot'], meta.get('importanceProjection')),
@@ -232,6 +241,14 @@ def run(packet, out, model, invoke, previous, resume=None):
     kept = {t['question_id'] for t in old['document']['tasks']}
     v3.require(kept <= {t['question_id'] for t in doc['tasks']} | {m['question_id'] for m in placed['mergedDuplicates']},
                f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
+    if update:
+        update['questionsOnChangedPages'], update['conflictsOnChangedPages'] = source_update.on_changed_pages(
+            update, doc['bank_snapshot'], reviews)
+        record['sourceUpdate'] = update
+        doc = v4.apply_source_update(doc, brief, packet, update)
+        print(f"── 필기 교체: 바뀐 쪽을 근거로 한 문항 {len(update['questionsOnChangedPages'])}개 "
+              f"{[q['question_id'] for q in update['questionsOnChangedPages']]} · 원본 충돌 기록 "
+              f"{[c['conflict_id'] for c in update['conflictsOnChangedPages']]} — 문항은 그대로입니다. 사람이 확인하세요.", flush=True)
     g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
     doc['equivalences'], record['carry'] = v4.carry_links(doc, packet['carrySources'])
     previous_carry = next((r for r in record['carry'] if r['revision'] == old['document']['revision']), None)

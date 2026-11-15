@@ -1,0 +1,44 @@
+{
+  "id": "2026-11-16-replace-updated-notes",
+  "title": "Main-Quiz 재배치가 바뀐 필기(같은 쪽 수)를 이어받기",
+  "area": "generation",
+  "created_at": "2026-11-15T15:04:34.460228+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-15T15:48:07.795779+00:00",
+      "evidence": "사용자 채팅 2026-11-16: 「승인, 구현해」 뒤 구현 중 설계 변경(공개 문서에서만 원본 교체·replaced_sources, 계약 generation_v4·validate·media)을 보고, 로컬 실측 결과 보고 뒤 「병합·재설치·재요청 진행」",
+      "scope": "spec R1~R6 최종(release.md 구현 기록), PR 병합(API 배포)·러너 재설치·261112_03 재요청",
+      "evidence_version": 2,
+      "source_hash": "5b5857b8049907b93a64d3157f8e814a0a77a94ab090434fcdb62803491edefd",
+      "plan_hash": "16e3f790e719cb4ee3ffda0000e8f36e398204f45f4a0a6336a973077675ea13",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "dae76ee830de7c2b163cc38da0a5f5511460ae0bc9b995e753220f1d69d4c0b0"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-15T15:48:07.885356+00:00"
+}

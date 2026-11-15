@@ -1029,6 +1029,32 @@ def _placement4(value, brief, reviewed, meta):
 CARRY_REASON = '못 붙은 문항 재배치: 같은 방향·같은 문항 지문의 학습 기록을 잇는다'
 
 
+NOTES_UPDATE = 'notes-update/1'
+
+
+def apply_source_update(doc, brief, packet, update):
+    """notes-update/1 (docs/changes/2026-11-16-replace-updated-notes): a replacement run took corrected notes of the same
+    pages. The brief and every judgment stay those of the earlier file; the document names the corrected file (its
+    answer evidence is rendered from it) and lists the earlier one, which only figures cropped from it still name."""
+    require(type(update) is dict and update.get('policy') == NOTES_UPDATE and type(update.get('sources')) is list
+            and update['sources'], 'notes update: malformed record')
+    files = {s['id']: s for s in packet['sources']}
+    before = {s['source_id']: s for s in brief['sources']}
+    changed = {}
+    for r in update['sources']:
+        sid = r.get('source_id')
+        require(sid in before and sid in files and sid not in changed and before[sid]['kind'] == 'notes'
+                and type(before[sid]['page_count']) is int, 'notes update: only a notes PDF of the brief is replaced')
+        require(r.get('fromSha256') == before[sid]['sha256'] and r.get('toSha256') == files[sid]['sha256'] != before[sid]['sha256'],
+                'notes update: the record names other files')
+        changed[sid] = files[sid]
+    doc = copy.deepcopy(doc)
+    doc['review']['sources'] = [{**s, 'label': changed[s['source_id']]['filename'], 'sha256': changed[s['source_id']]['sha256']}
+                                if s['source_id'] in changed else s for s in doc['review']['sources']]
+    doc['replaced_sources'] = [{'source_id': sid, 'sha256': before[sid]['sha256']} for sid in changed]
+    return validate_document(doc)
+
+
 def carry_links(doc, sources):
     """docs/changes/2026-11-15-replace-carry-records R1: one equivalence per (earlier revision, direction) that keeps at
     least one of that revision's questions unchanged on the same direction. The server replays an earlier event only for
@@ -1071,6 +1097,8 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
     if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):
         # A replacement continues the history of the earlier revisions it keeps questions of (replace-carry-records).
         again['equivalences'] = carry_links(again, packet['carrySources'])[0]
+    if (meta.get('unplacedOnly') or {}).get('sourceUpdate'):
+        again = apply_source_update(again, brief, packet, meta['unplacedOnly']['sourceUpdate'])
     require(again == doc, 'result4: the document is not the assembly of the reviewed judgments')
     require(placed == {k: meta[k] for k in placed}, 'result4: merged duplicates or unplaced questions differ')
     require(meta['readiness'] == readiness(brief, meta['coverage'], doc), 'result4: the readiness table is not of these judgments')
