@@ -53,17 +53,24 @@ def counted_targets(doc, dropped=frozenset()):
 def personal_tiers(doc, events, now=None):
     """This revision's 「내 중요도」: the last tier event per question (tier null = 원래대로).
 
-    Other revisions are never read: a question ID alone does not carry a learner's choice."""
-    chosen = {}
-    rows = [e for e in events if e['kind'] == 'tier' and e['revision'] == doc['revision']
-            and (now is None or instant(e['at']) <= now)]
+    A question ID alone never carries a learner's choice. An earlier revision's choice counts only for the question its
+    equivalences link with the same question fingerprint (`doc.carried_questions`, light documents;
+    docs/changes/2026-11-15-replace-carry-records R4)."""
+    carried = getattr(doc, 'carried_questions', None) or {}
+    chosen, rows = {}, []
+    for e in events:
+        if e['kind'] != 'tier' or (now is not None and instant(e['at']) > now):
+            continue
+        qid = e['payload']['question_id'] if e['revision'] == doc['revision'] else carried.get((e['revision'], e['payload']['question_id']))
+        if qid:
+            rows.append((e, qid))
     # `seq` orders choices saved at the same instant (request IDs are random).
-    for event in sorted(rows, key=lambda e: (instant(e['at']), e['payload'].get('seq', 0), e['id'])):
+    for event, qid in sorted(rows, key=lambda r: (instant(r[0]['at']), r[0]['payload'].get('seq', 0), r[0]['id'])):
         p = event['payload']
         if p.get('tier') is None:
-            chosen.pop(p['question_id'], None)
+            chosen.pop(qid, None)
         else:
-            chosen[p['question_id']] = {'tier': p['tier'], 'originalTier': p['originalTier']}
+            chosen[qid] = {'tier': p['tier'], 'originalTier': p['originalTier']}
     return chosen
 
 

@@ -104,6 +104,9 @@ def run(packet, out, model, invoke, previous, resume=None):
     from . import connection_generate as g
     out, previous = Path(out), Path(previous)
     v3.require(packet.get('generationPolicy') == v4.POLICY, f'{LABEL}은 root-generation/4 packet만 받습니다.')
+    # R1: without the earlier revisions' fingerprints the new revision would start every learner over.
+    v3.require(packet.get('carrySources'), f'{LABEL}: 이전 판 문항 지문(carrySources)이 없어 학습 기록을 이을 수 없습니다. '
+               '새 서버에서 다시 요청하세요.')
     old_packet = json.loads((previous / 'packet.json').read_text(encoding='utf-8'))
     old = json.loads((previous / 'result.json').read_text(encoding='utf-8'))
     v4.validate_result(old, old_packet)
@@ -230,6 +233,12 @@ def run(packet, out, model, invoke, previous, resume=None):
     v3.require(kept <= {t['question_id'] for t in doc['tasks']} | {m['question_id'] for m in placed['mergedDuplicates']},
                f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
     g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
+    doc['equivalences'], record['carry'] = v4.carry_links(doc, packet['carrySources'])
+    previous_carry = next((r for r in record['carry'] if r['revision'] == old['document']['revision']), None)
+    staying = {t['question_id'] for t in doc['tasks']}   # an old task merged as a duplicate stays off the task list
+    v3.require(previous_carry and previous_carry['tasks'] == sum(t['question_id'] in staying for t in old['document']['tasks']),
+               f'{LABEL}: 이전 판의 과제 중 같은 문항으로 이을 수 없는 것이 있습니다 — 학습 기록이 끊깁니다.')
+    print(f"── {LABEL} 학습 기록 승계: " + ', '.join(f"{r['revision']} {r['tasks']}/{r['of']}과제" for r in record['carry']), flush=True)
 
     manifest = copy.deepcopy(meta)
     for key in ('coverageFallback',):

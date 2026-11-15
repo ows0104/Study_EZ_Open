@@ -41,7 +41,7 @@ SEEDING = '.seeding'   # present while the receipts are being linked; a rerun af
 NOT_COPIED = {'result.json', 'readiness.json', 'packet.json', 'ledger.json', 'evidence', 'choices', '.check-render', SEEDING}
 # Packet fields that name the request, not the lecture input; everything else must be the previous run's.
 REQUEST_KEYS = {'generationId', 'revision', 'inputHash', 'derivedFrom', 'owner', 'privatePilot', 'requestedExamDate',
-                'examDate', 'restartOf', 'restartReason', 'replacePublished', 'duplicatesOnly', 'unplacedOnly', 'operatorResumes'}
+                'examDate', 'restartOf', 'restartReason', 'replacePublished', 'duplicatesOnly', 'unplacedOnly', 'carrySources', 'operatorResumes'}
 SOURCE_LOCAL = {'snapshotKey', 'localPath', 'downloadUrl'}
 
 
