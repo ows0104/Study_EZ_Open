@@ -41,7 +41,7 @@
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
 |---|---|---|---|---|
-| P1 | 존재 목표(presuppose/1) 운영 적용: 러너 재설치(새 출제가 presuppose/1로 돌게) → 공개된 강의 보강(presuppose-only/1, 요청 presupposeOnly) 강의별로 | ows0104 / Claude 출제 진단 세션 | runner .runtime 재설치, 운영 공개판 교체(강의별) | 코드는 병합 완료(#188~190·#194). 사용자 확인 대기: 러너 재설치 시점·첫 보강 강의. 재배치(unplaced-replace)·다른 교체 작업과 강의별로 차례로 |
+| P1 | 존재 목표(presuppose/1) 운영 적용: 러너 재설치 완료(11-16, .runtime/main-quiz-47d04aee233e, 새 출제가 presuppose/1로 돈다) → 공개된 강의 보강(presuppose-only/1, 요청 presupposeOnly) 강의별로 | ows0104 / Claude 출제 진단 세션 | runner .runtime 재설치, 운영 공개판 교체(강의별) | 코드는 병합 완료(#188~190·#194). 사용자 확인 대기: 첫 보강 강의. 재배치(unplaced-replace)·다른 교체 작업과 강의별로 차례로 |
 
 ## 3. 제안된 아이디어 (논의 필요)
 
