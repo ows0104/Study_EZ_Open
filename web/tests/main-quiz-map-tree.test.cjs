@@ -8,7 +8,7 @@ function load(file){
 }
 // Values come from a vm realm; compare their JSON shape, not prototypes.
 const same=(a,b,m)=>assert.deepEqual(JSON.parse(JSON.stringify(a)),b,m);
-const {buildTree,lanes,lanesPerRow,questionsOf,ancestors,plain}=load(path.join(__dirname,'../src/bank/rootMapTree.ts'));
+const {buildTree,lanes,lanesPerRow,questionsOf,ancestors,plain,contentRelations}=load(path.join(__dirname,'../src/bank/rootMapTree.ts'));
 const direction=id=>({direction_id:id,cue:'cue',answer_scope:'secret',requirement:'required'});
 const importance={structural:{status:'insufficient',reason:''},exam:{status:'insufficient',reason:''},clinical:{status:'insufficient',reason:''}};
 // Shape of the published 감염병리1 판: topic concepts (two share a title) + one answer node per question.
@@ -90,4 +90,14 @@ test('lane rows stay screen-shaped for flat maps',()=>{
 
 test('display text drops authored emphasis markers only',()=>{
   assert.equal(plain('**감염**이라고 결론 (O/X) 2*3'),'감염이라고 결론 (O/X) 2*3');
+});
+
+test('a prerequisite relation (study order) is not a content link: its answer node stays an answer node',()=>{
+  // N3_A answers N3_T; it is the from end of a code-derived prerequisite to C001 (docs/changes/2026-11-15-tree-edge-goals).
+  const withOrder={...published,relations:[...published.relations,
+    {relation_id:'PRE1',from_id:'N3_A',to_id:'C001',kind:'prerequisite',reason:'존재 목표 → 세부 목표'}]};
+  same(contentRelations(withOrder).map(r=>r.relation_id),published.relations.map(r=>r.relation_id));
+  const before=buildTree(published,summary,'강의'),after=buildTree(withOrder,summary,'강의');
+  same([...after.nodes.keys()],[...before.nodes.keys()],'same tree with and without the order relation');
+  assert.equal([...after.nodes.values()].some(n=>/정답/.test(n.label)),false);
 });

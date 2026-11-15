@@ -38,6 +38,11 @@ export function bankHref(lecture: { subject: string; runId: string }) {
   return quizHref("main", lecture);
 }
 
+/** 같은 Main-Quiz 화면을 개념 지도부터 연다(2026-11-14). 뒤로는 연 곳으로 돌아간다. */
+export function mapHref(lecture: { subject: string; runId: string }) {
+  return `${bankHref(lecture)}?map=1`;
+}
+
 export function bankCatalogHref(lecture: { subject: string; runId: string }) {
   return `/bank/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/all`;
 }

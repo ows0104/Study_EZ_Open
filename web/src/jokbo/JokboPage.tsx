@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
+import { useNoteLecture } from "../notes/noteLecture";
 import { Icon } from "../shell/icons";
 import type { JokboBand, JokboDoc, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
 import { JokboBody } from "./JokboBody";
@@ -23,6 +24,10 @@ import "./jokbo.css";
  * 답을 본 뒤 독에서 **모르겠음 · 주의 · 괜찮음**을 골라야 넘어간다 — 고른 것이 오답노트 표시다.
  * 끝 화면은 이번에 오답노트에 넣은 문제를 답·해설과 함께 펼쳐 둔다.
  * 틀리면 서버가 먼저 high(모르겠음)를 붙이고, 사람이 고른 값이 그 뒤에 덮는다.
+ *
+ * 회독(2026-11-14 사용자 「첫 페이지에서 설정한 만큼 다 풀고 마무리 페이지에 도착했으면 1회독」):
+ * 진입 화면에서 고른 범위 전부(또는 끝 화면 「다시 풀기」로 같은 범위 전부)를 끝까지 풀어 끝 화면에 닿으면
+ * 서버에 1회독을 남긴다. 「이 문제만 다시 풀기」처럼 일부만 다시 푼 것은 세지 않는다.
  */
 export function JokboPage() {
   const { eventId = "" } = useParams();
@@ -31,6 +36,8 @@ export function JokboPage() {
   const [error, setError] = useState("");
   const [queue, setQueue] = useState<JokboItem[] | null>(null);
   const [round, setRound] = useState(0);
+  // 진입 화면에서 고른 범위. 이것을 통째로 푼 판만 회독으로 센다.
+  const range = useRef<JokboItem[] | null>(null);
   const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
   const bandsRef = useRef(bands);
   bandsRef.current = bands;
@@ -50,7 +57,7 @@ export function JokboPage() {
     pending.current[itemId] = postAnswer(eventId, itemId, verdict).catch(() => { /* 기록 실패는 풀이를 막지 않는다 */ });
   }, [eventId]);
 
-  const rate = useCallback((itemId: string, band: Shown) => {
+  const rate = useCallback((itemId: string, band: JokboBand | null) => {
     const before = bandsRef.current[itemId] ?? null;
     if (before === band) return; // 틀려서 서버가 이미 high, 또는 원래 표시 그대로
     setBands(prev => ({ ...prev, [itemId]: band }));
@@ -67,9 +74,16 @@ export function JokboPage() {
       });
     return () => { alive = false; };
   }, [eventId]);
+  // 플로팅 노트의 「＋강의명」(2026-11-14 사용자: 족보 풀 때도 복습 퀴즈처럼). 이름은 머리줄과 같게.
+  useNoteLecture(data ? lectureTitle(data.doc) : null);
 
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
   const start = (items: JokboItem[]) => { setQueue(items); setRound(r => r + 1); };
+  const startRange = (items: JokboItem[]) => { range.current = items; start(items); };
+  const finished = useCallback(() => {
+    api(`/api/jokbo/events/${encodeURIComponent(eventId)}/rounds`, { method: "POST" })
+      .catch(() => { /* 회독 기록 실패는 끝 화면을 막지 않는다 */ });
+  }, [eventId]);
 
   if (error) return <main className="main-quiz-learning jokbo-learning"><p className="notice is-error">{error}</p></main>;
   if (!data) return <main className="main-quiz-learning jokbo-learning"><p className="event-panel-loading">불러오는 중…</p></main>;
@@ -77,8 +91,9 @@ export function JokboPage() {
     <main className={`main-quiz-learning jokbo-learning${queue ? "" : " is-start"}`}>
       {queue
         ? <JokboSolve key={round} doc={data.doc} items={queue} bands={bands}
-            onExit={() => setQueue(null)} onLeave={back} onRetry={start} onAnswered={answered} onRate={rate} />
-        : <JokboStart data={data} onBack={back} onStart={start} />}
+            onExit={() => setQueue(null)} onLeave={back} onRetry={start} onAnswered={answered} onRate={rate}
+            onFinish={queue === range.current ? finished : undefined} />
+        : <JokboStart data={data} onBack={back} onStart={startRange} />}
     </main>
   );
 }
@@ -188,23 +203,28 @@ function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: ()
 
 // ─────────────────────────────────────────────── 풀이
 
-type Result = { item: JokboItem; verdict: Verdict; picked: number[]; band?: Shown };
+/** `before`: 표시를 고르기 직전의 값(틀리면 서버가 붙인 high 포함). z로 되돌리면 이 값으로 돌린다. */
+type Result = { item: JokboItem; verdict: Verdict; picked: number[]; band?: Shown; before?: JokboBand | null };
 
 const BACK_ICON = (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
 );
 
-function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, onRate }: {
+function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, onRate, onFinish }: {
   doc: JokboDoc; items: JokboItem[];
   bands: Record<string, JokboBand | null>;
   onExit: () => void; onLeave: () => void; onRetry: (items: JokboItem[]) => void;
   onAnswered: (itemId: string, verdict: Verdict) => void;
-  onRate: (itemId: string, band: Shown) => void;
+  onRate: (itemId: string, band: JokboBand | null) => void;
+  /** 고른 범위 전부를 푸는 판이면 있다. 끝 화면에 닿을 때 한 번 부른다(회독 1). */
+  onFinish?: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number[]>([]);
   const [shown, setShown] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
+  // z로 직전 표시를 되돌려 그 문제의 답 화면에 와 있다. 한 번 더 고르기 전까지 z를 또 받지 않는다.
+  const [undone, setUndone] = useState(false);
   const item = items[index] as JokboItem | undefined;
   const verdict = shown ? results[results.length - 1]?.verdict : undefined;
   // 독의 기본값(Enter·Space): 틀렸으면 모르겠음, 그 밖은 괜찮음.
@@ -221,13 +241,33 @@ function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, o
 
   const rate = useCallback((band: Shown) => {
     if (!item || !shown) return;
+    const before = item.id in bands ? bands[item.id] : null;
     onRate(item.id, band);
-    setResults(prev => prev.map((r, i) => (i === prev.length - 1 ? { ...r, band } : r)));
+    setResults(prev => prev.map((r, i) => (i === prev.length - 1 ? { ...r, band, before } : r)));
     setIndex(i => i + 1);
     setPicked([]);
     setShown(false);
+    setUndone(false);
     window.scrollTo({ top: 0 });
-  }, [item, shown, onRate]);
+  }, [item, shown, bands, onRate]);
+
+  /**
+   * z: 다른 퀴즈처럼 직전 평가(모르겠음·주의·괜찮음)를 되돌린다(2026-11-15 사용자 지시).
+   * 직전 문제의 답 화면으로 돌아가고 오답노트 표시는 고르기 전 값으로 돌린다. 끝 화면에서도 된다.
+   * 답을 막 본 문제는 채점 기록이 이미 남아 되돌리지 않는다.
+   */
+  const undo = useCallback(() => {
+    if (shown || undone) return;
+    const last = results[results.length - 1];
+    if (!last || last.band === undefined) return;
+    onRate(last.item.id, last.before ?? null);
+    setResults(prev => prev.map((r, i) => (i === prev.length - 1 ? { ...r, band: undefined, before: undefined } : r)));
+    setIndex(i => i - 1);
+    setPicked(last.picked);
+    setShown(true);
+    setUndone(true);
+    window.scrollTo({ top: 0 });
+  }, [shown, undone, results, onRate]);
 
   const pick = useCallback((n: number) => {
     if (!item || shown) return;
@@ -237,9 +277,16 @@ function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, o
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.repeat || event.isComposing || event.altKey) return;
       if (event.target instanceof HTMLElement
         && event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+      if ((event.key.toLowerCase() === "z" || event.code === "KeyZ") && !event.shiftKey) {
+        if (document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
+        event.preventDefault();
+        undo();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey) return;
       if (!item) return;
       const n = Number(event.key);
       const enter = event.key === "Enter" || event.key === " ";
@@ -253,7 +300,16 @@ function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, o
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [item, shown, picked, pick, reveal, rate, suggested]);
+  }, [item, shown, picked, pick, reveal, rate, undo, suggested]);
+
+  // 끝 화면에 닿으면 한 번만. 판마다 새로 마운트된다(key=round).
+  const counted = useRef(false);
+  const done = !item;
+  useEffect(() => {
+    if (!done || counted.current || !onFinish) return;
+    counted.current = true;
+    onFinish();
+  }, [done, onFinish]);
 
   const head = (
     <header className="pq-head">

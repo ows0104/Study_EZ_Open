@@ -17,6 +17,21 @@ export function saveQuizMode(mode: QuizMode) {
   try { localStorage.setItem(KEY, mode); } catch { /* 이번 화면에서는 고른 대로 동작한다. */ }
 }
 
+/**
+ * 사진 반입 판의 문항 순서(2026-11-15 사용자 「처음할 때 랜덤으로 섞어서」, docs/changes/2026-11-15-photo-quiz-shuffle).
+ * ordered: 판의 순서대로. random: 날마다 고정된 섞은 순서. 이 기기에 보관하는 편의 설정이고 못 읽으면 순서대로다.
+ */
+export type QuizOrder = 'ordered' | 'random';
+const ORDER_KEY = 'studyez:main-quiz-order';
+
+export function readQuizOrder(): QuizOrder {
+  try { return localStorage.getItem(ORDER_KEY) === 'random' ? 'random' : 'ordered'; } catch { return 'ordered'; }
+}
+
+export function saveQuizOrder(order: QuizOrder) {
+  try { localStorage.setItem(ORDER_KEY, order); } catch { /* 이번 시작에는 고른 대로 보낸다. */ }
+}
+
 type Choice = { id: string; text: string };
 type Group = { label: string; ids: string[] };
 export type ChoiceSet = { choices: Choice[]; correct: string[] | undefined; groups?: Group[] };

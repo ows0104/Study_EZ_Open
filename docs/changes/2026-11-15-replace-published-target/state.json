@@ -1,0 +1,45 @@
+{
+  "id": "2026-11-15-replace-published-target",
+  "title": "공개판 재사용 경로(중복만·못 붙은 문항만)가 공개 판의 작업을 이전 판으로",
+  "area": "site",
+  "created_at": "2026-11-15T14:00:43.277048+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-15T14:01:25.492755+00:00",
+      "evidence": "사용자 채팅 2026-11-15: 무산소세균 restartOf 버그 보고 뒤 「고쳐서 재요청」",
+      "scope": "plan.md 1~2: restart_target from_published, 끝난 같은 입력 요청 재사용 제외, 테스트, 병합, 261106_06 재요청",
+      "evidence_version": 2,
+      "source_hash": "34a12a75a81e496718984c5fbf4de2c20f4c8c9c3432574ebf4f0158e514e150",
+      "plan_hash": "95846a45e24cd917d4114b7c2225dd05a44e49417615a05e3b46c0d09a2188bd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "17eefec14b3e8b449b9ef95462db9b81c72fc43ed13748a0705c9efeb7e022d8"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-15T14:01:36.890443+00:00"
+}

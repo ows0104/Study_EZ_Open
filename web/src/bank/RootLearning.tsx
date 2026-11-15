@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNoteLecture } from '../notes/noteLecture';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { useMe } from '../useMe';
@@ -45,6 +45,10 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const [map,setMap]=useState<RootMapData|null>(null);
   const [error,setError]=useState('');
   const [tab,setTab]=useState<'learn'|'map'>('learn');
+  // ?map=1 (강의 패널 「개념 지도」, 2026-11-14): 지도부터 열고, 뒤로는 연 곳으로 돌아간다.
+  const [search]=useSearchParams();
+  const mapEntry=useRef(search.get('map')==='1');
+  const mapPending=useRef(mapEntry.current);
   const [advancing,setAdvancing]=useState(false);
   const viewRef=useRef(view);viewRef.current=view;
   // Views before each reveal/rating/skip of this session, so every Z draws at once (2026-11-11: unlimited, full undo).
@@ -132,8 +136,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   // 정리 화면의 뒤로: 들어온 화면(강의 목록·캘린더)으로, 바로 열린 창이면 캘린더로.
   const navigate=useNavigate();
   const leave=()=>(window.history.state?.idx>0?navigate(-1):navigate('/'));
-  async function begin() {
-    const started=writes.run(base+'/sessions',{});
+  async function begin(order?:'ordered'|'random') {
+    const started=writes.run(base+'/sessions',order?{order}:{});
     if(!started)return;
     setAdvancing(true);
     try{const r=await started;await Promise.all([loadSession(r.sessionId),refresh()]);}
@@ -192,6 +196,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     }catch(e){if(!(e instanceof ApiError&&e.status===409))setError((e as Error).message);}
     finally{setAdvancing(false);if(!shown)setTab('learn');}
   }
+  useEffect(()=>{if(info&&mapPending.current){mapPending.current=false;void showMap();}},[info]);
+  const mapBack=()=>{if(mapEntry.current)leave();else setTab('learn');};
   useEffect(()=>{document.title='Main-Quiz · Study_EZ';},[]);
   useNoteLecture(info?.title);
   async function reload() {
@@ -217,7 +223,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     <p><Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}?legacy=1`}>기존 문제·기록 보기</Link>{info&&<span className="bank-note"> · 자료 판 {info.revision}</span>}</p>
     <details><summary>Main Quiz 만들기</summary><RootGenerationPanel subject={subject} runId={runId} onPublished={()=>{void refresh().catch(e=>setError(e.message));void adminVersions();}}/></details>
     <details><summary>Main Quiz 자료·공개 관리</summary><p>검토 묶음·원본 문항·채택 목표·방향별 과제를 포함한 새 판을 등록합니다. 기존 기록과 은행은 보존됩니다.</p>
-      <input type="file" accept="application/json,.json" aria-label="Main Quiz 자료" onChange={async e=>{setCandidate(null);const file=e.target.files?.[0];if(!file)return;if(file.size>5_000_000){setError('5MB 이하의 자료를 선택하세요.');return;}try{const text=await file.text();setRaw(text);const value=JSON.parse(text);if(value.schema_version!=='roots/1')throw new Error('Main Quiz 자료 형식을 확인하세요.');setCandidate(value);}catch(err){setError((err as Error).message);}}}/>
+      <input type="file" accept="application/json,.json" aria-label="Main Quiz 자료" onChange={async e=>{setCandidate(null);const file=e.target.files?.[0];if(!file)return;if(file.size>30_000_000){setError('30MB 이하의 자료를 선택하세요.');return;}try{const text=await file.text();setRaw(text);const value=JSON.parse(text);if(value.schema_version!=='roots/1')throw new Error('Main Quiz 자료 형식을 확인하세요.');setCandidate(value);}catch(err){setError((err as Error).message);}}}/>
       {candidate&&<><details><summary>등록할 내용 검토</summary><pre>{raw}</pre></details><button disabled={managing||writes.blocked} onClick={()=>void register()}>새 판 비공개 등록</button></>}
       <p><label><input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>목표·답·출처·미준비 범위를 검토했습니다</label></p>
       <p><label><input type="checkbox" checked={privatePilot} onChange={e=>setPrivatePilot(e.target.checked)}/>내 계정에서만 시범 사용</label></p>
@@ -233,11 +239,19 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     {notice&&<p role="status">{notice}</p>}
     {writes.slow&&<p className="bank-note main-quiz-save-status" role="status">저장 확인 중…</p>}
     {view?<>
-      {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'?map?<RootMap map={map} summary={view.summary} title={info?.title} onBack={()=>setTab('learn')}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>:
+      {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'?map?<RootMap map={map} summary={view.summary} title={info?.title} backTo={mapEntry.current?'back':'question'} onBack={mapBack}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>:
         <RootSolve view={view} title={info?.title} scope={scope} disabled={writes.blocked}
           editPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/personal`}
           onEdited={result=>{forget();const current=viewRef.current;if(!current?.task)return;
-            const next={...current,task:{...current.task,question:result.question,answer:current.task.answer?result.answer:null}};
+            const next={...current,task:{...current.task,question:result.question,answer:current.task.answer?{...result.answer,memo:current.task.answer.memo}:null}};
+            viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}}
+          mineBase={base}
+          // 내 문제를 만들거나 고치거나 지우면 서버가 오늘 흐름의 남은 뒷부분을 다시 고른다: 회차를 다시 읽는다.
+          onMineChanged={()=>{forget();const current=viewRef.current;if(!current)return;
+            void loadSession(current.sessionId).catch(e=>setError((e as Error).message));}}
+          onMemo={(qid,memo)=>{forget();const current=viewRef.current;
+            if(!current?.task?.answer||current.task.question.question_id!==qid)return;
+            const next={...current,task:{...current.task,answer:{...current.task.answer,memo}}};
             viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}}
           tierPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/tier`}
           onTier={question=>{forget();const current=viewRef.current;if(!current?.task||current.task.question.question_id!==question.question_id)return;
@@ -245,8 +259,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
             viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
-    </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo="today" onBack={()=>setTab('learn')}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
-    :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
+    </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo={mapEntry.current?'back':'today'} onBack={mapBack}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
+    :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={order=>{if(!focusing)void begin(order);}} onMap={()=>void showMap()}
       onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}
       resumeCount={info.sessionId&&openLeft?.id===info.sessionId?openLeft.left:undefined} onBack={leave}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;

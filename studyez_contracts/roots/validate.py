@@ -57,15 +57,32 @@ def validate_prerequisites(targets,relations,edges,adopted,*,reviewed=True):
     acyclic([(e['before_target'],e['after_target'])for e in edges],'roots prerequisites')
 
 
+def replaced_files(doc):
+    """notes-update/1 (docs/changes/2026-11-16-replace-updated-notes): optional `replaced_sources` — the earlier files of
+    the same pages a corrected notes source replaces. Only figures cropped from them may still name them."""
+    rows = doc.get('replaced_sources')
+    if rows is None:
+        return {}
+    current = {s['source_id']: s['sha256'] for s in doc['review']['sources']}
+    require(type(rows) is list and rows and all(type(r) is dict and set(r) == {'source_id', 'sha256'} and r['source_id'] in current
+            and type(r['sha256']) is str and re.fullmatch(r'[0-9a-f]{64}', r['sha256']) and r['sha256'] != current[r['source_id']]
+            for r in rows) and len({(r['source_id'], r['sha256']) for r in rows}) == len(rows), 'roots: invalid replaced sources')
+    out = {}
+    for r in rows:
+        out.setdefault(r['source_id'], []).append(r['sha256'])
+    return out
+
+
 def validate_document(doc):
-    require(type(doc) is dict and set(doc)-{'generation_policy'} == {
+    require(type(doc) is dict and set(doc)-{'generation_policy', 'replaced_sources'} == {
         'schema_version', 'revision', 'title', 'review', 'bank_snapshot', 'bank_source',
         'bank_build_id', 'adopted_target_ids', 'tasks', 'exam_date', 'equivalences', 'prerequisites'}, 'roots: missing or unknown fields')
     require(doc['schema_version'] == 'roots/1', 'roots: unsupported schema')
+    replaced = replaced_files(doc)
     if 'generation_policy'in doc:
         require(doc['generation_policy']in('root-generation/2','root-generation/4')and doc['review']['schema_version']=='learning-links/2','roots: invalid generation policy')
         from .media import validate_images
-        validate_images(doc['bank_snapshot'],doc['review']['sources'])
+        validate_images(doc['bank_snapshot'],doc['review']['sources'],replaced=replaced)
         from .generation_v2 import graph_order
         graph_order(doc['bank_snapshot'])
     require(type(doc['revision']) is str and re.fullmatch(r'[A-Za-z0-9_-]{1,64}', doc['revision']), 'roots: invalid revision')
@@ -78,8 +95,8 @@ def validate_document(doc):
         date.fromisoformat(doc['exam_date'])
     review, bank = doc['review'], doc['bank_snapshot']
     if any(q.get('stimuli')for q in bank.get('questions',[])):
-        from .media import validate_images
-        validate_images(bank,review['sources'])
+        from .media import validate_images, photo_import
+        validate_images(bank,review['sources'],photo=photo_import(doc),replaced=replaced)
     require(type(review) is dict and type(review.get('sources')) is list, 'roots: review required')
     validate_review(review, bank, bank_sha256=document_hash(bank),
                     source_hashes={s['source_id']: s['sha256'] for s in review['sources']})
@@ -121,11 +138,16 @@ def validate_document(doc):
         from .generation_v2 import order_plan
         require(order_plan(doc,doc['tasks'],set(tasks),set())==doc['tasks'],'roots: prerequisite order mismatch')
     require(type(doc['equivalences']) is list, 'roots: equivalences array required')
-    destinations = set()
+    # One link per (earlier revision, new direction) and per (earlier revision, old direction). A new direction may
+    # continue several earlier revisions (docs/changes/2026-11-15-replace-carry-records R3): replay merges their
+    # events in time order.
+    destinations, sources = set(), set()
     for link in doc['equivalences']:
         require(type(link) is dict and set(link) == {'revision', 'from_direction', 'to_direction', 'reason'}, 'roots: invalid equivalence')
         require(all(type(v) is str and v.strip() for v in link.values()), 'roots: equivalence needs review reason')
-        require(link['to_direction'] in directions and link['to_direction'] not in destinations, 'roots: ambiguous equivalence')
+        destination, source = (link['revision'], link['to_direction']), (link['revision'], link['from_direction'])
+        require(link['to_direction'] in directions and destination not in destinations and source not in sources,
+                'roots: ambiguous equivalence')
         require(link['revision'] != doc['revision'], 'roots: self equivalence')
-        destinations.add(link['to_direction'])
+        destinations.add(destination); sources.add(source)
     return copy.deepcopy(doc)

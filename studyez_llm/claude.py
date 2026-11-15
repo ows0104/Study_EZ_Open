@@ -26,6 +26,17 @@ INLINE_IMAGE_LIMIT = 20
 INLINE_IMAGE_BYTES = 20_000_000
 # 공급자 거절은 원장의 model_content_restricted 판정이 읽는 표식으로 올린다(runner.root_native_json.classify_error).
 REFUSAL_MARKER = "[CLAUDE_CONTENT_RESTRICTED]"
+# Claude Code CLI(2.1.282)는 안전 분류기가 응답을 멈추면 그 응답을 출력에서 빼고 같은 세션을 한 번 더 이어 간다.
+# stream-json의 assistant 이벤트는 stop_reason이 비어 있고 result의 stop_reason은 이어 간 마지막 응답 것이라,
+# stop_reason만 보면 거절이 보이지 않는다(2026-11-15 261109_02 v4-fix-1-1: 「Expecting value」 실행 실패로 보였다).
+# CLI가 그 자리에 남기는 문구를 그대로 읽는다(docs/changes/2026-11-15-claude-refusal-classification).
+REFUSAL_TOOL_RESULTS = (
+    "Not run: the response that made this tool call was stopped by a safety classifier.",
+    "Interrupted: the response that made this tool call was stopped by a safety classifier while the call was running; "
+    "it may have partially or fully completed.",
+)
+REFUSAL_NUDGE = "Your response above was stopped by a safety classifier"
+REFUSAL_NOTICE = "safeguards stopped the response above"
 LIMIT_MARKERS = ("usage limit", "rate limit", "limit reached", "quota", "overloaded")
 FALLBACK_MARKER = "[CLAUDE_MODEL_FALLBACK]"
 # Claude 세션은 같은 단계에서 Codex보다 오래 걸린다(261109_02: 단계당 10~84분). 호출한 쪽의 제한에 이 배수를 곱한다.
@@ -136,8 +147,40 @@ def first_message(prompt: str, inline: list[Path], listed: list[Path]) -> str:
     return json.dumps({"type": "user", "message": {"role": "user", "content": content}}, ensure_ascii=False) + "\n"
 
 
+def refusal_sign(event: dict) -> str | None:
+    """이 이벤트가 안전 분류기 거절의 흔적이면 그 종류를, 아니면 None.
+
+    모델이 쓴 글이나 도구 출력이 이 문구를 담아도 걸리지 않게, CLI가 직접 만드는 자리만 본다:
+    정지 사유, CLI가 넣는 사용자 문자열 메시지, 오류 tool_result의 정확한 전문, 시스템 알림."""
+    kind = event.get("type")
+    message = event.get("message") if isinstance(event.get("message"), dict) else {}
+    if kind in ("assistant", "result"):
+        source = message if kind == "assistant" else event
+        details = source.get("stop_details") if isinstance(source.get("stop_details"), dict) else {}
+        if source.get("stop_reason") == "refusal" or details.get("type") == "refusal":
+            return "stop_reason=refusal"
+    if kind == "user":
+        content = message.get("content")
+        if isinstance(content, str) and content.startswith(REFUSAL_NUDGE):
+            return "CLI 거절 안내"
+        for block in content if isinstance(content, list) else []:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "text" and str(block.get("text") or "").startswith(REFUSAL_NUDGE):
+                return "CLI 거절 안내"
+            if block.get("type") == "tool_result" and block.get("is_error"):
+                body = block.get("content")
+                if isinstance(body, list):
+                    body = "".join(str(b.get("text") or "") for b in body if isinstance(b, dict))
+                if body in REFUSAL_TOOL_RESULTS:
+                    return "거절로 멈춘 도구 호출"
+    if kind == "system" and event.get("subtype") == "informational" and REFUSAL_NOTICE in str(event.get("content") or ""):
+        return "CLI 안전 장치 알림"
+    return None
+
+
 def parse_events(stdout: str, *, model: str) -> dict:
-    result, refused = None, False
+    result, refused, session = None, None, None
     for line in stdout.splitlines():
         if not line.strip():
             continue
@@ -147,16 +190,16 @@ def parse_events(stdout: str, *, model: str) -> dict:
             raise SessionError("claude 출력이 JSONL이 아니다") from cause
         if not isinstance(event, dict):
             raise SessionError("claude 이벤트가 객체가 아니다")
-        if event.get("type") == "assistant":
-            message = event.get("message") or {}
-            refused = refused or message.get("stop_reason") == "refusal"
+        refused = refused or refusal_sign(event)
+        session = session or event.get("session_id")
         if event.get("type") == "result":
             result = event
+    # 거절 뒤 이어 간 응답이 끝까지 가도(결과·영수증이 있어도) 보류한다. 멈춘 내용은 버려졌고 모델은
+    # 그것을 다시 쓰지 말라는 안내를 받았으므로, 그 뒤의 결과는 거절된 부분을 조용히 뺐을 수 있다.
+    if refused:
+        raise SessionError(REFUSAL_MARKER + f" Claude가 안전상 이유로 응답을 거절했다 ({refused}, 세션 {session or '?'})")
     if result is None:
         raise SessionError("claude 세션 완료 이벤트가 없다 (출력 중단)")
-    refused = refused or result.get("stop_reason") == "refusal"
-    if refused:
-        raise SessionError(REFUSAL_MARKER + " Claude가 안전상 이유로 응답을 거절했다 (stop_reason=refusal)")
     if result.get("is_error") or result.get("subtype") != "success":
         detail = str(result.get("result") or result.get("subtype") or "")[-1500:]
         raise SessionError(f"claude 세션 오류: {detail}")

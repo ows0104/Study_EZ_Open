@@ -84,7 +84,9 @@ def review_images(stage,work,ctx):
 # pages it cites (`pages`: [[source_id, page], …]) and the stimuli of its questions; only those are attached (P3).
 V3_PROMPTS={'coverage':'coverage.md','map':'map-check.md','supplement':'point-supplement.md',
     'supplement-normalize':'supplement-normalize.md','add':'add.md','review':'item-review.md','fix':'fix.md','brief':'brief-fix.md',
-    'context':'context.md'}
+    'context':'context.md',
+    # presuppose/1 (docs/changes/2026-11-15-tree-edge-goals): /4 only, prompts in v4/.
+    'presuppose':'presuppose.md','presuppose-normalize':'supplement-normalize-presuppose.md'}
 
 # root-generation/4 (docs/changes/2026-11-10-importance-at-authoring): the same stages named `v4-<kind>…`, with the /4
 # schemas and checks; a prompt in content/prompts/learning-links/v4 replaces the v3 one of the same name.
@@ -94,6 +96,7 @@ def is_v4(stage):return stage.startswith('v4-')
 
 def v3_kind(stage):
     require(stage.startswith(STAGED),'Not a v3/v4 stage')
+    if stage[3:].startswith('supplement-normalize-presuppose'):return 'presuppose-normalize'
     if stage[3:].startswith('supplement-normalize'):return 'supplement-normalize'
     kind=stage.split('-')[1]
     require(kind in V3_PROMPTS,'Unsupported v3 stage')
@@ -111,6 +114,9 @@ def v3_schema(stage,ctx=None):
     from studyez_contracts.roots import generation_v4 as v4
     kind=v3_kind(stage)
     if kind=='supplement-normalize':return v3.SUPPLEMENT_NORMALIZE_OUTPUT
+    if kind in('presuppose','presuppose-normalize'):
+        from studyez_contracts.roots import presuppose as pre
+        return pre.OUTPUT if kind=='presuppose'else pre.NORMALIZE_OUTPUT
     if kind=='brief':return v3.BRIEF_FIX_OUTPUT
     if is_v4(stage)and kind=='review':return v4.review_schema(ctx or {})
     if is_v4(stage)and kind=='add':return v4.add_schema(ctx or {})
@@ -121,7 +127,10 @@ def v3_check(stage,ctx,value,state=None,work=None):
     check_stage: the same merge and image render that run after the receipt, so their errors reach the model."""
     from studyez_contracts.roots import generation_v3 as v3
     kind=v3_kind(stage)
-    if state is not None and kind in('add','fix','supplement','supplement-normalize'):
+    if kind in('presuppose','presuppose-normalize')and not(state is not None and kind=='presuppose-normalize'):
+        from studyez_contracts.roots import presuppose as pre
+        return pre.check(value,ctx)if kind=='presuppose'else pre.check_normalize(value,ctx)
+    if state is not None and kind in('add','fix','supplement','supplement-normalize','presuppose-normalize'):
         if is_v4(stage):from quizbank.connection_generate_v4 import check_stage
         else:from quizbank.connection_generate_v3 import check_stage
         return check_stage(kind,value,ctx,state,Path(work)/'.check-render')
@@ -140,7 +149,12 @@ def v3_check(stage,ctx,value,state=None,work=None):
     if kind=='fix':return v3.check_fixed(value,ctx)
     if kind=='supplement':return v3.check_supplement(value,ctx)
     if kind=='supplement-normalize':return v3.check_supplement_normalize(value,ctx)
-    return v3.check_brief_fix(value,ctx)
+    value=v3.check_brief_fix(value,ctx)
+    if state is not None and state.get('repair'):
+        # unplaced-only/1 relation repair (docs/changes/2026-11-15-unplaced-replace R4): only the listed relations change.
+        from quizbank.connection_replace import _check_repair
+        _check_repair(ctx['brief'],value,set(state['repair']))
+    return value
 
 # docs/changes/2026-11-11-pipeline-overlap: of 211 model minutes in two clean /4 runs (101 stage sessions) the one
 # long thinking step took 40%; shell commands took 24% and the short model turns between them 26%. A review call
@@ -207,7 +221,7 @@ def redact(body):
 
 def remember_restriction(out,stage,evidence):
     """Bind a provider refusal to this immutable input; never resubmit it."""
-    out=Path(out);require(re.fullmatch(r'(normalize|generate|(?:source|medical|repair)-[0-3])',stage),'Invalid restricted stage')
+    out=Path(out);require(re.fullmatch(r'(normalize|generate|(?:source|medical|repair)-[0-3]|medical-presuppose)',stage),'Invalid restricted stage')
     classification=classify_error(ValueError(evidence))
     require(classification['kind']=='model_content_restricted','Evidence is not a provider content restriction')
     ledger=read(out/'ledger.json');packet=read(out/'packet.json');entry=ledger['stages'][stage]
@@ -459,15 +473,23 @@ def artifact(work,receipt):
     after=path.stat();require((stat.st_ino,stat.st_mtime_ns,stat.st_size)==(after.st_ino,after.st_mtime_ns,after.st_size),'Native file changed during acceptance')
     return body,loads(model_text(body))
 
+# Claude Code CLI reads the attached pages one by one; v4-add-0 of 261109_02 hit 2400s twice
+# (docs/changes/2026-11-15-claude-stage-timeout). Codex stages keep the original limit.
+CLAUDE_TIMEOUT=7200
+
 class NativeJson:
     def __init__(self,out,*,invoke=None,timeout=2400):self.out=Path(out).resolve();self.invoke=invoke;self.timeout=timeout
+
+    def timeout_for(self,model):
+        return max(self.timeout,CLAUDE_TIMEOUT)if g.codex.provider(model)=='claude'else self.timeout
 
     def __call__(self,stage,ctx,material,model):
         require_unblocked(self.out,model)
         state=ctx.get('_check')   # P6: host check state, not stage input
         if '_check'in ctx:ctx={k:v for k,v in ctx.items()if k!='_check'}
         if stage.startswith('medical-'):
-            require(re.fullmatch(r'medical-[0-3]',stage),'Unsupported medical stage')
+            # medical-presuppose: presuppose-only/1 reviews only the questions it added (docs/changes/2026-11-15-tree-edge-goals).
+            require(re.fullmatch(r'medical-(?:[0-3]|presuppose)',stage),'Unsupported medical stage')
             try:return producer.call_model(stage,ctx,material,model)
             except BaseException as error:
                 failure(self.out/'.native'/stage,error);raise
@@ -503,7 +525,7 @@ class NativeJson:
         result=None
         try:
             result=(self.invoke or g.codex.run)(first_message(images,inline_inputs(work),python),
-                blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
+                blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout_for(model),
                 label='연결 파일 실행 '+stage,schema=RECEIPT,system=SYSTEM,**({'images':images}if images else{}))
             g.write(seat/'provider.json',result)
             require(type(result.get('turns'))is int and result['turns']>0 and result.get('session_id'),'Missing actual native completion')
@@ -524,7 +546,7 @@ class NativeJson:
             if error is not None and followups:
                 (seat/'check-failure.json').write_text(json.dumps({'error':str(error)[:4000],'outputSha256':first_output},ensure_ascii=False),encoding='utf-8')
                 followup=(self.invoke or g.codex.run)(FOLLOWUP.format(error=str(error)[:4000]),
-                    blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
+                    blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout_for(model),
                     label='연결 파일 실행 '+stage+' 형식 확인 후속',schema=RECEIPT,system=SYSTEM,
                     resume=result['session_id'],previous_usage=result['usage'])
                 g.write(seat/'provider-followup.json',followup)
@@ -655,7 +677,11 @@ def main():
     p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)')
     p.add_argument('--rerun',metavar='STAGE',action='append',default=[],help='with --resume: also run this completed stage again')
     # duplicates-only/1 (docs/changes/2026-11-12-dedupe-published): the published /4 run this request judges again for duplicates only.
-    p.add_argument('--duplicates-of',type=Path,metavar='GENERATION_DIR');a=p.parse_args()
+    p.add_argument('--duplicates-of',type=Path,metavar='GENERATION_DIR')
+    # unplaced-only/1 (docs/changes/2026-11-15-unplaced-replace): the published /4 run whose unplaced questions this request places again.
+    p.add_argument('--unplaced-of',type=Path,metavar='GENERATION_DIR')
+    # presuppose-only/1 (docs/changes/2026-11-15-tree-edge-goals): the published /4 run this request adds existence goals to.
+    p.add_argument('--presuppose-of',type=Path,metavar='GENERATION_DIR');a=p.parse_args()
     if a.rerun and not a.resume:p.error('--rerun needs --resume <reason>')
     try:
         require_unblocked(a.out,model=g.codex.model_name(a.model))
@@ -666,7 +692,7 @@ def main():
             # 259 characters. A copy of 261102_02 in a deeper folder failed in the middle of a late stage.
             deepest=a.out.resolve()/'.resume-99'/'.native'/'v3-coverage-fix-context-0'/'work'/'material'/('stimulus-'+'0'*64+'.png')
             require(os.name!='nt'or len(str(deepest))<260,f'실행 폴더 경로가 너무 깁니다({len(str(a.out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
-        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun),duplicates_of=a.duplicates_of)
+        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun),duplicates_of=a.duplicates_of,unplaced_of=a.unplaced_of,presuppose_of=a.presuppose_of)
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

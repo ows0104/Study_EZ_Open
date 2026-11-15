@@ -24,6 +24,9 @@ deploy-revision.ps1이 해당 버전으로 100% 트래픽을 명시 전환하고
 2026-11-14 족보 오답노트는 API 배포 전에 `jokbo_mark` 표를 만들고 RLS를 확인한다(`changes/2026-11-14-jokbo-wrong-notes/create_table.py`).
 기존 표는 바뀌지 않는다([설계](changes/2026-11-14-jokbo-wrong-notes/spec.md)).
 
+2026-11-14 족보 회독은 API 배포 전에 `jokbo_round` 표를 만들고 RLS를 확인한다(`changes/2026-11-14-jokbo-read/create_table.py`).
+표 없이 배포하면 시간표 학습 집계가 실패한다([설계](changes/2026-11-14-jokbo-read/spec.md)).
+
 2026-10-19 학습 기록 보존은 API 배포 전에 `init-db`로 `bank_version`,
 `bank_state_archive` 표를 만들고 RLS 활성화를 확인한다. 은행 교체·공용 문항 수정은
 원본 은행과 사용자 상태를 같은 트랜잭션에서 보관한 후, 내용이 같은 문항의 기록만

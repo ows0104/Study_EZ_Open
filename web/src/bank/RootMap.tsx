@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { RootMapData, RootSummary } from '../types/rootLearning';
 import { useFlagPreference } from '../preferences';
-import { ancestors, buildTree, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type TreeNode } from './rootMapTree';
+import { ancestors, buildTree, contentRelations, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type TreeNode } from './rootMapTree';
 
 /*
  * 개념 지도 — 가지 보기(2026-11-09).
@@ -59,8 +59,8 @@ function crossPath(a:Box,b:Box){
 }
 
 export function RootMap({map,summary,title='강의 전체',onBack,backTo='question'}:{map:RootMapData;summary:RootSummary;title?:string;onBack?:()=>void;
-  /** Opened from the start screen without a session (2026-11-12): back goes to 오늘 추천. */
-  backTo?:'question'|'today'}) {
+  /** Opened from the start screen without a session (2026-11-12): back goes to 오늘 추천. 'back': opened from the lecture panel (2026-11-14). */
+  backTo?:'question'|'today'|'back'}) {
   const tree=useMemo(()=>buildTree(map,summary,title),[map,summary,title]);
   const columns=useMemo(()=>lanes(tree),[tree]);
   const laneOf=useMemo(()=>{const m=new Map<string,number>();columns.forEach((l,i)=>{m.set(l.head,i);
@@ -95,9 +95,9 @@ export function RootMap({map,summary,title='강의 전체',onBack,backTo='questi
   const nodeOf=useMemo(()=>{const m=new Map<string,string>();
     for(const n of tree.nodes.values())if(n.kind==='concept')for(const id of n.conceptIds)m.set(id,n.id);return m;},[tree]);
   const allLinks=useMemo(()=>{const seen=new Set<string>();
-    return map.relations.map(r=>({...r,a:nodeOf.get(r.from_id),b:nodeOf.get(r.to_id)}))
+    return contentRelations(map).map(r=>({...r,a:nodeOf.get(r.from_id),b:nodeOf.get(r.to_id)}))
       .filter((r):r is typeof r&{a:string;b:string}=>{
-        if(!r.a||!r.b||r.a===r.b)return false;const key=[r.a,r.b].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;});},[map.relations,nodeOf]);
+        if(!r.a||!r.b||r.a===r.b)return false;const key=[r.a,r.b].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;});},[map,nodeOf]);
   const linked=node?.kind==='concept'?allLinks.filter(r=>r.a===node.id||r.b===node.id).slice(0,20):[];
   const linkedIds=new Set(linked.map(r=>r.a===node?.id?r.b:r.a));
 
@@ -296,6 +296,11 @@ export function RootMap({map,summary,title='강의 전체',onBack,backTo='questi
   return <section className={`main-quiz-map${large?' is-large':''}`}>
     <h2 className="sr-only">개념 지도</h2>
     <div ref={frame} className="main-quiz-tree-frame" style={large||frameH==null?undefined:{height:frameH}}>
+      {/* 좌측 상단(2026-11-14 사용자 지시: 아래 도구 줄에 있어 보이지 않았다). */}
+      {onBack&&<button type="button" className="quiz-back mq-map-back" onClick={onBack}
+        aria-label={backTo==='today'?'오늘 추천으로 돌아가기':backTo==='question'?'문제로 돌아가기':'뒤로'}>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>
+        {backTo==='today'?'오늘':backTo==='question'?'문제':'뒤로'}</button>}
       <div ref={stage} className={`main-quiz-tree-stage${narrow?' is-narrow':''}`}
         onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}
         onClickCapture={e=>{if(drag.current.moved>4){e.stopPropagation();e.preventDefault();drag.current.moved=0;}}}
@@ -318,7 +323,6 @@ export function RootMap({map,summary,title='강의 전체',onBack,backTo='questi
           </div>
         </div>
         <div className="main-quiz-tree-tools" onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
-          {onBack&&<button className="mq-map-back" onClick={onBack} aria-label={backTo==='today'?'오늘 추천으로 돌아가기':'문제로 돌아가기'}>{backTo==='today'?'← 오늘':'← 문제'}</button>}
           {!narrow&&<><button onClick={()=>zoomStep(1.25)} aria-label="확대">＋</button>
           <button onClick={()=>zoomStep(0.8)} aria-label="축소">－</button>
           <button onClick={()=>fitAll(undefined,true)}>전체</button></>}

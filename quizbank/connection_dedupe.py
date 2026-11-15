@@ -41,7 +41,8 @@ SEEDING = '.seeding'   # present while the receipts are being linked; a rerun af
 NOT_COPIED = {'result.json', 'readiness.json', 'packet.json', 'ledger.json', 'evidence', 'choices', '.check-render', SEEDING}
 # Packet fields that name the request, not the lecture input; everything else must be the previous run's.
 REQUEST_KEYS = {'generationId', 'revision', 'inputHash', 'derivedFrom', 'owner', 'privatePilot', 'requestedExamDate',
-                'examDate', 'restartOf', 'restartReason', 'replacePublished', 'duplicatesOnly', 'operatorResumes'}
+                'examDate', 'restartOf', 'restartReason', 'replacePublished', 'duplicatesOnly', 'unplacedOnly', 'presupposeOnly',
+                'carrySources', 'operatorResumes'}
 SOURCE_LOCAL = {'snapshotKey', 'localPath', 'downloadUrl'}
 
 
@@ -68,16 +69,18 @@ def _link(src, dst):
         shutil.copy2(src, dst)
 
 
-def seed(previous, out, packet, model, old_result):
-    """Copy the previous run's receipts and point its ledger at this packet. A folder already seeded is kept."""
+def seed(previous, out, packet, model, old_result, key='duplicatesOnly', policy=POLICY, label='중복 재판정', extra=None):
+    """Copy the previous run's receipts and point its ledger at this packet. A folder already seeded is kept.
+    `key`/`policy`/`label`: the record this kind of rerun leaves in the ledger (unplaced-only/1 seeds the same way);
+    `extra`: further ledger fields that kind sets once, when the folder is seeded."""
     if (out / 'ledger.json').exists():
         return
     v3.require((out / SEEDING).exists() or {p.name for p in out.glob('*.json')} <= {'packet.json'},
-               '중복 재판정: 기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
+               f'{label}: 기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
     ledger = json.loads((previous / 'ledger.json').read_text(encoding='utf-8'))
-    v3.require(ledger.get('pipelineVersion') == v4.POLICY, '중복 재판정: root-generation/4 실행만 받습니다.')
-    v3.require(all(s['status'] == 'completed' for s in ledger['stages'].values()), '중복 재판정: 이전 실행에 끝나지 않은 단계가 있습니다.')
-    v3.require(ledger.get('identity') == old_result['manifest']['runtimeHash'], '중복 재판정: 이전 실행의 ledger가 게시 결과와 다릅니다.')
+    v3.require(ledger.get('pipelineVersion') == v4.POLICY, f'{label}: root-generation/4 실행만 받습니다.')
+    v3.require(all(s['status'] == 'completed' for s in ledger['stages'].values()), f'{label}: 이전 실행에 끝나지 않은 단계가 있습니다.')
+    v3.require(ledger.get('identity') == old_result['manifest']['runtimeHash'], f'{label}: 이전 실행의 ledger가 게시 결과와 다릅니다.')
     out.mkdir(parents=True, exist_ok=True)
     (out / SEEDING).write_text(str(previous), encoding='utf-8')
     for item in sorted(previous.iterdir()):
@@ -88,9 +91,9 @@ def seed(previous, out, packet, model, old_result):
             shutil.copytree(item, target, copy_function=_link, dirs_exist_ok=True)
         else:
             _link(item, target)
-    ledger['duplicatesOnly'] = {'policy': POLICY, 'previousRevision': old_result['document']['revision'],
-                                'previousInputHash': ledger['inputHash'], 'previousIdentity': ledger['identity']}
-    ledger.update(inputHash=packet['inputHash'], identity=identity(packet, model))
+    ledger[key] = {'policy': policy, 'previousRevision': old_result['document']['revision'],
+                   'previousInputHash': ledger['inputHash'], 'previousIdentity': ledger['identity']}
+    ledger.update(inputHash=packet['inputHash'], identity=identity(packet, model), **(extra or {}))
     (out / 'ledger.json').write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding='utf-8')
     (out / SEEDING).unlink()
 

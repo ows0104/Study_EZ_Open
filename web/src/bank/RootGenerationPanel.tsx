@@ -10,7 +10,7 @@ type Generation={id:string;requestId?:string;state:string;stage:string;message:s
   authoring?:string;parallelAuthoring?:boolean;pipeline?:string|null;awaitingWeb?:boolean;dispatched?:boolean;
   sources?:{id:string;kind:string;filename:string}[];operatorResumes?:number;restartOf?:string|null;
   privatePilot:boolean;featureEnabled:boolean;input:Input;report?:{repairRounds:number;taskCount:number;targetCount:number;
-    pipelineVersion?:string;addRounds?:number;fixCount?:number;notReady?:number;mergedDuplicates?:number;unplacedQuestions?:number;importanceNotes?:number;
+    pipelineVersion?:string;addRounds?:number;fixCount?:number;notReady?:number;mergedDuplicates?:number;unplacedQuestions?:number;coverageFallback?:number;unplacedList?:{question_id:string;reason:string;question:string}[];importanceNotes?:number;
     issues:string[];questionNotes:{source:string;question_id:string;verdict:string;note:string}[];
     coverage:{point_id:string;status:string;reason:string}[]}|null};
 type Props={subject:string;runId:string;onPublished?:()=>void};
@@ -98,9 +98,11 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
         {!job.featureEnabled&&<p>콘텐츠는 저장되었습니다. 현재 Main Quiz 학습 공개 설정은 꺼져 있습니다.</p>}</>:null}</div>}
     {job?.awaitingWeb&&<details><summary>응답 전달 복구</summary><p>자동 회수가 되지 않을 때만 완성된 응답 파일을 전달하세요.</p><label>완성된 웹 응답 JSON 불러오기 (기존 MD 지원)<input type="file" accept=".json,.md" aria-label="웹 응답 파일" disabled={busy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setBusy(true);try{await saveRootWebFile(job.id,file);setError('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}/></label></details>}
     {job?.report&&<details><summary>생성·검수 결과</summary><p>목표 {job.report.targetCount}개 · 준비된 과제 {job.report.taskCount}개 · {job.report.pipelineVersion==='root-generation/4'
-      ?`빈 부분 추가 ${job.report.addRounds}/2회 · 고친 문항 ${job.report.fixCount}개 · 다 묻지 못한 목표 ${job.report.notReady}개 · 중복으로 합친 문항 ${job.report.mergedDuplicates}개 · 목표에 못 붙은 문항 ${job.report.unplacedQuestions}개`
+      ?`빈 부분 추가 ${job.report.addRounds}/2회 · 고친 문항 ${job.report.fixCount}개 · 다 묻지 못한 목표 ${job.report.notReady}개 · 중복으로 합친 문항 ${job.report.mergedDuplicates}개 · 목표에 못 붙은 문항 ${job.report.unplacedQuestions}개${job.report.coverageFallback!=null?` · 범위 점검 판정으로 붙인 문항 ${job.report.coverageFallback}개`:''}`
       :job.report.pipelineVersion==='root-generation/3'
       ?`빈 목표 추가 ${job.report.addRounds}/2회 · 고친 문항 ${job.report.fixCount}개 · 준비 안 된 목표 ${job.report.notReady}개`:`수정 ${job.report.repairRounds}/3회`}</p>
+      {job.report.unplacedList?.length?<details><summary>지도에 못 붙은 문항 {job.report.unplacedList.length}개 (학생에게 보이지 않음)</summary>
+        <ul>{job.report.unplacedList.map(u=><li key={u.question_id}>{u.question_id} · {u.reason} · {u.question}</li>)}</ul></details>:null}
       <ul>{job.report.issues.map((text,i)=><li key={i}>{text}</li>)}{job.report.questionNotes.map((r,i)=><li key={'q'+i}>{r.source} · {r.question_id} · {r.verdict}: {r.note}</li>)}</ul>
       <ul>{job.report.coverage.map(c=><li key={c.point_id}>{c.point_id} · {c.status} · {c.reason}</li>)}</ul></details>}
   </section>;

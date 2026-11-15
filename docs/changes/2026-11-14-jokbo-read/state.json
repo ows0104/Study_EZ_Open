@@ -1,0 +1,113 @@
+{
+  "id": "2026-11-14-jokbo-read",
+  "title": "족보 1회 풀이를 회독에 기록",
+  "area": "site",
+  "created_at": "2026-11-14T11:01:47.034982+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T11:02:59.278722+00:00",
+      "evidence": "사용자 채팅 2026-11-14: 「족보 1회 푼 것도 회독에 기록되게 변경해줘. 족보 색깔처럼 살짝 진한 회색으로 하면 될 거 같아.」 / 「꼭 모든 교수 다 안 풀었어도 돼 그냥 첫 페이지에서 설정한 만큼 다 풀고 마무리 페이지에 도착했으면 1회독 한 걸로 해줘」 / 「이 컴퓨터에서 할 수 있는 건 실행하고, 러너 컴퓨터에서 실행해야 하는 게 있으면 정리해서 전달할 수 있게 알려줘」",
+      "scope": "plan.md의 서버(jokbo_round 표·rounds POST·시간표 jokboRounds)·웹(족보 끝 화면 기록·회독 줄 족보 토막)·문서; 로컬 구현·검사·Draft PR까지. 운영 표 생성(러너 PC)·master 병합 제외",
+      "evidence_version": 2,
+      "source_hash": "5b37e656b3c605e2d2e81f0e4b01f5c1761d27a91bef76b5a8283c8a91768f36",
+      "plan_hash": "b765c62f0c0a0be8c126d8f568b9121e7a64fca72872d7a0932a0e1883c00dba",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "84d1a2861c8ffaa887c33442b0b74bd486cdaae126dce25c53a7300b29a53a61"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-14T11:04:06.947774+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5b37e656b3c605e2d2e81f0e4b01f5c1761d27a91bef76b5a8283c8a91768f36",
+      "plan_hash": "b765c62f0c0a0be8c126d8f568b9121e7a64fca72872d7a0932a0e1883c00dba",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-jokbo-read/1794654232256928500-web.log",
+      "web_artifact": "08d7c1252a1b2185362bd3d04de7875327633e23450e0f423807bb4a0c153f66",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-14T11:04:34.238174+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_Open/.claude/worktrees/free-notes/server/.venv/Scripts/python.exe",
+        "-c",
+        "import subprocess,sys,os;env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8',PYTHONPATH=os.pathsep.join([os.getcwd(),os.path.join(os.getcwd(),'server')]));sys.exit(max(subprocess.call([sys.executable,'-m','tests',t],cwd='server',env=env) for t in ['jokbo','route_contract','lecture_notes','root_timetable_mark','smoke','study_loading']))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5b37e656b3c605e2d2e81f0e4b01f5c1761d27a91bef76b5a8283c8a91768f36",
+      "plan_hash": "b765c62f0c0a0be8c126d8f568b9121e7a64fca72872d7a0932a0e1883c00dba",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-jokbo-read/1794654250658481100-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T11:04:34.238780+00:00"
+}

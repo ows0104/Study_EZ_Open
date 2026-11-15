@@ -6,6 +6,9 @@
 
 band  오답노트 표시. high 틀림 · mid 좁혀서 · low 헷갈림 · NULL 표시 없음.
       족보 퀴즈에서 틀리면 high가 붙고, 사람이 손으로 바꾸거나 뗀다.
+
+`jokbo_round`(2026-11-14): 족보 1회독 = 한 줄. 진입 화면에서 고른 범위를 끝까지 풀고 마무리 화면에
+닿으면 웹이 한 줄을 더한다(「틀린 문제 다시」는 세지 않는다). 시간표 칸(event_id)에 붙는다 — 족보가 칸에 붙으므로.
 """
 
 from datetime import datetime
@@ -36,5 +39,18 @@ class JokboMark(Base):
     __table_args__ = (Index("ix_jokbo_mark_user_band", "user_id", "band"),)
 
 
-event.listen(JokboMark.__table__, "after_create",
-             DDL("ALTER TABLE jokbo_mark ENABLE ROW LEVEL SECURITY").execute_if(dialect="postgresql"))
+class JokboRound(Base):
+    __tablename__ = "jokbo_round"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    __table_args__ = (Index("ix_jokbo_round_user_event", "user_id", "event_id"),)
+
+
+# Supabase 공개 API에서는 못 읽는다. 서버 DB 역할은 RLS를 우회하고 HTTP 경로가 소유자를 확인한다.
+for _table in (JokboMark.__table__, JokboRound.__table__):
+    event.listen(_table, "after_create",
+                 DDL(f"ALTER TABLE {_table.name} ENABLE ROW LEVEL SECURITY").execute_if(dialect="postgresql"))

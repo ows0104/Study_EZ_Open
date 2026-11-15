@@ -1,0 +1,44 @@
+{
+  "id": "2026-11-14-map-relation-guard",
+  "title": "Main-Quiz 지도 관계 누락 검사",
+  "area": "generation",
+  "created_at": "2026-11-14T11:00:08.927053+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T11:32:35.500018+00:00",
+      "evidence": "사용자 채팅 2026-11-14: 「승인, 구현해」 (A 지도 검사·B 범위 점검 판정 배치·C 늦은 보충·D 남으면 멈춤 계획 보고 직후; 앞서 「1+2, 남으면 멈춤」)",
+      "scope": "plan.md의 generation_v4.py·connection_generate_v4.py·root_generation.py build_report·RootGenerationPanel.tsx 표시·tests; 로컬 구현·검사·로컬 사본 실측(운영 쓰기 없음)·Draft PR까지. master 병합·러너 재설치·261105_03 재출제 제외",
+      "evidence_version": 2,
+      "source_hash": "411ba06baed5f7aa69b1262fd968146760bf286c684c603ae6277a1797c61b83",
+      "plan_hash": "0f86e1b4055905022b720f462417f957cf8d6530c18650b0277c0efa954eaba8",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "48bc1ac7c8c825fafc676547f974e1e3d27123e80df2d6168e5bcb696f59aaca"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T11:32:39.413815+00:00"
+}

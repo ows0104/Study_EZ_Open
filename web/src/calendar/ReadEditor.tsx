@@ -10,15 +10,17 @@ export type NoteReadsChange = { subject: string; runId: string; count: number };
 const MAX_SEGMENTS = 12;
 
 /**
- * 통계의 회독 줄(2026-11 개편 2단계). 첫 토막 = 예습 퀴즈(끝냈을 때만), 뒤 = 강의록 회독, 끝에 +.
+ * 통계의 회독 줄(2026-11 개편 2단계). 첫 토막 = 예습 퀴즈(끝냈을 때만), 뒤 = 강의록 회독, 그 뒤 = 족보 회독, 끝에 +.
  * 강의록 토막을 누르면 최근 1회독을 지우고 4초 동안 「되돌리기」가 뜬다.
+ * 족보 토막(2026-11-14)은 족보 퀴즈 끝 화면에 닿을 때 자동으로 생기고, 여기서는 지우지 않는다.
  */
-export function ReadEditor({ lecture, base, preOpen, preDone, initial, onError }: {
+export function ReadEditor({ lecture, base, preOpen, preDone, initial, jokboRounds = 0, onError }: {
   lecture: Pick<LectureRef, "subject" | "runId">;
   base: string;
   preOpen: boolean;
   preDone: boolean;
   initial: number;
+  jokboRounds?: number;
   onError: (message: string) => void;
 }) {
   const [count, setCount] = useState(initial);
@@ -56,6 +58,7 @@ export function ReadEditor({ lecture, base, preOpen, preDone, initial, onError }
   }
 
   const shown = Math.min(count, MAX_SEGMENTS);
+  const jokbo = Math.min(jokboRounds, MAX_SEGMENTS);
   return (
     <span className="read-editor">
       <span className="readline is-lg">
@@ -64,9 +67,12 @@ export function ReadEditor({ lecture, base, preOpen, preDone, initial, onError }
           <button key={index} type="button" className="rl-note is-button" title="지우기"
             aria-label={`강의록 회독 ${index + 1} 지우기`} disabled={busy} onClick={() => void remove()} />
         ))}
-        {!preDone && !count && preOpen ? <i className="rl-pre" title="예습 퀴즈 미완료" /> : null}
+        {Array.from({ length: jokbo }, (_, index) => (
+          <i key={`j${index}`} className="rl-jokbo" title={`족보 ${index + 1}회독`} />
+        ))}
+        {!preDone && !count && !jokbo && preOpen ? <i className="rl-pre" title="예습 퀴즈 미완료" /> : null}
       </span>
-      {count > MAX_SEGMENTS ? <span className="read-count">{count}</span> : null}
+      {count > MAX_SEGMENTS || jokboRounds > MAX_SEGMENTS ? <span className="read-count">{count + jokboRounds}</span> : null}
       <button type="button" className="read-plus" aria-label="강의록 회독 추가" title="회독 추가"
         disabled={busy} onClick={() => { setUndo(false); void change("POST"); }}>+</button>
       {undo ? (

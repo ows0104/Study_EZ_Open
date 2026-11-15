@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import hashlib
 import json
 import sys
@@ -29,7 +31,7 @@ from . import jokbo_pool
 PROMPTS = Path(__file__).resolve().parents[1] / "content/prompts/learning-links/mcq"
 PROMPT = PROMPTS / "write.md"
 REVIEW_PROMPT = PROMPTS / "review.md"
-REVIEW_POLICY = "mcq-medical/2"
+REVIEW_POLICY = "mcq-medical/3"   # 2026-11-14: 강의 맥락 기준·그림 전달(docs/changes/2026-11-14-mcq-images-lenient)
 BATCH = 40
 ATTEMPTS = 2
 ROUNDS = 2
@@ -53,9 +55,43 @@ REVIEWS = {"type": "object", "additionalProperties": False, "required": ["review
                                    "properties": {"text": _STR, "reason": _STR}}}}}}}}
 
 
-def _call(prompt: str, schema: dict, work: Path, model: str | None, label: str) -> tuple[dict, dict]:
-    from .coverage import _call as call
-    return call(prompt, schema, work, model, label)
+def _call(prompt: str, schema: dict, work: Path, model: str | None, label: str,
+          images: list[Path] | None = None) -> tuple[dict, dict]:
+    """Codex 한 번. 사진 문항의 그림은 첨부로 같이 보낸다(2026-11-14 사용자 「사진 문항은 사진 넣어서 다시 만들어줘」)."""
+    if not images:
+        from .coverage import _call as call
+        return call(prompt, schema, work, model, label)
+    import jsonschema
+
+    from studyez_llm import codex
+    result = codex.run(prompt, blind=False, cwd=work, model=model, schema=schema, timeout=3600, label=label, images=images)
+    try:
+        output = json.loads(result["text"])
+        jsonschema.validate(output, schema)
+    except (ValueError, jsonschema.ValidationError) as cause:
+        raise codex.SessionError(f"{label}: 구조화 출력 형식 오류: {cause}") from cause
+    usage = result["usage"]
+    return output, {"seconds": round(result["duration_ms"] / 1000, 1), "cost_usd": result["cost_usd"],
+                    "input_tokens": usage["input_tokens"] + usage["cache_read_input_tokens"],
+                    "output_tokens": usage["output_tokens"], "models": sorted(result["models"]), "images": len(images)}
+
+
+def stimuli_files(questions: list[dict]) -> dict[str, bytes]:
+    """문항 그림(`stimuli`)을 작업 폴더에 쓸 상대 경로 → PNG 바이트로. 이름에 sha를 넣어 그림이 바뀌면 입력 지문도 바뀐다.
+    깨진 base64는 그 그림만 뺀다(게시 판은 `validate_images`를 지나 드물다)."""
+    out: dict[str, bytes] = {}
+    for q in questions:
+        for n, s in enumerate(q.get("stimuli") or [], 1):
+            try:
+                body = base64.b64decode(s["png_base64"], validate=True)
+            except (KeyError, TypeError, ValueError, binascii.Error):
+                continue
+            out[f"images/{q['question_id']}-{n}-{hashlib.sha256(body).hexdigest()[:12]}.png"] = body
+    return out
+
+
+def _image_names(files: dict[str, bytes], question_id: str) -> list[str]:
+    return [name for name in files if name.startswith(f"images/{question_id}-")]
 
 
 def _item(item: dict) -> dict:
@@ -83,8 +119,10 @@ def batch_input(document: dict, batch: list[dict], context: dict, rejected: dict
                 "correct": [g["correct"] for g in found], "parts_needed": 0} if found else {
             "groups": [], "correct": contract.correct_texts(q), "parts_needed": contract.parts_needed(q)}
 
+    files = stimuli_files(batch)
     return {"title": document.get("title", ""), "block": context.get("block", ""), "questions": [{
         "question_id": q["question_id"], "format": q["format"], "question": q["question"], "answer": q["answer"],
+        **({"images": _image_names(files, q["question_id"])} if _image_names(files, q["question_id"]) else {}),
         **parts(q),
         **({"sequence_items": q.get("sequence_items", [])} if q["format"] == "sequence" else {}),
         "explanation": q.get("explanation", ""), "same_lecture": contract.same_lecture_pool(questions, q),
@@ -109,10 +147,15 @@ def _correct_shown(question: dict) -> list[str]:
 
 
 def review_input(document: dict, drafts: dict, questions: dict) -> dict:
-    """검토자에게는 오답을 쓴 쪽의 출처·근거·이유를 주지 않는다."""
+    """검토자에게는 오답을 쓴 쪽의 출처·근거·이유를 주지 않는다. 강의 맥락으로 판단하도록 같은 강의의 짧은 정답들과
+    문항 그림은 준다(2026-11-14 사용자 「강의록을 근거로 풀 수 있으면 어느정도 괜찮지 않을까」)."""
+    every = document["bank_snapshot"]["questions"]
+    files = stimuli_files([questions[qid] for qid in drafts])
     return {"title": document.get("title", ""), "questions": [{
         "question_id": qid, "format": questions[qid]["format"], "question": questions[qid]["question"],
+        **({"images": _image_names(files, qid)} if _image_names(files, qid) else {}),
         "correct": _correct_shown(questions[qid]), "explanation": questions[qid].get("explanation", ""),
+        "lecture_facts": contract.same_lecture_pool(every, questions[qid]),
         "wrong": [shown(questions[qid], row) for row in wrong]} for qid, wrong in drafts.items()]}
 
 
@@ -203,9 +246,17 @@ def _merge(question: dict, rows: list[dict]) -> list[dict]:
     return out
 
 
-def _stage(work: Path, name: str, prompt: str, schema: dict, data: dict, model: str | None, label: str, call, usage: list):
-    """입력을 쓰고 한 번 부른다(실패하면 한 번 더). 같은 입력으로 이미 받은 답은 다시 부르지 않는다."""
+def _stage(work: Path, name: str, prompt: str, schema: dict, data: dict, model: str | None, label: str, call, usage: list,
+           images: dict[str, bytes] | None = None):
+    """입력을 쓰고 한 번 부른다(실패하면 한 번 더). 같은 입력으로 이미 받은 답은 다시 부르지 않는다.
+    그림이 있으면 작업 폴더에 쓰고 첨부한다. 이름에 sha가 있어 입력 지문(input.json)이 그림까지 가린다."""
     work.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for rel, body in (images or {}).items():
+        path = work / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+        paths.append(path)
     body = json.dumps(data, ensure_ascii=False, sort_keys=True)
     digest = hashlib.sha256((prompt + body).encode()).hexdigest()
     (work / "input.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -220,7 +271,7 @@ def _stage(work: Path, name: str, prompt: str, schema: dict, data: dict, model: 
     error = None
     for _attempt in range(ATTEMPTS):
         try:
-            output, info = call(prompt, schema, work, model, label)
+            output, info = call(prompt, schema, work, model, label, images=paths) if paths else call(prompt, schema, work, model, label)
             usage.append({"stage": name, **info})
             saved.write_text(json.dumps({"input_sha256": digest, "output": output}, ensure_ascii=False, indent=2), encoding="utf-8")
             return output, None
@@ -235,7 +286,7 @@ def _batch(document: dict, by_id: dict, batch: list[dict], work: Path, label: st
     prompt, review_prompt = prompts
     got = {"questions": {}, "skipped": {}, "reviewed": {}, "rejected": {}, "styled": {}, "partial": {}, "failed": 0, "usage": []}
     output, error = _stage(work, "mcq-write", prompt, PROPOSALS, batch_input(document, batch, context, rejected, kept_before), model,
-                           f"{label} 작성", call, got["usage"])
+                           f"{label} 작성", call, got["usage"], stimuli_files(batch))
     if output is None:
         got["failed"] = 1
         got["skipped"].update({q["question_id"]: f"묶음 호출 실패: {error}" for q in batch})
@@ -249,7 +300,7 @@ def _batch(document: dict, by_id: dict, batch: list[dict], work: Path, label: st
     if not drafts:
         return got
     verdicts, error = _stage(work / "review", "mcq-review", review_prompt, REVIEWS, review_input(document, drafts, by_id),
-                             model, f"{label} 의학 검토", call, got["usage"])
+                             model, f"{label} 의학 검토", call, got["usage"], stimuli_files([by_id[qid] for qid in drafts]))
     if verdicts is None:
         got["failed"] = 1
         got["skipped"].update({qid: f"의학 검토 호출 실패: {error}" for qid in drafts})

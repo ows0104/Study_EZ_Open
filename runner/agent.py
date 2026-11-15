@@ -132,6 +132,15 @@ POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
 SWEEP_SECONDS = 600       # 남은 것을 쓸어 올리는 간격
 BUILD_TIMEOUT = 3 * 3600  # 이 시간을 넘기면 그 편을 버린다
+# Claude로 지정한 Main-Quiz 편은 단계마다 느리다(261109_02가 3시간에 review 중 끊김).
+# docs/changes/2026-11-15-claude-stage-timeout
+CLAUDE_BUILD_TIMEOUT = 8 * 3600
+
+
+def build_timeout(argv: list[str], default: int) -> int:
+    """그 편의 시한. `--model claude-…`로 띄운 편만 길게 준다."""
+    model = argv[argv.index('--model') + 1] if '--model' in argv[:-1] else ''
+    return max(default, CLAUDE_BUILD_TIMEOUT) if model.startswith('claude-') else default
 
 # 한 번에 몇 편을 겹쳐 만드나(관리자 지시, 2026-09-01). 서버도 같은 값을 든다
 # (`routes/prequiz_jobs.MAX_RUNNING`) — 둘 중 작은 쪽이 실제 상한이 된다.
@@ -309,7 +318,8 @@ class Agent:
         posted = ""
         started = time.time()
         stage_at = started
-        deadline = started + self.timeout
+        limit = build_timeout(argv, self.timeout)
+        deadline = started + limit
 
         with log.open("w", encoding="utf-8") as sink:
             # **자식은 물을 자리가 없다**(`stdin`). 안 막으면 러너의 stdin을 그대로
@@ -333,7 +343,7 @@ class Agent:
                     now = time.time()
                     if now > deadline:
                         kill_tree(proc)
-                        return 124, [f"{self.timeout // 60}분 안에 끝나지 않아 끊었다"]
+                        return 124, [f"{limit // 60}분 안에 끝나지 않아 끊었다"]
                     if job is None:
                         continue
                     # 그 편을 만드는 동안 계속 만진다. 쓸기가 이 표시를 보고 이번

@@ -4,6 +4,7 @@ import type { BankQuestion as BankQuestionData, BankRating, BankTier } from '../
 import { api } from '../api';
 import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './BankQuestion';
 import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQuestionDialog';
+import { MemoBox, MineQuestionDialog, type MineMode } from './MineQuestionDialog';
 import { RootSummaryPanel } from './RootToday';
 import { ANSWER_SECONDS, questionSeconds, readTimerOn, saveTimerOn, useQuizTimer } from './quizTimer';
 import { mcqChoices, recallChoices, readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
@@ -32,8 +33,10 @@ function clearSavedPicks() {
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 const TIER_LABEL: Record<BankTier,string> = {Essential:'★ Must-Know', Core:'Core', Important:'Important', Optional:'Optional'};
 
-export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier}:{view:RootView;title?:string;scope:string;disabled:boolean;
+export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier,mineBase,onMineChanged,onMemo}:{view:RootView;title?:string;scope:string;disabled:boolean;
   editPath?:(questionId:string)=>string;onEdited?:(result:PersonalQuestionResult)=>void;
+  /** 내 문제·뒷면 메모(2026-11-15) API 기준 주소. 없으면 메뉴·메모를 그리지 않는다. */
+  mineBase?:string;onMineChanged?:()=>void;onMemo?:(questionId:string,memo:string)=>void;
   /** 「내 중요도」 저장 경로(2026-11-09). 없으면 선택을 그리지 않는다. */
   tierPath?:(questionId:string)=>string;onTier?:(question:BankQuestionData)=>void;
   advancing:boolean;onAction:(a:RootAction)=>void;onToday:()=>void;onError:(message:string)=>void;onMap?:()=>void}) {
@@ -47,8 +50,18 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const choicesSeen=choiceState.key===key&&choiceState.seen;
   const setChoices=(shown:boolean,seen=shown)=>setChoiceState({key,shown,seen});
   const [imageState,setImageState]=useState<{taskId:string;ready:boolean}|null>(null);
+  // 힌트(2026-11-15 photo-quiz-import): 발문에서 뺀 부위·염색·임상 단서. 펼친 문항의 key만 기억한다(다음 문항은 접힌 채).
+  const [clueKey,setClueKey]=useState('');
+  const clue=task?.question.clue??'';
+  const clueOpen=!!clue&&clueKey===key;
+  function toggleClue(){setClueKey(clueOpen?'':key);heading.current?.focus({preventScroll:true});}
   const [editing,setEditing]=useState(false);
   const [editNote,setEditNote]=useState('');
+  // 내 문제 창(2026-11-15)과 메모 입력: 열려 있는 동안 타이머를 멈춘다(해설 40초가 쓰는 중에 Again을 누르지 않게).
+  const [mineMode,setMineMode]=useState<MineMode|null>(null);
+  const [memoEditing,setMemoEditing]=useState(false);
+  const mineQuestion=!!task?.question.personalAdded;
+  const mineTools=!!(mineBase&&view.mineEnabled&&task);
   const [tierBusy,setTierBusy]=useState(false);
   const heading=useRef<HTMLHeadingElement>(null);
   const menu=useRef<HTMLDetailsElement>(null);
@@ -71,7 +84,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       const saved=localStorage.getItem(key+':choices');
       setChoices(saved==='shown',saved==='shown'||saved==='seen');
     }catch{setChoices(false);onError('보관된 선지 보기 기록을 읽지 못했습니다. 원본을 보존했습니다.');}
-    menu.current?.removeAttribute('open');setEditing(false);setEditNote('');
+    menu.current?.removeAttribute('open');setEditing(false);setEditNote('');setMineMode(null);setMemoEditing(false);
     heading.current?.focus();window.scrollTo(0,0);
   },[key]);
   function save(suffix:string,text:string) {
@@ -119,6 +132,14 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     }catch(cause){onError((cause as Error).message);}
     finally{setTierBusy(false);}
   }
+  /** 내 문제 지우기(2026-11-15). 계획·풀이에서 빠지고 기록은 남는다. */
+  async function removeMine(){
+    if(!task||!mineBase||!window.confirm('이 내 문제를 지울까요? 앞으로 나오지 않습니다. 지금까지의 기록은 남습니다.'))return;
+    try{
+      await api(`${mineBase}/mine/${encodeURIComponent(task.question.question_id)}`,{method:'PUT',body:JSON.stringify({requestId:crypto.randomUUID(),action:'delete'})});
+      setEditNote('내 문제를 지웠습니다.');onMineChanged?.();
+    }catch(cause){onError((cause as Error).message);}
+  }
   /** 이 판에서 내 학습에서 뺀다(2026-11-12). Z로 되돌린다. */
   function exclude(){if(!disabled&&!advancing&&task&&!view.blocked?.includes('학습일'))onAction({kind:'exclude'});}
   function rate(selfRating:BankRating){if(!locked&&task?.answer)onAction({kind:'rate',selfRating});}
@@ -127,7 +148,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const timer=useQuizTimer({
     phase:task&&!view.finished?`${task.id}:${task.answer?'answer':'question'}`:null,
     seconds:task?.answer?ANSWER_SECONDS:questionSeconds(mcq&&task?.question.format!=='ox'?'mcq':task?.question.format??'basic'),
-    enabled:timerOn,running:!locked&&!editing&&(!!task?.answer||imagesReady),
+    enabled:timerOn,running:!locked&&!editing&&!mineMode&&!memoEditing&&(!!task?.answer||imagesReady),
     onExpire:()=>{if(task?.answer)rate('Again');else reveal();},
   });
   function toggleTimer(){const on=!timerOn;saveTimerOn(on);setTimerOn(on);heading.current?.focus({preventScroll:true});}
@@ -158,6 +179,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       }
       if(target.closest('a,summary')||target.closest('button')&&!number&&event.key!=='5')return;
       if((event.code==='Space'||event.key==='Enter')&&!task.answer){event.preventDefault();reveal();}
+      if(event.code==='KeyH'&&clue){event.preventDefault();toggleClue();}
       if(event.code==='KeyV'&&recallClosed){event.preventDefault();showChoices();}
       else if(event.code==='KeyV'&&recallOpen){event.preventDefault();hideChoices();}
       if(task.answer&&number){event.preventDefault();rate(RATINGS[Number(event.key)-1]);}
@@ -170,7 +192,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(event.key==='5'){event.preventDefault();exclude();}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
-  },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,recallOpen,choices,choicesSeen,view.mapSeen,view.canUndo,timerOn,timer.togglePause,mcq]);
+  },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,recallOpen,choices,choicesSeen,view.mapSeen,view.canUndo,timerOn,timer.togglePause,mcq,clue,clueOpen]);
   const done=Math.min(view.position,view.count);
   const head=<header className="mq-solve-head">
     <p className="mq-kicker">
@@ -192,7 +214,11 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
           {!task?.answer&&<button disabled={locked} onClick={()=>reveal(false)}>답만 보기</button>}
           <button disabled={disabled||advancing||!!view.blocked?.includes('학습일')} onClick={()=>onAction({kind:'skip'})}>이 문제 보류</button>
           <button disabled={disabled||advancing||!task||!!view.blocked?.includes('학습일')} onClick={exclude} aria-keyshortcuts="5">이 문제 제외 <kbd>5</kbd></button>
-          {task&&editPath&&<button disabled={disabled||advancing} onClick={()=>setEditing(true)}>문제 수정·제보</button>}
+          {task&&editPath&&!mineQuestion&&<button disabled={disabled||advancing} onClick={()=>setEditing(true)}>문제 수정·제보</button>}
+          {mineTools&&!mineQuestion&&<button disabled={disabled||advancing} onClick={()=>setMineMode('new')}>이 자리에 새 문제</button>}
+          {mineTools&&!mineQuestion&&<button disabled={disabled||advancing} onClick={()=>setMineMode('copy')}>복사해서 고치기</button>}
+          {mineTools&&mineQuestion&&<button disabled={disabled||advancing} onClick={()=>setMineMode('edit')}>내 문제 고치기</button>}
+          {mineTools&&mineQuestion&&<button disabled={disabled||advancing} onClick={()=>void removeMine()}>내 문제 지우기</button>}
           {/* 기록은 평가마다 저장된다. 이 버튼은 풀이를 멈추고 오늘 현황(시작 화면)으로 간다. */}
           <button disabled={disabled||advancing} onClick={onToday}>오늘 현황 보기</button>
         </div>
@@ -208,7 +234,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     {head}
     <div className="quiz-progress bank-progress mq-solve-progress"><h2 className="main-quiz-question-heading" ref={heading} tabIndex={-1}>문항 {view.position+1} / {view.count}</h2>
       <span className="mq-track" aria-hidden="true"><i style={{width:`${view.count?done/view.count*100:0}%`}}/></span>
-      {task&&tierPath&&<span className="bank-tags mq-tier">
+      {task&&tierPath&&!mineQuestion&&<span className="bank-tags mq-tier">
         <label className={`bank-tier-control${task.question.tier==='Essential'?' is-essential':''}`} title="내 계정의 이 문제에만 적용됩니다. 중요도가 목표 기억률을 정하고, 높이면 더 자주·낮추면 덜 자주 복습합니다. Must-Know: 교수의 직접·간접적인 필수 지식 강조·출제 예고 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
           내 중요도{' '}
           <select aria-label="내 문제 중요도" value={task.question.tier} disabled={disabled||tierBusy}
@@ -224,21 +250,35 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     {view.blocked&&<p role="alert">{view.blocked}</p>}
     {editNote&&<p className="bank-note mq-edit-note" role="status">{editNote}</p>}
     {task&&task.question.personalEdited&&<p className="mq-edited"><span className="tag">내 수정본</span></p>}
+    {mineQuestion&&<p className="mq-edited"><span className="tag">내 문제</span></p>}
+    {mineMode&&task&&mineBase&&<MineQuestionDialog base={mineBase} mode={mineMode} questionId={task.question.question_id}
+      onClose={()=>setMineMode(null)} onSaved={note=>{setMineMode(null);setEditNote(note);onMineChanged?.();}}/>}
     {editing&&task&&editPath&&<PersonalQuestionDialog path={editPath(task.question.question_id)} questionId={task.question.question_id}
       answerVisible={!!task.answer} onClose={()=>setEditing(false)} onSaved={(result,reset)=>{
         setEditing(false);onEdited?.(result);
         setEditNote(reset?'원본으로 되돌렸습니다.':(result.highlighted?'강조 제보를 보냈습니다.':'관리자에게 전달했습니다.')+(result.question.personalEdited?' 내 수정본을 저장했습니다.':''));
       }}/>}
     {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
-    {task&&<div className="quiz-card bank-card mq-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
+    {task&&<div className={`quiz-card bank-card mq-card${task.answer?' is-answered':''}`}><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
       recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
       choiceNotes={task.answer?.mcqWrongNotes} choiceGroups={(mcq??recallSet)?.groups}/>
+      {/* 예습 퀴즈와 같은 알약 버튼(2026-11-15 사용자). 문항마다 접힌 채로 시작하고 H로도 편다. */}
+      {clue&&<div className="quiz-hint mq-clue"><button type="button" className="quiz-hint-toggle" disabled={locked} onClick={toggleClue}
+        aria-expanded={clueOpen} aria-keyshortcuts="H">
+        <svg className="quiz-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 18h6m-5 3h4M9 15c0-2-3-3-3-7a6 6 0 0 1 12 0c0 4-3 5-3 7"/></svg>
+        <span>{clueOpen?'힌트 접기':'힌트 보기'}</span> <kbd>H</kbd>
+        <svg className="quiz-hint-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+      </button>{clueOpen&&<p>{clue}</p>}</div>}
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
       {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
+        {mineBase&&task.answer.memo!==undefined&&<MemoBox key={task.id} value={task.answer.memo} disabled={disabled||advancing}
+          path={`${mineBase}/questions/${encodeURIComponent(task.question.question_id)}/memo`} onEditing={setMemoEditing} onError={onError}
+          onSaved={memo=>onMemo?.(task.question.question_id,memo)}/>}
         <AnswerSlides key={task.id} answer={task.answer}/>
         <AnswerRecords task={task}/>
       </>}

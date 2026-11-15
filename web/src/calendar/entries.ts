@@ -15,6 +15,8 @@ export type CalendarEntry = {
   category: TimetableEvent["category"];
   course: string;
   lectures: LectureRef[];
+  /** 본인 족보 회독 수(시간표 칸 단위). */
+  jokboRounds: number;
 };
 
 export const weekDayLabels = ["월", "화", "수", "목", "금"];
@@ -216,6 +218,7 @@ export function toCalendarEntries(events: TimetableEvent[]): CalendarEntry[] {
         category: event.category,
         course: event.course,
         lectures: event.lectures,
+        jokboRounds: event.jokboRounds ?? 0,
       };
     })
     .sort(

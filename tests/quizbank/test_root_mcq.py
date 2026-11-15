@@ -283,6 +283,34 @@ def test_항목별_정답이면_묶음으로_나누고_빈칸_여럿도_빈칸�
     assert contract.groups(_q("X", "list", "a", ["감염: x", "감염: y"])) is None          # 항목 이름이 겹치면 나누지 않는다
 
 
+def _tb():
+    return _q("TB", "cloze", "", ["첫 2개월: isoniazid, rifampicin, pyrazinamide, ethambutol", "다음 4개월: isoniazid, rifampicin"],
+              question="약제감수성 결핵의 기본 6개월 치료에서 각 시기의 약제를 채우시오.\n\n| 시기 | 약제 구성 |\n|---|---|\n"
+                       "| 첫 2개월 | {첫 2개월: isoniazid, rifampicin, pyrazinamide, ethambutol} |\n"
+                       "| 다음 4개월 | {다음 4개월: isoniazid, rifampicin} |")
+
+
+def test_빈칸_정답의_항목_머리가_발문에_있으면_선지에는_값만_보인다():
+    # 2026-11-16 사용자 「답인 보기에만 앞에 저게 붙어있어」 — 정답 선지에만 「첫 2개월:」이 붙어 답이 티 났다.
+    q = _tb()
+    assert contract.groups(q) == [{"label": "빈칸 1", "correct": "isoniazid, rifampicin, pyrazinamide, ethambutol"},
+                                  {"label": "빈칸 2", "correct": "isoniazid, rifampicin"}]
+    entry = contract.entry_v2(q, [_gw(0, "isoniazid, rifampicin"), _gw(0, "isoniazid, rifapentine, moxifloxacin, pyrazinamide"),
+                                  _gw(1, "isoniazid, rifampicin, pyrazinamide, ethambutol"), _gw(1, "isoniazid, rifapentine, moxifloxacin")])
+    picked = contract.select(q, entry, "s")
+    assert not any(":" in c["text"] for c in picked["choices"])
+    # 머리가 발문에 없거나·글자가 없거나(비율)·일부만 머리가 있으면 원문 그대로 둔다.
+    assert contract.groups(_q("X", "cloze", "", ["가: x", "나: y"], question="{가: x} 와 {나: y}"))[0]["correct"] == "가: x"
+    ratio = _q("R", "cloze", "", ["1:1", "2:1"], question="비율 1 은 {1:1}, 비율 2 는 {2:1}")
+    assert [g["correct"] for g in contract.groups(ratio)] == ["1:1", "2:1"]
+    half = _q("H", "cloze", "", ["첫 2개월: a", "b"], question="첫 2개월 {첫 2개월: a} 다음 {b}")
+    assert [g["correct"] for g in contract.groups(half)] == ["첫 2개월: a", "b"]
+    # 이름 안의 쌍점(혈청형 O157:H7)은 발문에 있는 가장 긴 머리까지 뗀다 — 「H7: …」이 남으면 그것이 또 단서다.
+    sero = _q("E", "cloze", "", ["E. coli O157:H7: 혈청형", "EHEC: 병원형"],
+              question="| 표기 | 축 |\n|---|---|\n| E. coli O157:H7 | {혈청형} |\n| EHEC | {병원형} |")
+    assert [g["correct"] for g in contract.groups(sero)] == ["혈청형", "병원형"]
+
+
 def test_묶음_문항은_오답마다_묶음이_필요하고_묶음_정답과_견준다():
     q = _bal()
     assert contract.row_errors(q, _w("10^5 CFU/mL")) == ["나눠 묻는 문항은 오답마다 묶음 번호(group) 필요"]
@@ -344,3 +372,51 @@ def test_두_회차_뒤에도_1개면_선지_없이_둔다(tmp_path):
 
     asset = root_mcq.build(_document(), tmp_path, "r", call=_fake(write))
     assert "C2" not in asset["questions"] and "최소 2개" in asset["skipped"]["C2"]
+
+
+# ── 사진 문항·강의 맥락(2026-11-14 mcq-images-lenient) ─────────────────────────
+
+def test_사진_문항은_그림을_작업_폴더에_쓰고_작성과_검토_호출에_첨부한다(tmp_path):
+    import base64
+    import hashlib
+    png = b"\x89PNG\r\n\x1a\nfake-image"
+    document = _document()
+    document["bank_snapshot"]["questions"][0]["stimuli"] = [{"png_base64": base64.b64encode(png).decode()}]
+    calls = []
+
+    def call(prompt, schema, work, model, label, images=None):
+        rows = json.loads((work / "input.json").read_text(encoding="utf-8"))
+        calls.append(("review" if "reviews" in schema["properties"] else "write", rows, images))
+        if "reviews" in schema["properties"]:
+            return {"reviews": [{"question_id": q["question_id"], "invalid": []} for q in rows["questions"]]}, {}
+        return _all_good(rows), {}
+
+    root_mcq.build(document, tmp_path, "r", call=call, rounds=1)
+    name = f"images/B1-1-{hashlib.sha256(png).hexdigest()[:12]}.png"
+    for stage, rows, images in calls:
+        by_id = {q["question_id"]: q for q in rows["questions"]}
+        assert by_id["B1"]["images"] == [name], stage
+        assert all("images" not in q for qid, q in by_id.items() if qid != "B1")   # 그림 없는 문항은 그대로
+        assert [p.read_bytes() for p in images] == [png], stage
+    assert [c[0] for c in calls] == ["write", "review"]
+
+
+def test_그림_없는_묶음은_images_인자_없이_부르고_검토에_같은_강의_사실을_준다(tmp_path):
+    seen_review = []
+
+    def review(qs):
+        seen_review.extend(qs)
+        return {"reviews": [{"question_id": q["question_id"], "invalid": []} for q in qs]}
+
+    asset = root_mcq.build(_document(), tmp_path, "r", call=_fake(_all_good, review), rounds=1)   # _fake는 images 인자를 받지 않는다
+    assert asset["medicalReview"]["policy"] == "mcq-medical/3"
+    b1 = next(q for q in seen_review if q["question_id"] == "B1")
+    assert b1["lecture_facts"] == contract.same_lecture_pool(_document()["bank_snapshot"]["questions"], _document()["bank_snapshot"]["questions"][0])
+    assert "몸니" in b1["lecture_facts"]   # 같은 강의의 다른 문항 정답
+
+
+def test_깨진_그림은_그_그림만_뺀다():
+    files = root_mcq.stimuli_files([_q("B1", stimuli=[{"png_base64": "@@not-base64@@"}, {"png_base64": "iVBORw=="}])])
+    import hashlib
+    digest = hashlib.sha256(b"\x89PNG").hexdigest()[:12]
+    assert list(files) == [f"images/B1-2-{digest}.png"]

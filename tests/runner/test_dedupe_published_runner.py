@@ -62,7 +62,9 @@ def test_a_run_not_published_here_is_refused(tmp_path, derive):
         worker.duplicates_front(request(), runs / '_root-generation' / NEW)
 
 
-def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_reused(tmp_path, derive, monkeypatch):
+@pytest.mark.parametrize('flags, flag', [({}, '--duplicates-of'),
+                                          ({'duplicatesOnly': False, 'unplacedOnly': True}, '--unplaced-of')])   # 2026-11-15-unplaced-replace
+def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_reused(tmp_path, derive, monkeypatch, flags, flag):
     runs = tmp_path / 'runs'
     root = previous_run(runs)
     out = runs / '_root-generation' / NEW
@@ -89,11 +91,12 @@ def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_r
     choices = []   # the new revision still gets its recall choices (2026-11-14 choices-by-default)
     monkeypatch.setattr(root_mcq, 'publish', lambda client, subject, run_id, folder, payload, **k: choices.append(payload['document']['revision']))
     client = SimpleNamespace(call=lambda method, path, payload=None: {'status': 'ready', 'revision': 'auto-' + NEW})
-    packet = request()
+    packet = request(**flags)
     assert worker._generate(client, 'S', 'R', '/api/x', packet, out / 'packet.json', out) == 0
     args = commands[0]
     assert args[2] == 'runner.root_native_json'   # the native transport, whose main takes the flag
-    assert Path(args[args.index('--duplicates-of') + 1]) == (root / 'generation').resolve() and '--resume' not in args
+    assert Path(args[args.index(flag) + 1]) == (root / 'generation').resolve() and '--resume' not in args
+    assert {'--duplicates-of', '--unplaced-of'} - {flag} & set(args) == set()
     assert [p.name for p in uploads] == ['auto-' + NEW + '.json']
     assert choices == ['auto-' + NEW]
     assert json.loads(uploads[0].read_text(encoding='utf-8')) == {'schema': 'root-evidence/1', 'revision': 'auto-' + NEW, 'sources': {'S1': 'x'}}
@@ -119,3 +122,52 @@ def test_the_native_transport_takes_the_flag_to_the_generator(tmp_path, monkeypa
     monkeypatch.setattr('sys.argv', ['x', '--packet', str(tmp_path / 'packet.json'), '--out', str(tmp_path / 'o'), '--duplicates-of', str(tmp_path / 'prev')])
     assert native.main() == 0
     assert seen['duplicates_of'] == tmp_path / 'prev' and isinstance(seen['invoke'], native.NativeJson)
+    assert seen['unplaced_of'] is None
+    monkeypatch.setattr('sys.argv', ['x', '--packet', str(tmp_path / 'packet.json'), '--out', str(tmp_path / 'o'), '--unplaced-of', str(tmp_path / 'prev')])
+    assert native.main() == 0
+    assert seen['unplaced_of'] == tmp_path / 'prev' and seen['duplicates_of'] is None
+
+
+def test_a_presuppose_only_request_calls_the_generator_with_its_flag_and_builds_evidence_anew(tmp_path, derive, monkeypatch):
+    """presuppose-only/1 (docs/changes/2026-11-15-tree-edge-goals R6): the published run is the start, but the new
+    revision has new questions, so its evidence is built as after any publication."""
+    runs = tmp_path / 'runs'
+    root = previous_run(runs)
+    out = runs / '_root-generation' / NEW
+    out.mkdir(parents=True)
+    commands, built = [], []
+    gen_packet = {'generationPolicy': 'root-generation/4', 'sourceAssessmentFormat': 'source-assessment/2'}
+
+    def front(packet, out_, **kw):
+        (out_ / 'generation').mkdir(exist_ok=True)
+        write(out_ / 'generation' / 'packet.json', gen_packet)
+        return gen_packet
+
+    def child(args, **kw):
+        commands.append(args)
+        write(Path(args[args.index('--out') + 1]) / 'result.json', {'document': {'revision': 'auto-' + NEW}, 'manifest': {}})
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(worker, 'map_tree_front', front)
+    monkeypatch.setattr(worker, 'run_forwarded', child)
+    monkeypatch.setattr(worker, 'validate_result', lambda payload, packet: payload['document'])
+    monkeypatch.setattr(worker, 'validate_continuations', lambda out_, payload: None)
+    monkeypatch.setattr(worker, 'completed_result', lambda out_, packet: json.loads((out_ / 'result.json').read_text(encoding='utf-8')))
+    monkeypatch.setattr(worker, 'reuse_evidence', lambda *a, **k: pytest.fail('the old evidence lacks the new questions'))
+    monkeypatch.setattr(root_evidence, 'publish', lambda client, subject, run_id, folder, packet, payload, **k: built.append(payload['document']['revision']))
+    monkeypatch.setattr(root_mcq, 'publish', lambda *a, **k: None)
+    client = SimpleNamespace(call=lambda method, path, payload=None: {'status': 'ready', 'revision': 'auto-' + NEW})
+    assert worker._generate(client, 'S', 'R', '/api/x', request(duplicatesOnly=False, presupposeOnly=True), out / 'packet.json', out) == 0
+    args = commands[0]
+    assert Path(args[args.index('--presuppose-of') + 1]) == (root / 'generation').resolve()
+    assert not {'--duplicates-of', '--unplaced-of'} & set(args) and built == ['auto-' + NEW]
+
+
+def test_the_native_transport_takes_the_presuppose_flag(tmp_path, monkeypatch):
+    from runner import root_native_json as native
+    seen = {}
+    monkeypatch.setattr(native.g, 'run', lambda packet, out, **kw: seen.update(kw) or {'manifest': {}})
+    monkeypatch.setattr(native, 'validate_all', lambda out, result: None)
+    (tmp_path / 'packet.json').write_text(json.dumps({'generationPolicy': 'root-generation/4', 'sourceAssessmentFormat': 'source-assessment/2'}), encoding='utf-8')
+    monkeypatch.setattr('sys.argv', ['x', '--packet', str(tmp_path / 'packet.json'), '--out', str(tmp_path / 'o'), '--presuppose-of', str(tmp_path / 'prev')])
+    assert native.main() == 0
+    assert seen['presuppose_of'] == tmp_path / 'prev' and seen['unplaced_of'] is None and seen['duplicates_of'] is None

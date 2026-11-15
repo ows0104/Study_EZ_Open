@@ -7,7 +7,7 @@ import { decksIn, useBundleDecks } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
 import { Link } from "react-router-dom";
 import { useMe } from "../useMe";
-import { bankHref, lectureHref, legacyMainHref, quizHref } from "../links";
+import { bankHref, lectureHref, legacyMainHref, mapHref, quizHref } from "../links";
 import { FeedbackButton } from "../feedback/FeedbackButton";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
@@ -128,6 +128,7 @@ export function EventPanel({
               lecture={lecture}
               detail={detail}
               jokbo={<JokboAction eventId={entry.id} />}
+              jokboRounds={entry.jokboRounds}
             />
           ) : error ? null : (
             <p className="event-panel-loading">자료를 불러오는 중…</p>
@@ -300,11 +301,14 @@ function KeyActions({
   lecture,
   detail,
   jokbo,
+  jokboRounds = 0,
 }: {
   lecture: LectureRef;
   detail: LectureDetail;
   /** 복습 아래 「족보」 칸(2026-11-13). 시간표 칸에 붙으므로 바깥에서 만든다. */
   jokbo?: React.ReactNode;
+  /** 본인 족보 회독 수(시간표 칸 단위). 회독 줄 뒤에 족보 색 토막으로. */
+  jokboRounds?: number;
 }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [error, setError] = useState("");
@@ -352,13 +356,15 @@ function KeyActions({
         base={base}
         onError={setError}
         open
-        trailing={opened ? (
+        trailing={opened ? (<>
           <Link className="action-button is-quiz is-review" to={bankHref(lecture)}>
             ▶ 복습 퀴즈{questions?.reviewDue ? <b>{questions.reviewDue}</b> : null}
           </Link>
-        ) : (
+          <Link className="action-button" to={mapHref(lecture)}>개념 지도</Link>
+        </>) : (<>
           <span className="action-button is-quiz is-review is-disabled" aria-disabled="true">▶ 복습 퀴즈</span>
-        )}
+          <span className="action-button is-disabled" aria-disabled="true">개념 지도</span>
+        </>)}
       />
 
       {jokbo}
@@ -368,7 +374,7 @@ function KeyActions({
         <div className="stat-row">
           <span className="stat-label">회독</span>
           <ReadEditor lecture={lecture} base={base} preOpen={Boolean(detail.prequiz)} preDone={preDone}
-            initial={detail.noteReads ?? 0} onError={setError} />
+            initial={detail.noteReads ?? 0} jokboRounds={jokboRounds} onError={setError} />
         </div>
         <div className="stat-row">
           <span className="stat-label">학습률</span>

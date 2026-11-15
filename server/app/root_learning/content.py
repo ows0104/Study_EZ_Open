@@ -112,16 +112,26 @@ def bank_hash(row):
 _UNUSED_BANK_COLUMNS = (QuizBank.raw_response, QuizBank.validation, QuizBank.review, QuizBank.usage)
 
 
-def excluded_ids(events, revision):
+def excluded_ids(events, revision, carried=None):
     """Main-Quiz 「이 문제 제외」(2026-11-12): 이 판에서 제외한 문항 ID. Z로 되돌린 제외는 events_for가 이미 뺐다.
-    판(revision)별이다 — 새 판의 같은 ID에는 승계하지 않는다."""
-    return {e['payload']['question_id'] for e in events if e['kind'] == 'exclude' and e['revision'] == revision}
+    ID만 같다고 새 판에 승계하지 않는다. 이전 판의 제외는 그 판과 링크된 같은 지문의 문항에만 잇는다
+    (`carried`: 가벼운 문서의 `carried_questions`, docs/changes/2026-11-15-replace-carry-records R4)."""
+    carried = carried or {}
+    out = set()
+    for e in events:
+        if e['kind'] != 'exclude':
+            continue
+        qid = e['payload']['question_id'] if e['revision'] == revision else carried.get((e['revision'], e['payload']['question_id']))
+        if qid:
+            out.add(qid)
+    return out
 
 
 def availability(db, content, user_id):
     doc = content.document
     tasks = {t['task_id']: t for t in doc['tasks']}
-    excluded = excluded_ids(events_for(db, content.subject, content.run_id, user_id), content.revision)
+    excluded = excluded_ids(events_for(db, content.subject, content.run_id, user_id), content.revision,
+                            getattr(doc, 'carried_questions', None))
     if doc['bank_source'] == 'standalone':
         # Main-Quiz documents are standalone. They take the same prerequisite rule as a bank source
         # (2026-11-12: an excluded prerequisite left its dependents available and order_plan raised 500).
@@ -181,8 +191,9 @@ def events_for(db, subject, run_id, user_id):
 def tiers_for(db, doc, user_id):
     """This learner's 「내 중요도」 on the active revision (tier events only)."""
     from .state import personal_tiers
+    revisions = {doc.revision, *(r for r, _ in getattr(doc.document, 'carried_questions', None) or {})}
     rows = db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == doc.subject,
-        RootEvent.run_id == doc.run_id, RootEvent.revision == doc.revision, RootEvent.kind == 'tier'))
+        RootEvent.run_id == doc.run_id, RootEvent.revision.in_(revisions), RootEvent.kind == 'tier'))
     return personal_tiers(doc.document, [{'id': e.request_id, 'revision': e.revision, 'kind': e.kind,
                                           'payload': e.payload, 'at': e.created_at} for e in rows])
 
@@ -252,8 +263,13 @@ def front(q):
     if q.get('stimuli'):
         from studyez_contracts.roots.media import public_images
         result['stimuli']=public_images(q)
+    if type(q.get('clue')) is str and q['clue'].strip():
+        # 사진 반입 판의 힌트(docs/changes/2026-11-15-photo-quiz-import): 발문에서 뺀 단서, 답 보기 전에 펼친다.
+        result['clue']=q['clue']
     if q.get('personalEdited'):
         result['personalEdited']=True
+    if q.get('personalAdded'):
+        result['personalAdded']=True  # 내 문제(2026-11-15, mine.py)
     if q.get('personalTier'):
         result.update(personalTier=True, originalTier=q['originalTier'] or 'Core')
     return result

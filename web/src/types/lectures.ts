@@ -108,6 +108,8 @@ export type TimetableEvent = {
   slot: number | null;
   /** 한 칸에 여러 강의가 붙을 수 있다. 선택형 과목이 그렇다. */
   lectures: LectureRef[];
+  /** 본인 족보 회독 수. 족보는 강의가 아니라 시간표 칸에 붙는다. 목록만 먼저 읽을 때는 0. */
+  jokboRounds?: number;
 };
 
 export type LectureFile = {

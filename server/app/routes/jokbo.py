@@ -19,17 +19,18 @@ import io
 import json
 import re
 import time
+import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user, require_runner
 from app.database import get_db
-from app.models import JokboMark, TimetableEvent
+from app.models import JokboMark, JokboRound, TimetableEvent
 from app.models.base import _now
 from app.routes.common import storage_or_503
 from studyez_contracts.jokbo import JokboSolveError, validate_lecture
@@ -329,3 +330,36 @@ def jokbo_wrong_notes(
     for entry in out:
         del entry["order"]
     return {"items": out, "missing": missing}
+
+
+# ─────────────────────────────────────────────── 회독
+
+MAX_ROUNDS = 30
+
+
+def jokbo_round_counts(db: Session, user_id: str, event_ids: list[str]) -> dict[str, int]:
+    """시간표 칸마다 이 사람의 족보 회독 수. 없는 칸은 빠진다."""
+    if not event_ids:
+        return {}
+    rows = db.execute(
+        select(JokboRound.event_id, func.count())
+        .where(JokboRound.user_id == user_id, JokboRound.event_id.in_(event_ids))
+        .group_by(JokboRound.event_id)
+    ).all()
+    return {event_id: n for event_id, n in rows}
+
+
+@router.post("/jokbo/events/{event_id}/rounds")
+def add_jokbo_round(
+    event_id: str,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    """족보 1회독. 진입 화면에서 고른 범위를 끝까지 풀고 마무리 화면에 닿으면 웹이 부른다."""
+    _visible(_load_cached(event_id), user)
+    count = jokbo_round_counts(db, user.id, [event_id]).get(event_id, 0)
+    if count >= MAX_ROUNDS:
+        raise HTTPException(status_code=409, detail=f"족보 회독은 {MAX_ROUNDS}번까지 기록합니다.")
+    db.add(JokboRound(id=uuid.uuid4().hex, user_id=user.id, event_id=event_id))
+    db.commit()
+    return {"jokboRounds": count + 1}

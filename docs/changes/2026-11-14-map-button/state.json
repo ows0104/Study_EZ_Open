@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-14-map-button",
+  "title": "강의 패널 개념 지도 버튼·지도 좌측 상단 뒤로",
+  "area": "site",
+  "created_at": "2026-11-14T12:16:05.097896+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T12:16:05.097916+00:00"
+}

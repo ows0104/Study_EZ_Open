@@ -31,6 +31,11 @@ export function targetStatus(targetId:string,ready:boolean,summary:RootSummary):
   return 'is-new';
 }
 
+/** Content links of the map. A `prerequisite` relation records study order (존재 목표 → 세부 목표,
+ *  docs/changes/2026-11-15-tree-edge-goals), not a link between ideas: it is not drawn, and it does not
+ *  make its `from` end a topic. */
+export const contentRelations=(map:RootMapData)=>map.relations.filter(r=>r.kind!=='prerequisite');
+
 export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree{
   const concepts=new Map(map.concepts.map(c=>[c.concept_id,c]));
   const uses=new Map<string,number>();
@@ -38,8 +43,9 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
   const usedBy=new Map<string,RootMapData['targets'][number][]>();
   for(const t of map.targets)for(const id of t.concept_ids)usedBy.set(id,[...(usedBy.get(id)??[]),t]);
   const parents=new Set(map.concepts.flatMap(c=>c.parent_ids));
-  const links=new Map<string,Set<string>>(),sources=new Set(map.relations.map(r=>r.from_id));
-  for(const r of map.relations){
+  const relations=contentRelations(map);
+  const links=new Map<string,Set<string>>(),sources=new Set(relations.map(r=>r.from_id));
+  for(const r of relations){
     links.set(r.from_id,(links.get(r.from_id)??new Set()).add(r.to_id));
     links.set(r.to_id,(links.get(r.to_id)??new Set()).add(r.from_id));
   }

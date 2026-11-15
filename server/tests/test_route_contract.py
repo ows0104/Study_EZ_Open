@@ -234,15 +234,18 @@ def main() -> None:
     check_bank_schema_identity()
     # 2026-11-13: jokbo — 강의(시간표 칸)별 족보 풀이 읽기·러너 업로드(routes/jokbo.py, 문서는 R2).
     # 2026-11-14: 오답노트 — 푼 결과·상중하 표시(jokbo_mark 표), 강의를 가리지 않는 오답노트.
+    # 2026-11-14: 족보 회독 — 끝 화면에 닿으면 1회독(jokbo_round 표).
     jokbo_routes = """GET /api/jokbo/events/{event_id}
 GET /api/jokbo/events/{event_id}/summary
 GET /api/jokbo/marks
 GET /api/jokbo/wrong-notes
 POST /api/jokbo/events/{event_id}/items/{item_id}/answer
 PUT /api/jokbo/events/{event_id}/items/{item_id}/mark
+POST /api/jokbo/events/{event_id}/rounds
 PUT /api/admin/jokbo/events/{event_id}
 GET /api/admin/jokbo/figures/{name}
 PUT /api/admin/jokbo/figures/{name}"""
+    # 2026-11-15: root-learning mine·mine-draft·memo — 내 문제(추가·복사 후 수정)와 뒷면 메모(root_event kind='mine'·'memo').
     # 2026-11-13: root-learning/optional — Optional 계산 제외(계정 단위, root_event kind='optional').
     # 2026-11-12: root-learning lectures/{subject}/{run_id}/focus — 오늘 학습 중요도 필터(root_event kind='focus').
     # 2026-11-09: root-learning questions/{question_id}/tier — 풀이 중 「내 중요도」(root_event kind='tier').
@@ -270,6 +273,10 @@ GET /api/root-learning/lectures/{subject}/{run_id}/sources/{source_id}
 GET /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/personal
 PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/personal
 PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/tier
+GET /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/mine-draft
+PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/memo
+POST /api/root-learning/lectures/{subject}/{run_id}/mine
+PUT /api/root-learning/lectures/{subject}/{run_id}/mine/{mine_id}
 PUT /api/root-learning/lectures/{subject}/{run_id}/focus
 GET /api/root-learning/optional
 PUT /api/root-learning/optional"""

@@ -1,0 +1,137 @@
+{
+  "id": "2026-11-14-jokbo-note-lecture",
+  "title": "족보 풀이 플로팅 노트 강의명 버튼",
+  "area": "site",
+  "created_at": "2026-11-14T12:20:45.916428+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-14T12:20:46.267800+00:00",
+      "evidence": "2026-11-14 Claude Code 채팅 사용자 발언: 「괜찮아졌어. 족보 풀 때에도 복습퀴즈 풀 때처럼 똑같이 강의명 추가 버튼 좀 만들어줘」, 같은 파일(#170) 겹침 안내 뒤 「Go ahead」",
+      "scope": "web/src/jokbo/JokboPage.tsx 2줄, 검사·PR",
+      "evidence_version": 2,
+      "source_hash": "b2a0ace472d893ebe4d2f7a414cbd5e97e2c73cb6375ad287db70f5f25a987ee",
+      "plan_hash": "191c8e1386e729da2165e09d045724662724efb4f180b360f1db0c755ac2cb77",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "61eb5684582da6b111a7518796a088c83aede6f19fc6fe0bc68d39e02b8d3006"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-14T12:21:19.563706+00:00",
+      "command": [
+        "C:/Program Files/nodejs/npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "b2a0ace472d893ebe4d2f7a414cbd5e97e2c73cb6375ad287db70f5f25a987ee",
+      "plan_hash": "191c8e1386e729da2165e09d045724662724efb4f180b360f1db0c755ac2cb77",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-jokbo-note-lecture/1794658863402112500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-14T12:21:46.254986+00:00",
+      "command": [
+        "C:/Program Files/nodejs/npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "1394dc42f3e232b9fcc32faf813f25797d7a7bb1b060cb7f4b57f5a840457fcd",
+      "plan_hash": "191c8e1386e729da2165e09d045724662724efb4f180b360f1db0c755ac2cb77",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-14-jokbo-note-lecture/1794658891447389000-web.log",
+      "web_artifact": "4346cf033fb9df5e661d50e1243ff5d4c2b1afaffb77959edc8893a68d0f5f61",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-14T12:25:20.808045+00:00",
+    "summary": "JokboPage가 문서 수신 뒤 useNoteLecture(lectureTitle(doc)) 호출, 조기 return 전 위치라 hook 순서 안전. 떠나면 정리. #170과 같은 파일 다른 블록. 남은 위험: 노트 없을 때 첫 삽입이 개발 StrictMode에서 화면에 안 보임(운영 빌드 미확인).",
+    "evidence_version": 2,
+    "source_hash": "1394dc42f3e232b9fcc32faf813f25797d7a7bb1b060cb7f4b57f5a840457fcd",
+    "plan_hash": "191c8e1386e729da2165e09d045724662724efb4f180b360f1db0c755ac2cb77",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-14T12:25:22.133224+00:00"
+}

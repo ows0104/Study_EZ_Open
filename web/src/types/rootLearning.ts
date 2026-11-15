@@ -28,16 +28,22 @@ export type RootOverview = {revision:string; title:string; policyReady:boolean; 
   focus?:RootFocus;
   /** 오늘 학습 흐름에서 지나간 자리 수(2026-11-14 이어 풀기). sessionId가 없고 0보다 크면 오늘 목록을 다 푼 것 → 「더 풀기」. */
   todayDone?:number;
+  /** 사진 반입 판(2026-11-15): 시작 화면에 「순서대로/랜덤」을 보인다. order는 진행 중 회차의 지금 순서(없으면 null). */
+  orderChoice?:boolean; order?:'ordered'|'random'|null;
   scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;
+  /** 이 판에서 내 문제를 만들 수 있다(root-generation/4, 2026-11-15). 옛 서버는 보내지 않는다. */
+  mineEnabled?:boolean;
   task:{id:string; question:BankQuestion; answer:RootAnswer|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
 export type RootAnswer = BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
   reviewIssues?:string[];sourceLinks?:{label:string;url:string}[];pdfSlides?:RootPdfSlide[];
   /** 족보(exam) 원본의 지면. 강의록 슬라이드와 따로 그린다. */
   jokboPdfSlides?:RootPdfSlide[];
   /** 판의 근거 보강이 있어 pdfSlides의 primary가 실제 판정이다. */
-  slideFocusKnown?:boolean};
+  slideFocusKnown?:boolean;
+  /** 뒷면 「내 메모」(2026-11-15). 나만 본다. 옛 서버는 보내지 않는다(그때는 메모 칸을 그리지 않는다). */
+  memo?:string};
 /** Read-only look-ahead of one session position (GET …/prepare). Records nothing; display only until /events confirms. */
 export type RootFrame = {position:number; taskId:string; blocked:string|null;
   task:{id:string; question:BankQuestion; answer:RootAnswer; helped:boolean}|null};

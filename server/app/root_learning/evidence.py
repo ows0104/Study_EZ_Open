@@ -13,6 +13,7 @@ from studyez_contracts.bank.evidence_resolution import status as evidence_status
 from studyez_contracts.bank.jokbo_pages import references as jokbo_references
 from studyez_contracts.bank.pages import pages_of
 from studyez_contracts.bank.slide_focus import all_selected_pages, question_hash, selected_references
+from studyez_contracts.roots.media import photo_import
 from app.models import Asset, QuizBank
 from app.root_learning.content import bank_hash
 from app.storage import ObjectStorage
@@ -22,6 +23,44 @@ EVIDENCE_SCHEMA = 'root-evidence/1'
 # (object_key, size, uploaded_at) -> parsed JSON. A revision's evidence is replaced only by a new upload.
 _EVIDENCE: dict[tuple, dict | None] = {}
 _EVIDENCE_LIMIT = 32
+# 사진 반입 판(photo-import/1, 2026-11-15)은 출제 기록(RootGeneration)이 없다. 원본 PDF는 지문 이름의 고정 사본으로 둔다
+# (scripts/photo_quiz_sources.py가 올린다). 키에 지문이 있으므로 같은 키는 언제나 같은 바이트다.
+PHOTO_PREFIX = 'lectures/root-photo-import/'
+_PHOTO_PRESENT: set[str] = set()   # 있음을 확인한 키. 없음은 기억하지 않는다 — 올리면 바로 보인다.
+
+
+def photo_snapshot_key(sha256):
+    return f'{PHOTO_PREFIX}{sha256}.pdf'
+
+
+def photo_sources(doc, storage=None):
+    """사진 반입 판의 원본 기록(출제 기록의 `source_records`와 같은 모양). 사본이 올라간 원본만 낸다."""
+    document = getattr(doc, 'document', None) or {}
+    if not photo_import(document):
+        return []
+    records = []
+    for source in document['review']['sources']:
+        key = photo_snapshot_key(source['sha256'])
+        if key not in _PHOTO_PRESENT:
+            storage = storage or ObjectStorage()
+            try:
+                present = storage.head(key) is not None
+            except Exception:  # noqa: BLE001 — 저장소를 못 읽으면 이번 답에는 그 원본을 붙이지 않는다
+                present = False
+            if not present:
+                continue
+            _PHOTO_PRESENT.add(key)
+        records.append({'id': source['source_id'], 'sha256': source['sha256'], 'filename': source['label'],
+                        'contentType': 'application/pdf', 'pageCount': source.get('page_count'), 'snapshotKey': key})
+    return records
+
+
+def source_list(doc, generation, storage=None):
+    """판의 고정 원본: 출제 기록이 있으면 그 사본, 없으면 사진 반입 판의 지문 사본."""
+    if generation is not None:
+        from app.root_learning.reviewed_import import source_records
+        return source_records(generation)
+    return photo_sources(doc, storage)
 
 
 def proxy_path(doc, source):
@@ -38,11 +77,8 @@ def is_pdf(source):
 
 def frozen_pdf(doc, generation, source_id):
     """The verified PDF snapshot for one source of the active document, or None."""
-    if generation is None:
-        return None
-    from app.root_learning.reviewed_import import source_records
     known = {s['source_id']: s for s in doc.document['review']['sources']}
-    for source in source_records(generation):
+    for source in source_list(doc, generation):
         expected = known.get(source['id'])
         if source['id'] != source_id or not expected or expected['sha256'] != source['sha256']:
             continue
@@ -90,10 +126,9 @@ def attach_evidence(db, doc, question, generation, answer):
             from app.routes.bank_api.presentation import _slides, _jokbo_slides
             answer['slides'] = _slides(db, row, question['question_id'])
             answer['jokboSlides'] = _jokbo_slides(db, row, question)
-    if generation is None:
+    sources = source_list(doc, generation)
+    if not sources:
         return
-    from app.root_learning.reviewed_import import source_records
-    sources = source_records(generation)
     storage = ObjectStorage()
     known = {s['source_id']: s for s in doc.document['review']['sources']}
     signed = {}

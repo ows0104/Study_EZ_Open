@@ -104,6 +104,8 @@
 .main-quiz-tree-tools{position:absolute;z-index:6;left:8px;bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-width:calc(100% - 16px);padding:4px;border-radius:10px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(4px)}
 .main-quiz-tree-tools button{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:8px;font:inherit;font-size:.75rem;min-height:32px;min-width:32px;padding:4px 9px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .main-quiz-tree-tools button:hover{background:var(--hover);color:var(--ink)}
+/* 뒤로: 지도 좌측 상단(2026-11-14). */
+.main-quiz-tree-frame>.mq-map-back{position:absolute;z-index:7;left:12px;top:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 /* 패널은 지도 옆에 붙는 열이다 — 지도를 덮지 않고 지도 영역이 그만큼 좁아진다. */
 .main-quiz-tree-panel{position:relative;flex:0 0 340px;max-width:40%;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:18px 18px 24px;box-sizing:border-box;font-size:.85rem}
 .main-quiz-tree-panel h3{font-size:1rem;line-height:1.5;margin:6px 28px 8px 0}
@@ -123,7 +125,7 @@
 .main-quiz-tree-link:hover{color:var(--accent-ink);text-decoration:underline}
 .main-quiz-tree-outline{padding-left:18px;line-height:1.7}
 .main-quiz-tree-outline ol{padding-left:18px}
-@media(max-width:760px){.main-quiz-tree-frame{flex-direction:column}
+@media(max-width:760px){.main-quiz-tree-frame{flex-direction:column}.main-quiz-tree-frame>.mq-map-back{position:static;align-self:flex-start;margin:8px 8px 0}
   .main-quiz-tree-panel{position:absolute;z-index:5;left:6px;right:6px;bottom:52px;max-width:none;max-height:55%;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:14px}
   .main-quiz-tree-tools{left:6px;right:6px;bottom:6px;flex-wrap:nowrap;overflow-x:auto;max-width:none}.main-quiz-tree-tools button{flex:0 0 auto;min-height:30px;padding:3px 8px}}
 @media(max-width:600px){.main-quiz-learning{padding:0 8px 100px}.main-quiz-tools{gap:0}.main-quiz-learning .main-quiz-tools button,.main-quiz-menu>summary{padding:6px}.main-quiz-learning .quiz-bar{padding:10px 8px;gap:5px}.main-quiz-learning .quiz-bar button{font-size:12px}.main-quiz-learning .quiz-bar .quiz-undo{min-width:48px;font-size:11px;flex-basis:56px}.main-quiz-map .root-card{padding:14px}}
@@ -266,6 +268,17 @@
 .mq-records{margin:18px 0 0;text-align:left;border-top:1px dashed var(--line);padding-top:10px;font-size:13px;color:var(--ink-2)}
 .mq-records>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--ink-3);font-size:12.5px}
 .mq-records p{margin:6px 0;line-height:1.6}
+/* 힌트(2026-11-15 photo-quiz-import): 답 보기 전에 펼치는 발문 밖 단서. 버튼 모양은 예습 퀴즈 힌트(base.css .quiz-hint)와 같다. */
+.main-quiz-solve .mq-clue{margin:14px auto 4px}
+.main-quiz-solve .mq-clue>p{margin:10px 0 0;padding:12px 16px;text-align:left}
+.mq-clue kbd{font-size:11px;font-weight:600;opacity:.7}
+/* 사진 문항(2026-11-15 사용자 「사진이 너무 크고 정렬이 안 되어 있어. 답을 눌러도 답이 바로 안 보여」):
+   카드 가운데, 답 전에는 화면 높이의 절반쯤까지, 답을 열면 작게 줄여 답이 스크롤 없이 보이게 한다. 비율은 그대로. */
+.main-quiz-solve .mq-card .bank-stimuli{justify-content:center;align-items:flex-start;gap:12px;margin:16px 0}
+.main-quiz-solve .mq-card .bank-stimuli figure{display:flex;justify-content:center;min-width:0}
+.main-quiz-solve .mq-card .bank-stimuli img{width:auto;height:auto;max-width:100%;max-height:min(52vh,560px);border-radius:8px;object-fit:contain}
+.main-quiz-solve .mq-card.is-answered .bank-stimuli{flex-wrap:nowrap}
+.main-quiz-solve .mq-card.is-answered .bank-stimuli img{max-height:min(28vh,300px)}
 .mq-help-note{margin:10px 0 0;font-size:12px}
 .mq-edited{margin:0 0 8px;text-align:left}
 .mq-edit-note{margin:0 0 8px;text-align:left}
@@ -286,3 +299,10 @@
 .mq-mode button:hover{color:var(--ink)}
 .mq-mode button.is-on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
 .mq-mode button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 뒷면 「내 메모」(2026-11-15, docs/changes/2026-11-15-root-personal-questions). 나만 보는 글이라 답 아래에 조용히 둔다. */
+.mq-memo{margin:14px 0 0;text-align:left;border-top:1px dashed var(--line);padding-top:10px;font-size:14px}
+.mq-memo-label{margin:0 0 4px;color:var(--ink-3);font-size:12.5px}
+.mq-memo-text{margin:0 0 6px;white-space:pre-wrap;line-height:1.6;color:var(--ink)}
+.mq-memo label{display:grid;gap:6px;color:var(--ink-3);font-size:12.5px}
+.mq-memo textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px}
+.mq-memo-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
