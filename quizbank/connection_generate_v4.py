@@ -408,6 +408,8 @@ def run(packet, out, model, invoke, resume=None):
     for n in range(v3.ADD_LIMIT):
         goals = _goals(brief)
         gaps = {did: v4.missing_components(rows[did], goals[did]) for did in goals if rows[did]['status'] != 'covered'}
+        if presuppositions:
+            gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # an existence goal is asked whole, in one question
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))

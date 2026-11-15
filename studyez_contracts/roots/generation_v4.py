@@ -855,10 +855,11 @@ def unit_parents(brief):
     return {u: g['direction_id'] for g in groups for u in g['unit_direction_ids']}
 
 
-def place(brief, review, raw, parents=None, placement='evidence'):
+def place(brief, review, raw, parents=None, placement='evidence', prefer=frozenset()):
     """The direction of each mapped question: most components answered there, then map order.
     `parents`: recall-unit id -> the parent id the raw evidence uses (identity without recall units).
-    Review rule: a goal the question recalls a relation of whole comes before one it recalls only part of."""
+    Review rule: a goal the question recalls a relation of whole comes before one it recalls only part of.
+    `prefer` (presuppose/1): (question, goal) pairs where the question asks an existence goal whole; that goal first."""
     order = {d['direction_id']: i for i, d in enumerate(d for t in brief['targets'] for d in t['directions'])}
     count = {(e['question_id'], e['direction_id']): len(answered(e)) for e in raw['direction_evidence']}
     whole = {(r['question_id'], c['relation_id']) for r in raw['question_reviews'] for c in r['relations']
@@ -869,7 +870,8 @@ def place(brief, review, raw, parents=None, placement='evidence'):
         if not m['tested_relation_ids']:
             continue
         first = 0 if placement not in REVIEW_RULES or any((m['question_id'], rid) in whole for rid in m['tested_relation_ids']) else 1
-        key = (first, -count.get((m['question_id'], parents.get(m['direction_id'], m['direction_id'])), 0), order[m['direction_id']])
+        parent = parents.get(m['direction_id'], m['direction_id'])
+        key = (0 if (m['question_id'], parent) in prefer else 1, first, -count.get((m['question_id'], parent), 0), order[m['direction_id']])
         if m['question_id'] not in best or key < best[m['question_id']][0]:
             best[m['question_id']] = (key, m['direction_id'])
     return {q: did for q, (_, did) in best.items()}
@@ -882,12 +884,13 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
     `snapshot`/`importance` as in /2 (container concepts, question-basis importance). `presuppositions` (presuppose/1
     records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals)."""
     validate_audit(brief, bank, audit)
+    prefer = pre.whole_answers(coverage_rows, brief, presuppositions) if presuppositions else frozenset()
     parents = unit_parents(brief)
     if recall.enabled(brief):
         brief = recall.project_brief(brief)[0]
     review = audit['review']
     verdict = {r['question_id']: r['verdict'] for r in audit['question_checks']['reviews']}
-    where = place(brief, review, audit['assessment']['assessment'], parents, placement)
+    where = place(brief, review, audit['assessment']['assessment'], parents, placement, prefer)
     weighed = snapshot if snapshot is not None else bank
     merged = merged_duplicates(coverage_rows, weighed, verdict, set(where))
     gone = {m['question_id'] for m in merged}

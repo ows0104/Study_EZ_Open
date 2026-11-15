@@ -267,3 +267,33 @@ def mark_existence(ctx, brief, presuppositions, bank):
         if qids:
             goal['existence'] = {'presupposed_by': [{'question_id': q, 'question': stems.get(q, '')} for q in qids]}
     return ctx
+
+
+def existence_directions(brief, presuppositions):
+    """The goals made from presupposition points (existence goals), in map order."""
+    pids = {r['point_id'] for r in presuppositions or [] if r['point_id']}
+    tids = {t for p in brief['points'] if p['point_id'] in pids for t in p['target_ids']}
+    return [d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']]
+
+
+def _whole(row, goal):
+    comps = {c['component_id'] for c in goal['components']}
+    return {e['question_id'] for e in row['evidence']
+            if comps and comps <= {p['component_id'] for p in e['components'] if p['location'] == 'answer'}}
+
+
+def whole_answers(coverage_rows, brief, presuppositions):
+    """(question, existence goal) pairs where one question answers every member of the goal. Placement puts such a
+    question on its existence goal first (2026-11-15 2차 실측: the review named an older relation and the question for
+    「C. jejuni가 일으키는 질환」 went to an older goal)."""
+    goals = {d['direction_id']: d for t in brief['targets'] for d in t['directions']}
+    rows = {r['direction_id']: r for r in coverage_rows}
+    return {(q, did) for did in existence_directions(brief, presuppositions) if did in rows for q in _whole(rows[did], goals[did])}
+
+
+def existence_gaps(rows, brief, presuppositions):
+    """Existence goals no single question asks whole, with all their members: the add stage writes one question that
+    asks the whole category, not 「…를 제외한」 the members another question happens to ask (2차 실측)."""
+    goals = {d['direction_id']: d for t in brief['targets'] for d in t['directions']}
+    return {did: [c['component_id'] for c in goals[did]['components']]
+            for did in existence_directions(brief, presuppositions) if did in rows and not _whole(rows[did], goals[did])}

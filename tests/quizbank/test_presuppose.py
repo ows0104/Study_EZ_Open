@@ -217,3 +217,28 @@ def test_links_with_the_same_point_text_make_one_existence_point():
     assert [p['point_id'] for p in made] == ['P002', 'P003'] and [p['origin_question_id'] for p in made] == ['Q1', 'Q3']
     assert [r['point_id'] for r in recs] == ['P002', 'P002', 'P002', 'P003']   # same text, same (A, B), a new one
     assert [p['point_id'] for p in doc['points']] == ['P1', 'P002', 'P003']
+
+
+def test_a_question_that_asks_an_existence_goal_whole_is_placed_there_first(tmp_path):
+    # The review names the older goal's relation whole and the existence relation only in part (2차 실측, C. jejuni).
+    model = Presupposing()
+    model.relations = {**model.relations, 'Q004': [('R1', 'whole'), ('RQP001', 'partial')]}
+    packet, _, result = t4.run(tmp_path, model)
+    consume(result, packet)
+    owners = {d['direction_id']: t['target_id'] for t in result['document']['review']['targets'] for d in t['directions']}
+    assert {t['question_id']: owners[t['direction_id']] for t in result['document']['tasks']}['Q004'] == 'TQ001'
+
+
+def test_existence_gaps_ask_the_whole_category_until_one_question_does():
+    brief = {'targets': [{'target_id': 'TQ', 'directions': [{'direction_id': 'DQ', 'components': [{'component_id': 'a'}, {'component_id': 'b'}]}]},
+                         {'target_id': 'T1', 'directions': [{'direction_id': 'D1', 'components': [{'component_id': 'x'}]}]}],
+             'points': [{'point_id': 'P9', 'target_ids': ['TQ']}, {'point_id': 'P1', 'target_ids': ['T1']}]}
+    recs = [{'question_id': 'Q2', 'a': 'A', 'b': 'B', 'link': 'x', 'recalled_by': [], 'point_id': 'P9'}]
+    ev = lambda q, *ans: {'question_id': q, 'components': [{'component_id': c, 'location': 'answer'} for c in ans]}
+    split = {'DQ': {'direction_id': 'DQ', 'evidence': [ev('Q5', 'a'), ev('Q6', 'b')]}, 'D1': {'direction_id': 'D1', 'evidence': []}}
+    assert pre.existence_directions(brief, recs) == ['DQ']
+    assert pre.existence_gaps(split, brief, recs) == {'DQ': ['a', 'b']}          # covered only by the union: still a gap
+    assert pre.whole_answers(list(split.values()), brief, recs) == set()
+    whole = {**split, 'DQ': {'direction_id': 'DQ', 'evidence': [ev('Q5', 'a'), ev('Q7', 'a', 'b')]}}
+    assert pre.existence_gaps(whole, brief, recs) == {}
+    assert pre.whole_answers(list(whole.values()), brief, recs) == {('Q7', 'DQ')}
