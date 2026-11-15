@@ -210,8 +210,10 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
 def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=None, resume=None):
     # map-tree/1 runs the front stages first; the generator then works in <run>/generation on the derived packet.
     gen_out, gen_packet, gen_packet_path = out, packet, packet_path
-    # duplicates-only/1 and unplaced-only/1 (docs/changes/2026-11-15-unplaced-replace) start from the published run.
-    previous = duplicates_front(packet, out) if packet.get('duplicatesOnly') or packet.get('unplacedOnly') else None
+    # duplicates-only/1, unplaced-only/1 (docs/changes/2026-11-15-unplaced-replace) and presuppose-only/1
+    # (docs/changes/2026-11-15-tree-edge-goals) start from the published run.
+    flag = '--presuppose-of' if packet.get('presupposeOnly') else '--unplaced-of' if packet.get('unplacedOnly') else '--duplicates-of'
+    previous = duplicates_front(packet, out) if packet.get('duplicatesOnly') or packet.get('unplacedOnly') or packet.get('presupposeOnly') else None
     if packet.get('pipeline') is not None:
         gen_packet = map_tree_front(packet, out, model=model, resume=resume)
         if gen_packet is None: return 1
@@ -223,7 +225,7 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     if previous is not None:
         # A map-tree packet is a source-assessment/2 packet: the native transport runs it (runner.root_native_json).
         if module != 'runner.root_native_json': raise ValueError('중복 재판정·못 붙은 문항 재배치는 map-tree 생성 packet만 받습니다.')
-        args += ['--unplaced-of' if packet.get('unplacedOnly') else '--duplicates-of', str(previous.resolve())]
+        args += [flag, str(previous.resolve())]
     if previous is None and (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)
@@ -241,7 +243,8 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
         refresh(out,'published')
     print(f'Quiz Bank {run_id}: Concept map·포인트 → 뿌리 학습 게시 완료', flush=True)
     # Quiz Bank와 같은 핵심 근거·족보 지면(2026-11-08). 실패해도 게시 결과는 그대로다.
-    if previous is None or not reuse_evidence(client, subject, run_id, previous, gen_out, payload):
+    # presuppose-only/1 adds questions: their evidence is built as after any publication.
+    if previous is None or packet.get('presupposeOnly') or not reuse_evidence(client, subject, run_id, previous, gen_out, payload):
         from .root_evidence import publish as publish_evidence
         publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
     # 선지도 게시 직후 기본으로 붙인다(2026-11-14 사용자 「기본으로 설정해줘」, docs/changes/2026-11-14-choices-by-default).

@@ -21,3 +21,4 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 ## 옮긴 규칙 (source-v2.md)
 
 recall_policy=recall-units/1이면 design_checks에 모든 문항을 정확히 한 번 포함한다: question_id, verdict(ok/doubt/wrong), reason. 실제 회상 목표를 짧게 요약하고 답의 양·독립 요구의 수·조건·채점 부담과 형식의 적절성을 검토한다. 단순한 글자 수 상한을 쓰지 않는다. 여러 요구가 과도하게 겹치면 분할이나 표/빈칸/대응/선택 등 구체적 개선 방향을 쓴다. 원본 일치나 문항 안의 지식이 맞다는 사실만으로 설계를 ok로 하지 않는다. 기출 정답 기억·검수 설명을 묻는 질문, 의도가 불분명한 후속 질문, 지식 없이 문구로 정답이 드러나는 판단은 wrong과 question_fix로 기록한다. 해설의 주의사항이 채점에 섞이면 역할에 맞게 옮긴다. 목표 자체가 지나치게 넓거나 units가 의미를 바꾸면 map_fix로 기록한다. 단순 표현 취향과 실제 설계 위반을 구별한다.
+발문이 상위 연결(A→B)을 사실로 주는지, 그 연결을 묻는 문항이 은행에 있는지는 이 단계가 판정하지 않는다(presuppose/1의 전제 판정 단계가 은행 전체로 본다, docs/changes/2026-11-15-tree-edge-goals). 이 단계는 입력 묶음만 보므로 그 이유로 design을 doubt로 하지 않는다. 쪼개려고 강의에 없는 묶음 이름을 지어 쓴 발문은 doubt다. 한 범주의 원소 이름 전체를 답하게 하는 목록 문항은 원소 수만으로 doubt로 하지 않는다.

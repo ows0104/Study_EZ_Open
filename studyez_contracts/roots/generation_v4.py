@@ -20,6 +20,7 @@ from .validate import document_hash, validate_document
 from . import generation_v2 as v2
 from . import generation_v3 as v3
 from . import recall_units as recall
+from . import presuppose as pre
 
 POLICY = 'root-generation/4'
 _STRING = {'type': 'string'}
@@ -854,10 +855,11 @@ def unit_parents(brief):
     return {u: g['direction_id'] for g in groups for u in g['unit_direction_ids']}
 
 
-def place(brief, review, raw, parents=None, placement='evidence'):
+def place(brief, review, raw, parents=None, placement='evidence', prefer=frozenset()):
     """The direction of each mapped question: most components answered there, then map order.
     `parents`: recall-unit id -> the parent id the raw evidence uses (identity without recall units).
-    Review rule: a goal the question recalls a relation of whole comes before one it recalls only part of."""
+    Review rule: a goal the question recalls a relation of whole comes before one it recalls only part of.
+    `prefer` (presuppose/1): (question, goal) pairs where the question asks an existence goal whole; that goal first."""
     order = {d['direction_id']: i for i, d in enumerate(d for t in brief['targets'] for d in t['directions'])}
     count = {(e['question_id'], e['direction_id']): len(answered(e)) for e in raw['direction_evidence']}
     whole = {(r['question_id'], c['relation_id']) for r in raw['question_reviews'] for c in r['relations']
@@ -868,24 +870,30 @@ def place(brief, review, raw, parents=None, placement='evidence'):
         if not m['tested_relation_ids']:
             continue
         first = 0 if placement not in REVIEW_RULES or any((m['question_id'], rid) in whole for rid in m['tested_relation_ids']) else 1
-        key = (first, -count.get((m['question_id'], parents.get(m['direction_id'], m['direction_id'])), 0), order[m['direction_id']])
+        parent = parents.get(m['direction_id'], m['direction_id'])
+        key = (0 if (m['question_id'], parent) in prefer else 1, first, -count.get((m['question_id'], parent), 0), order[m['direction_id']])
         if m['question_id'] not in best or key < best[m['question_id']][0]:
             best[m['question_id']] = (key, m['direction_id'])
     return {q: did for q, (_, did) in best.items()}
 
 
 def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_date, snapshot=None, importance=None,
-                  placement='evidence'):
+                  placement='evidence', presuppositions=None, settled=()):
     """roots/1 document of a /4 run and its placement record {mergedDuplicates, unplacedQuestions}.
 
-    `snapshot`/`importance` as in /2 (container concepts, question-basis importance)."""
+    `snapshot`/`importance` as in /2 (container concepts, question-basis importance). `presuppositions` (presuppose/1
+    records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals)."""
     validate_audit(brief, bank, audit)
+    # `settled`: questions whose placement stays as published (presuppose-only/1 keeps each published task on its goal,
+    # so its learning history carries over); only the others may be drawn to an existence goal they ask whole.
+    prefer = ({(q, d) for q, d in pre.whole_answers(coverage_rows, brief, presuppositions) if q not in set(settled)}
+              if presuppositions else frozenset())
     parents = unit_parents(brief)
     if recall.enabled(brief):
         brief = recall.project_brief(brief)[0]
     review = audit['review']
     verdict = {r['question_id']: r['verdict'] for r in audit['question_checks']['reviews']}
-    where = place(brief, review, audit['assessment']['assessment'], parents, placement)
+    where = place(brief, review, audit['assessment']['assessment'], parents, placement, prefer)
     weighed = snapshot if snapshot is not None else bank
     merged = merged_duplicates(coverage_rows, weighed, verdict, set(where))
     gone = {m['question_id'] for m in merged}
@@ -914,6 +922,11 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
         candidates = kept
     prepared_targets = {owners[t['direction_id']] for t in candidates}
     edges = [e for e in brief['prerequisites'] if e['relation_id'] in reviewed_relations and e['before_target'] in prepared_targets]
+    if presuppositions:
+        extra_relations, extra_edges = pre.order_edges(brief, candidates, presuppositions, review['relations'], edges)
+        if extra_edges:
+            review = {**review, 'relations': [*review['relations'], *extra_relations]}
+            edges = [*edges, *extra_edges]
     candidates.sort(key=lambda t: order.index(t['question_id']))
     doc = {'schema_version': 'roots/1', 'generation_policy': POLICY, 'revision': revision, 'title': title,
            'review': review, 'bank_snapshot': bank, 'bank_source': 'standalone', 'bank_build_id': None,
@@ -960,15 +973,20 @@ def notebook_profile(packet, meta):
         extended = meta['supplementPoints']
         require(extended['points'][:len(points['points'])] == points['points'] and extended['notebook_profile'] == points['notebook_profile'],
                 'result4: supplement changed the exam points')
-        require(all(p.get('origin') == 'question' and 'importance_basis' not in p for p in extended['points'][len(points['points']):]),
+        require(all(p.get('origin') in ('question', pre.ORIGIN) and 'importance_basis' not in p for p in extended['points'][len(points['points']):]),
                 'result4: unmarked supplement point or a point with importance')
+        made = [p['point_id'] for p in extended['points'] if p.get('origin') == pre.ORIGIN]
+        require(made == sorted({r['point_id'] for r in meta.get('presuppositions') or [] if r['point_id']}),
+                'result4: presupposition points differ from the presupposition records')
     else:
-        require(not meta['supplement'], 'result4: supplement decisions without points')
+        require(not meta['supplement'] and not any(r['point_id'] for r in meta.get('presuppositions') or []),
+                'result4: supplement decisions without points')
     require(all('importance_basis' not in p for p in points['points']), 'result4: /4 exam points carry no importance (R1)')
     return points['notebook_profile']
 
 
-def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence'):
+def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
+             presuppositions=None, settled=()):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing)."""
     table = question_table(basis, profile, reviewed)
@@ -976,7 +994,7 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
                                 snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table),
-                                placement=placement)
+                                placement=placement, presuppositions=presuppositions, settled=settled)
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
 
 
@@ -1031,16 +1049,26 @@ def carry_links(doc, sources):
     return links, record
 
 
+def _settled(meta):
+    """presuppose-only/1: the published questions (all but the ones the run added) keep their placement."""
+    record = meta.get('presupposeOnly')
+    if not record:
+        return ()
+    added = set(record['addedQuestions'])
+    return tuple(q for q in meta['questionImportance'] if q not in added)
+
+
 def _judgments4(value, packet, brief, reviewed, meta, doc):
     placement = _placement4(value, brief, reviewed, meta)
     require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result4: not-ready goals differ')
     profile = notebook_profile(packet, meta)
     again, placed, proofs = assemble(brief, reviewed, value['sourceAudit'], meta['coverage'], meta['questionImportance'], profile,
                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
-                                     placement=placement)
+                                     placement=placement, presuppositions=meta.get('presuppositions'),
+                                     settled=_settled(meta))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
-    if meta.get('unplacedOnly') and packet.get('carrySources'):
+    if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):
         # A replacement continues the history of the earlier revisions it keeps questions of (replace-carry-records).
         again['equivalences'] = carry_links(again, packet['carrySources'])[0]
     require(again == doc, 'result4: the document is not the assembly of the reviewed judgments')
