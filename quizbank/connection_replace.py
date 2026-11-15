@@ -21,6 +21,7 @@ The result is an ordinary /4 result (`generation_v4.validate_result`); the serve
 replaces the published revision."""
 import copy
 import json
+import re
 from pathlib import Path
 
 from studyez_llm import codex
@@ -75,9 +76,11 @@ def _check_repair(before, value, bad):
     touched = [cid for cid in old_con if new_con[cid] != old_con[cid] and cid in used]
     v3.require(not touched, f'관계 수선: 다른 관계가 쓰는 개념은 바꾸지 않습니다: {touched[:5]}')
     # The map is shown to students in the lecture's Korean (261111_02 repair rewrote labels as English sentences).
-    english = [rid for rid in bad if _hangul(old_rel[rid].get('condition')) and not _hangul(new_rel[rid].get('condition'))]
-    english += [cid for cid in old_con if new_con[cid] != old_con[cid] and _hangul(old_con[cid]['label']) and not _hangul(new_con[cid]['label'])]
-    english += [cid for cid in new_con if cid not in old_con and not _hangul(new_con[cid]['label'])
+    # A list of organism names and numbers has no Korean of its own (261106_06 PR014 「B. fragilis 25%, …」): only an
+    # English sentence (function words, no Hangul) is refused.
+    english = [rid for rid in bad if _hangul(old_rel[rid].get('condition')) and _english(new_rel[rid].get('condition'))]
+    english += [cid for cid in old_con if new_con[cid] != old_con[cid] and _hangul(old_con[cid]['label']) and _english(new_con[cid]['label'])]
+    english += [cid for cid in new_con if cid not in old_con and _english(new_con[cid]['label'])
                 and any(_hangul(c['label']) for c in before['concepts'])]
     v3.require(not english, f'관계 수선: 지도는 한국어로 씁니다(고유명사만 원문 표기). 한국어가 빠진 것: {english[:8]}')
     return value
@@ -85,6 +88,16 @@ def _check_repair(before, value, bad):
 
 def _hangul(text):
     return any('가' <= ch <= '힣' for ch in str(text or ''))
+
+
+ENGLISH_WORDS = {'the', 'of', 'and', 'is', 'are', 'to', 'in', 'with', 'by', 'for', 'from', 'as', 'a', 'an', 'that', 'which',
+                 'than', 'more', 'most', 'bind', 'binds', 'causes', 'cause', 'its', 'their', 'it', 'be', 'was', 'were', 'or'}
+
+
+def _english(text):
+    """An English sentence where the map is Korean: no Hangul and at least one English function word."""
+    words = {w.lower() for w in re.findall(r'[A-Za-z]+', str(text or ''))}
+    return not _hangul(text) and bool(words & ENGLISH_WORDS)
 
 
 def run(packet, out, model, invoke, previous, resume=None):
@@ -152,8 +165,11 @@ def run(packet, out, model, invoke, previous, resume=None):
                   for rid, c in bad.items()]
         pages = v3.cited_pages([e for rid in bad for e in rel[rid]['evidence']])
         old_brief = brief
+        # The same check runs inside the model session (runner.root_native_json v3_check with this state), so a refused
+        # repair goes back to the model instead of failing the lecture (261106_06, 2026-11-15).
         fixed = st.run(X + 'brief-fix' + TAG, {'brief': brief, 'errors': errors, 'pages': pages},
-                       lambda raw: _check_repair(old_brief, v3.check_brief_fix(raw, {'brief': old_brief}), set(bad)))
+                       lambda raw: _check_repair(old_brief, v3.check_brief_fix(raw, {'brief': old_brief}), set(bad)),
+                       {'repair': sorted(bad)})
         brief = v2.blank_target_importance(fixed['brief'])
         new_rel = {r['relation_id']: r for r in brief['relations']}
         changed = [rid for rid in bad if new_rel[rid] != rel[rid]]
