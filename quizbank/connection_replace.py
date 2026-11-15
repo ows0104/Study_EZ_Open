@@ -39,12 +39,41 @@ TAG = '-late'
 LABEL = '못 붙은 문항 재배치'
 
 
-def _merged_map_check(checks):
+def _merged_map_check(checks, repaired=None):
+    """The first verdict of each relation, as a /4 run merges them; a relation the repair rewrote takes the verdict
+    of its re-check instead (R4)."""
     value = {k: [x for m in checks for x in m[k]] for k in ('relation_checks', 'target_checks', 'direction_checks', 'issues')}
     seen = {}
     for r in value['relation_checks']:
         seen.setdefault(r['relation_id'], r)
+    seen.update(repaired or {})
     value['relation_checks'] = list(seen.values())
+    return value
+
+
+UNSUPPORTED = ('unknown', 'conflict')
+KEPT = ('targets', 'points', 'prerequisites', 'sources', 'scope', 'exclusions', 'lecture_id', 'recall_policy', 'schema_version')
+
+
+def _check_repair(before, value, bad):
+    """R4: a repair may rewrite only the unsupported relations (same IDs), add concepts, and change a concept only
+    those relations use. Goals, directions, points and prerequisites stay, so no task and no judgment moves."""
+    after = value['brief']
+    for key in KEPT:
+        v3.require(after.get(key) == before.get(key), f'관계 수선: {key}를 바꾸지 않습니다.')
+    old_rel = {r['relation_id']: r for r in before['relations']}
+    new_rel = {r['relation_id']: r for r in after['relations']}
+    v3.require([r['relation_id'] for r in after['relations']] == [r['relation_id'] for r in before['relations']],
+               '관계 수선: 관계 ID와 순서를 바꾸지 않습니다.')
+    other = [rid for rid in old_rel if rid not in bad and new_rel[rid] != old_rel[rid]]
+    v3.require(not other, f'관계 수선: 지도 점검이 지지한 관계는 바꾸지 않습니다: {other[:5]}')
+    old_con = {c['concept_id']: c for c in before['concepts']}
+    new_con = {c['concept_id']: c for c in after['concepts']}
+    v3.require(set(old_con) <= set(new_con), '관계 수선: 기존 개념을 지우지 않습니다.')
+    used = {cid for rid, r in old_rel.items() if rid not in bad for cid in (r['from_id'], r['to_id'])}
+    used |= {cid for c in after['concepts'] for cid in c.get('parent_ids', []) if cid in old_con and c['concept_id'] not in old_con}
+    touched = [cid for cid in old_con if new_con[cid] != old_con[cid] and cid in used]
+    v3.require(not touched, f'관계 수선: 다른 관계가 쓰는 개념은 바꾸지 않습니다: {touched[:5]}')
     return value
 
 
@@ -83,12 +112,13 @@ def run(packet, out, model, invoke, previous, resume=None):
     page_counts = {s['source_id']: s['page_count'] for s in brief['sources']}
     points_doc = meta.get('supplementPoints') or v4.check_points(json.loads(packet['points']))
     supplement = copy.deepcopy(meta.get('supplement') or [])
+    repaired = {}   # R4: relation -> its re-check after the repair
 
     def coverage_rows():
         return [rows[d['direction_id']] for t in brief['targets'] for d in t['directions']]
 
     def assemble():
-        map_check = _merged_map_check(map_checks)
+        map_check = _merged_map_check(map_checks, repaired)
         raw = v4.assessment_raw(brief, bank, coverage_rows(), map_check, reviews, context, meta['sourceAssessment']['summary'], placement)
         audit = v4.compile_assessment(brief, bank, v2.envelope(brief, bank, raw), placement)
         doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows(), basis, profile, revision=packet['revision'],
@@ -97,6 +127,36 @@ def run(packet, out, model, invoke, previous, resume=None):
 
     before = len(meta['unplacedQuestions'])
     placed = assemble()[4]
+    # R4 (사용자 「관계 수선 더해」): a question tied only to a relation the map check left unknown or in conflict
+    # cannot become a task (261111_02: the late goals reused such relations, 1 of 13 placed). Those relations are
+    # rewritten by the brief fix stage against the source and checked again; nothing else of the map changes.
+    repair = {'relations': [], 'changed': [], 'supported': []}
+    bad = {r['relation_id']: r for r in _merged_map_check(map_checks)['relation_checks'] if r['status'] in UNSUPPORTED}
+    bad = {rid: c for rid, c in bad.items() if any(r['relation_id'] == rid for r in brief['relations'])}
+    if bad and placed['unplacedQuestions']:
+        rel = {r['relation_id']: r for r in brief['relations']}
+        errors = [f"{rid}: 지도 점검 {c['status']} — {c['reason']} 현재 관계: {json.dumps(rel[rid], ensure_ascii=False)}. "
+                  '원본에 맞게 이 관계의 끝점·condition(필요하면 새 세부 개념)을 고쳐 원본이 말하는 주장을 그대로 담게 한다. '
+                  '관계 ID·kind, 목표·방향·포인트·선행 관계는 바꾸지 않는다.' for rid, c in bad.items()]
+        pages = v3.cited_pages([e for rid in bad for e in rel[rid]['evidence']])
+        old_brief = brief
+        fixed = st.run(X + 'brief-fix' + TAG, {'brief': brief, 'errors': errors, 'pages': pages},
+                       lambda raw: _check_repair(old_brief, v3.check_brief_fix(raw, {'brief': old_brief}), set(bad)))
+        brief = v2.blank_target_importance(fixed['brief'])
+        new_rel = {r['relation_id']: r for r in brief['relations']}
+        changed = [rid for rid in bad if new_rel[rid] != rel[rid]]
+        repair.update(relations=sorted(bad), changed=changed)
+        tids = [t['target_id'] for t in brief['targets']
+                if set(changed) & (set(t['relation_ids']) | {x for d in t['directions'] for x in d['relation_ids']})]
+        if tids:
+            ctx = v4.map_check_input(brief, tids)
+            check = st.judged(X + 'map-check-fix' + TAG, ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx))
+            repaired.update({r['relation_id']: r for r in check['relation_checks'] if r['relation_id'] in changed})
+            repair['supported'] = sorted(rid for rid, r in repaired.items() if r['status'] == 'supported')
+        st.save()
+        placed = assemble()[4]
+        print(f"── 관계 수선: 결함 관계 {len(bad)}개 · 고침 {len(changed)}개 · 다시 점검해 지지됨 {len(repair['supported'])}개 · "
+              f"남은 미배치 {len(placed['unplacedQuestions'])}개", flush=True)
     late = [u['question_id'] for u in placed['unplacedQuestions'] if not u['reason'].startswith('dependency')]
     print(f"── {LABEL}: 이전 판 지도에 못 붙은 문항 {before}개 → 범위 점검 판정 뒤 {len(placed['unplacedQuestions'])}개 · "
           f"늦은 보충 {len(late)}개", flush=True)
@@ -134,7 +194,8 @@ def run(packet, out, model, invoke, previous, resume=None):
     rows_now = coverage_rows()
     ready_rows = v4.readiness(brief, rows_now, doc)
     record = {**ledger['unplacedOnly'], 'unplacedBefore': before, 'unplacedAfter': len(placed['unplacedQuestions']),
-              'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']), 'lateQuestions': late}
+              'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']), 'lateQuestions': late,
+              'relationRepair': repair}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 지도에 못 붙은 문항 {before} → "
           f"{record['unplacedAfter']} · 범위 점검 판정 {len(placed['coverageFallback'])}개", flush=True)
     kept = {t['question_id'] for t in old['document']['tasks']}

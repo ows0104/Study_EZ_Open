@@ -80,3 +80,58 @@ def test_another_lecture_input_is_refused(tmp_path):
     packet['inputHash'] = packet_hash(packet)
     with pytest.raises(ValueError, match='강의 입력'):
         g.run(packet, tmp_path / 'new', invoke=LateModel(), unplaced_of=previous)
+
+
+# ---------------------------------------------------------------- R4: unsupported relations are repaired
+from tests.quizbank.test_root_generation_v4 import Model  # noqa: E402
+
+
+class UnknownR1Model(Model):
+    """The first map check leaves R1 unknown (its condition misses the subject), so neither D1 question is a task;
+    the repair rewrites R1's condition and the re-check supports it. `bad_fix`: the repair also edits a goal."""
+
+    def __init__(self, bad_fix=False):
+        # The item reviews name no relation for Q1/Q2 (R1 is not a supported relation they may name).
+        super().__init__(relations={'Q1': [], 'Q2': [], 'Q003': [('R2', 'whole')]})
+        self.bad_fix = bad_fix
+
+    def __call__(self, stage, ctx, material, model):
+        if stage == 'v4-brief-fix-late':
+            self.calls.append(stage)
+            self.inputs[stage] = ctx
+            fixed = copy.deepcopy(ctx['brief'])
+            fixed['provenance']['independent_points'] = 'derived'
+            next(r for r in fixed['relations'] if r['relation_id'] == 'R1')['condition'] = 'Synthetic subject named'
+            if self.bad_fix:
+                t = fixed['targets'][0]
+                key = next(k for k, v in t.items() if type(v) is str and k != 'target_id')
+                t[key] += ' (changed goal)'
+            return {'brief': fixed, 'map_change_reason': 'Synthetic relation repair'}, {}
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage == 'v4-map-check-0':
+            for r in value['relation_checks']:
+                if r['relation_id'] == 'R1':
+                    r.update(status='unknown', reason='Synthetic: the subject is missing')
+        return value, info
+
+
+def test_a_question_on_an_unknown_relation_is_placed_after_the_repair(tmp_path):
+    previous, old, packet = published(tmp_path, UnknownR1Model())
+    assert {'Q1', 'Q2'} & set(dict(tasks(old))) == set()
+    model = UnknownR1Model()
+    result = g.run(packet, tmp_path / 'new', invoke=model, unplaced_of=previous)
+    assert consume(result, packet) == result['document']
+    assert model.calls == ['v4-brief-fix-late', 'v4-map-check-fix-late']
+    assert [e.split(':')[0] for e in model.inputs['v4-brief-fix-late']['errors']] == ['R1']
+    assert {'Q1', 'Q2'} <= set(dict(tasks(result))) and result['manifest']['unplacedQuestions'] == []
+    repair = result['manifest']['unplacedOnly']['relationRepair']
+    assert repair == {'relations': ['R1'], 'changed': ['R1'], 'supported': ['R1']}
+    assert next(r for r in result['brief']['relations'] if r['relation_id'] == 'R1')['condition'] == 'Synthetic subject named'
+    assert result['brief']['targets'] == old['brief']['targets']
+    assert result['document']['bank_snapshot']['questions'] == old['document']['bank_snapshot']['questions']
+
+
+def test_a_repair_that_changes_a_goal_is_refused(tmp_path):
+    previous, _, packet = published(tmp_path, UnknownR1Model())
+    with pytest.raises(ValueError, match='관계 수선: targets'):
+        g.run(packet, tmp_path / 'new', invoke=UnknownR1Model(bad_fix=True), unplaced_of=previous)
