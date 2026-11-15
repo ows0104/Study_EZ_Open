@@ -268,6 +268,8 @@ def front(q):
         result['clue']=q['clue']
     if q.get('personalEdited'):
         result['personalEdited']=True
+    if q.get('personalAdded'):
+        result['personalAdded']=True  # 내 문제(2026-11-15, mine.py)
     if q.get('personalTier'):
         result.update(personalTier=True, originalTier=q['originalTier'] or 'Core')
     return result

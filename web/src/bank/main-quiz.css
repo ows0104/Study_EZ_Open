@@ -299,3 +299,10 @@
 .mq-mode button:hover{color:var(--ink)}
 .mq-mode button.is-on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
 .mq-mode button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 뒷면 「내 메모」(2026-11-15, docs/changes/2026-11-15-root-personal-questions). 나만 보는 글이라 답 아래에 조용히 둔다. */
+.mq-memo{margin:14px 0 0;text-align:left;border-top:1px dashed var(--line);padding-top:10px;font-size:14px}
+.mq-memo-label{margin:0 0 4px;color:var(--ink-3);font-size:12.5px}
+.mq-memo-text{margin:0 0 6px;white-space:pre-wrap;line-height:1.6;color:var(--ink)}
+.mq-memo label{display:grid;gap:6px;color:var(--ink-3);font-size:12.5px}
+.mq-memo textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px}
+.mq-memo-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
