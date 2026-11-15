@@ -317,13 +317,39 @@ _LABELED = re.compile(r'^\s*([^:：\n]{1,24}?)\s*[:：]\s*(\S.*)$')
 MAX_GROUPS = 12
 
 
+_COLON = re.compile('[:：]')
+_LABEL_MAX = 40
+
+
+def _cloze_values(question: dict, units: list[str]) -> list[str]:
+    """빈칸 정답 단위가 모두 발문에 이미 있는 「항목: 값」 꼴이면 값만(2026-11-16, docs/changes/2026-11-16-cloze-label-cue).
+    표 빈칸의 정답이 「첫 2개월: …」처럼 행 이름을 달고 오는데 오답은 값만 있어, 머리가 붙은 선지가 곧 정답으로 보였다.
+    항목 이름이 글자를 품고 서로 다르며 빈칸 밖 발문(표의 행 이름 등)에 그대로 있을 때만 뗀다 — 「1:1」 같은 비율 답은 건드리지 않는다.
+    이름 안에도 쌍점이 있을 수 있어(「E. coli O157:H7: 혈청형」) 발문에 있는 가장 긴 머리를 뗀다."""
+    stripped = [u.strip() for u in units]
+    stem = normalized(INLINE.sub(' ', _BLANK.sub(' ', str(question.get('question') or ''))))
+
+    def split(unit: str):
+        for cut in reversed([m.start() for m in _COLON.finditer(unit)]):
+            label, value = unit[:cut].strip(), unit[cut + 1:].strip()
+            if (value and len(label) <= _LABEL_MAX and (_HANGUL.search(label) or _LATIN.search(label))
+                    and normalized(label) and normalized(label) in stem):
+                return label, value
+        return None
+
+    found = [split(u) for u in stripped]
+    if not all(found) or len({normalized(label) for label, _ in found}) != len(found):
+        return stripped
+    return [value for _, value in found]
+
+
 def groups(question: dict) -> list[dict] | None:
     """묶음 [{label, correct}] 또는 None(한 묶음). 묶음마다 정답은 하나다."""
     fmt, units = question.get('format'), _units(question)
     if len(units) < 2 or len(units) > MAX_GROUPS:
         return None
     if fmt == 'cloze' and blank_count(question) == len(units):
-        return [{'label': f'빈칸 {i + 1}', 'correct': u.strip()} for i, u in enumerate(units)]
+        return [{'label': f'빈칸 {i + 1}', 'correct': u} for i, u in enumerate(_cloze_values(question, units))]
     if fmt in ('basic', 'list'):
         found = [_LABELED.match(u) for u in units]
         if all(found) and len({normalized(m.group(1)) for m in found}) == len(found):

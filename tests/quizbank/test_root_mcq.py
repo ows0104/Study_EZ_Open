@@ -283,6 +283,34 @@ def test_항목별_정답이면_묶음으로_나누고_빈칸_여럿도_빈칸�
     assert contract.groups(_q("X", "list", "a", ["감염: x", "감염: y"])) is None          # 항목 이름이 겹치면 나누지 않는다
 
 
+def _tb():
+    return _q("TB", "cloze", "", ["첫 2개월: isoniazid, rifampicin, pyrazinamide, ethambutol", "다음 4개월: isoniazid, rifampicin"],
+              question="약제감수성 결핵의 기본 6개월 치료에서 각 시기의 약제를 채우시오.\n\n| 시기 | 약제 구성 |\n|---|---|\n"
+                       "| 첫 2개월 | {첫 2개월: isoniazid, rifampicin, pyrazinamide, ethambutol} |\n"
+                       "| 다음 4개월 | {다음 4개월: isoniazid, rifampicin} |")
+
+
+def test_빈칸_정답의_항목_머리가_발문에_있으면_선지에는_값만_보인다():
+    # 2026-11-16 사용자 「답인 보기에만 앞에 저게 붙어있어」 — 정답 선지에만 「첫 2개월:」이 붙어 답이 티 났다.
+    q = _tb()
+    assert contract.groups(q) == [{"label": "빈칸 1", "correct": "isoniazid, rifampicin, pyrazinamide, ethambutol"},
+                                  {"label": "빈칸 2", "correct": "isoniazid, rifampicin"}]
+    entry = contract.entry_v2(q, [_gw(0, "isoniazid, rifampicin"), _gw(0, "isoniazid, rifapentine, moxifloxacin, pyrazinamide"),
+                                  _gw(1, "isoniazid, rifampicin, pyrazinamide, ethambutol"), _gw(1, "isoniazid, rifapentine, moxifloxacin")])
+    picked = contract.select(q, entry, "s")
+    assert not any(":" in c["text"] for c in picked["choices"])
+    # 머리가 발문에 없거나·글자가 없거나(비율)·일부만 머리가 있으면 원문 그대로 둔다.
+    assert contract.groups(_q("X", "cloze", "", ["가: x", "나: y"], question="{가: x} 와 {나: y}"))[0]["correct"] == "가: x"
+    ratio = _q("R", "cloze", "", ["1:1", "2:1"], question="비율 1 은 {1:1}, 비율 2 는 {2:1}")
+    assert [g["correct"] for g in contract.groups(ratio)] == ["1:1", "2:1"]
+    half = _q("H", "cloze", "", ["첫 2개월: a", "b"], question="첫 2개월 {첫 2개월: a} 다음 {b}")
+    assert [g["correct"] for g in contract.groups(half)] == ["첫 2개월: a", "b"]
+    # 이름 안의 쌍점(혈청형 O157:H7)은 발문에 있는 가장 긴 머리까지 뗀다 — 「H7: …」이 남으면 그것이 또 단서다.
+    sero = _q("E", "cloze", "", ["E. coli O157:H7: 혈청형", "EHEC: 병원형"],
+              question="| 표기 | 축 |\n|---|---|\n| E. coli O157:H7 | {혈청형} |\n| EHEC | {병원형} |")
+    assert [g["correct"] for g in contract.groups(sero)] == ["혈청형", "병원형"]
+
+
 def test_묶음_문항은_오답마다_묶음이_필요하고_묶음_정답과_견준다():
     q = _bal()
     assert contract.row_errors(q, _w("10^5 CFU/mL")) == ["나눠 묻는 문항은 오답마다 묶음 번호(group) 필요"]
