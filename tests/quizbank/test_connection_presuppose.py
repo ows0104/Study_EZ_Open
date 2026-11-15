@@ -12,6 +12,7 @@ from studyez_contracts.roots import presuppose as pre
 from studyez_contracts.roots.automation import packet_hash, validate_result as consume
 from tests.quizbank import test_root_generation_v4 as t4
 from tests.quizbank.test_presuppose import Presupposing
+from tests.quizbank.test_connection_replace import carry_sources
 
 BACKFILL = ['v4-presuppose-0', 'v4-supplement-normalize-presuppose', 'v4-coverage-presuppose', 'v4-map-check-presuppose',
             'v4-add-presuppose-0', 'v4-coverage-presuppose-1-DQ001', 'v4-review-presuppose-0', 'medical-presuppose']
@@ -34,7 +35,7 @@ def published(tmp_path):
     (previous / 'packet.json').write_text(json.dumps(old_packet, ensure_ascii=False), encoding='utf-8')
     packet = copy.deepcopy(old_packet)
     packet.update(revision='auto-new', generationId='new', restartOf='old', replacePublished=True, presupposeOnly=True,
-                  restartReason='존재 목표 보강')
+                  restartReason='존재 목표 보강', carrySources=carry_sources(old))
     packet['inputHash'] = packet_hash(packet)
     return previous, old, packet
 
@@ -66,6 +67,11 @@ def test_an_unasked_presupposed_link_gets_an_existence_goal_and_nothing_publishe
     assert record['policy'] == 'presuppose-only/1' and record['previousRevision'] == old['document']['revision']
     assert (record['addedQuestions'], record['existenceGoals'], record['counts']['existenceGoal'], record['counts']['open']) == (['Q004'], ['DQ001'], 1, 0)
     assert record['previousMedical'] == old['medical']
+    # Every published task keeps its goal, so learners' records carry over (replace-carry-records).
+    old_tasks = {(t['question_id'], t['direction_id']) for t in old['document']['tasks']}
+    assert old_tasks <= {(t['question_id'], t['direction_id']) for t in doc['tasks']}
+    carried = next(c for c in record['carry'] if c['revision'] == old['document']['revision'])
+    assert carried['tasks'] == len(old['document']['tasks']) and doc['equivalences']
     assert json.loads((previous / 'result.json').read_text(encoding='utf-8')) == old
 
 
@@ -111,7 +117,7 @@ def test_an_already_presuppose_run_and_other_flags_are_refused(tmp_path):
     (newer / 'out' / 'packet.json').write_text(json.dumps(new_packet, ensure_ascii=False), encoding='utf-8')
     again = copy.deepcopy(new_packet)
     again.update(revision='auto-again', generationId='again', restartOf='newer', replacePublished=True, presupposeOnly=True,
-                 restartReason='존재 목표 보강')
+                 restartReason='존재 목표 보강', carrySources=[{'revision': 'auto-older', 'tasks': []}])
     again['inputHash'] = packet_hash(again)
     with pytest.raises(ValueError, match='이미 presuppose/1'):
         g.run(again, tmp_path / 'again', invoke=t4.Model(), presuppose_of=newer / 'out')
@@ -144,6 +150,14 @@ def test_a_new_question_the_review_doubts_is_fixed_and_reviewed_again(tmp_path):
     assert fixes[len(old['manifest']['fixes']):] == [{'question_id': 'Q004', 'attempt': 1, 'stage': 'v4-fix-presuppose-0', 'reverted': False}]
     q = next(q for q in result['document']['bank_snapshot']['questions'] if q['question_id'] == 'Q004')
     assert q['explanation'] == 'Synthetic clearer explanation'
+
+
+def test_without_carry_sources_it_is_refused(tmp_path):
+    previous, _, packet = published(tmp_path)
+    del packet['carrySources']
+    packet['inputHash'] = packet_hash(packet)
+    with pytest.raises(ValueError, match='carrySources'):
+        g.run(packet, tmp_path / 'new', invoke=Presupposing(), presuppose_of=previous)
 
 
 def test_runner_and_server_names():

@@ -52,6 +52,10 @@ def run(packet, out, model, invoke, previous, resume=None):
     from . import connection_generate as g
     out, previous = Path(out), Path(previous)
     v3.require(packet.get('generationPolicy') == v4.POLICY, f'{LABEL}은 root-generation/4 packet만 받습니다.')
+    # Every published task stays: without the earlier revisions' fingerprints the new revision would start every learner
+    # over (docs/changes/2026-11-15-replace-carry-records).
+    v3.require(packet.get('carrySources'), f'{LABEL}: 이전 판 문항 지문(carrySources)이 없어 학습 기록을 이을 수 없습니다. '
+               '새 서버에서 다시 요청하세요.')
     old_packet = json.loads((previous / 'packet.json').read_text(encoding='utf-8'))
     old = json.loads((previous / 'result.json').read_text(encoding='utf-8'))
     v4.validate_result(old, old_packet)
@@ -243,10 +247,15 @@ def run(packet, out, model, invoke, previous, resume=None):
     basis = {q['question_id']: basis[q['question_id']] for q in bank['questions']}
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile, revision=packet['revision'],
                                       title=packet['title'], exam_date=packet['examDate'], placement=placement,
-                                      presuppositions=presuppositions)
+                                      presuppositions=presuppositions, settled=published)
     kept_tasks = {t['question_id'] for t in old['document']['tasks']}
-    v3.require(kept_tasks <= {t['question_id'] for t in doc['tasks']} | {m['question_id'] for m in placed['mergedDuplicates']},
-               f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
+    # Strict: a published task never becomes a duplicate of an added question (its history would stop).
+    v3.require(kept_tasks <= {t['question_id'] for t in doc['tasks']}, f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
+    doc['equivalences'], carry = v4.carry_links(doc, packet['carrySources'])
+    previous_carry = next((r for r in carry if r['revision'] == old['document']['revision']), None)
+    staying = {t['question_id'] for t in doc['tasks']}
+    v3.require(previous_carry and previous_carry['tasks'] == sum(t['question_id'] in staying for t in old['document']['tasks']),
+               f'{LABEL}: 이전 판의 과제 중 같은 문항으로 이을 수 없는 것이 있습니다 — 학습 기록이 끊깁니다.')
     counts = pre.report(presuppositions, doc)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
@@ -267,7 +276,7 @@ def run(packet, out, model, invoke, previous, resume=None):
 
     record = {**ledger['presupposeOnly'], 'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']),
               'addedQuestions': added, 'previousMedical': old['medical'], 'addedMedical': added_medical,
-              'existenceGoals': new_dids, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()}}
+              'existenceGoals': new_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()}}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "
           f"선행 연결 {counts['prerequisites']}개 · 남은 전제 {len(counts['open'])}개", flush=True)
 

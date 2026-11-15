@@ -878,13 +878,16 @@ def place(brief, review, raw, parents=None, placement='evidence', prefer=frozens
 
 
 def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_date, snapshot=None, importance=None,
-                  placement='evidence', presuppositions=None):
+                  placement='evidence', presuppositions=None, settled=()):
     """roots/1 document of a /4 run and its placement record {mergedDuplicates, unplacedQuestions}.
 
     `snapshot`/`importance` as in /2 (container concepts, question-basis importance). `presuppositions` (presuppose/1
     records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals)."""
     validate_audit(brief, bank, audit)
-    prefer = pre.whole_answers(coverage_rows, brief, presuppositions) if presuppositions else frozenset()
+    # `settled`: questions whose placement stays as published (presuppose-only/1 keeps each published task on its goal,
+    # so its learning history carries over); only the others may be drawn to an existence goal they ask whole.
+    prefer = ({(q, d) for q, d in pre.whole_answers(coverage_rows, brief, presuppositions) if q not in set(settled)}
+              if presuppositions else frozenset())
     parents = unit_parents(brief)
     if recall.enabled(brief):
         brief = recall.project_brief(brief)[0]
@@ -983,7 +986,7 @@ def notebook_profile(packet, meta):
 
 
 def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
-             presuppositions=None):
+             presuppositions=None, settled=()):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing)."""
     table = question_table(basis, profile, reviewed)
@@ -991,7 +994,7 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
                                 snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table),
-                                placement=placement, presuppositions=presuppositions)
+                                placement=placement, presuppositions=presuppositions, settled=settled)
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
 
 
@@ -1046,16 +1049,26 @@ def carry_links(doc, sources):
     return links, record
 
 
+def _settled(meta):
+    """presuppose-only/1: the published questions (all but the ones the run added) keep their placement."""
+    record = meta.get('presupposeOnly')
+    if not record:
+        return ()
+    added = set(record['addedQuestions'])
+    return tuple(q for q in meta['questionImportance'] if q not in added)
+
+
 def _judgments4(value, packet, brief, reviewed, meta, doc):
     placement = _placement4(value, brief, reviewed, meta)
     require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result4: not-ready goals differ')
     profile = notebook_profile(packet, meta)
     again, placed, proofs = assemble(brief, reviewed, value['sourceAudit'], meta['coverage'], meta['questionImportance'], profile,
                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
-                                     placement=placement, presuppositions=meta.get('presuppositions'))
+                                     placement=placement, presuppositions=meta.get('presuppositions'),
+                                     settled=_settled(meta))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
-    if meta.get('unplacedOnly') and packet.get('carrySources'):
+    if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):
         # A replacement continues the history of the earlier revisions it keeps questions of (replace-carry-records).
         again['equivalences'] = carry_links(again, packet['carrySources'])[0]
     require(again == doc, 'result4: the document is not the assembly of the reviewed judgments')
