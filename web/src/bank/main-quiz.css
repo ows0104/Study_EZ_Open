@@ -104,6 +104,8 @@
 .main-quiz-tree-tools{position:absolute;z-index:6;left:8px;bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-width:calc(100% - 16px);padding:4px;border-radius:10px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(4px)}
 .main-quiz-tree-tools button{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:8px;font:inherit;font-size:.75rem;min-height:32px;min-width:32px;padding:4px 9px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .main-quiz-tree-tools button:hover{background:var(--hover);color:var(--ink)}
+/* 뒤로: 지도 좌측 상단(2026-11-14). */
+.main-quiz-tree-frame>.mq-map-back{position:absolute;z-index:7;left:12px;top:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 /* 패널은 지도 옆에 붙는 열이다 — 지도를 덮지 않고 지도 영역이 그만큼 좁아진다. */
 .main-quiz-tree-panel{position:relative;flex:0 0 340px;max-width:40%;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:18px 18px 24px;box-sizing:border-box;font-size:.85rem}
 .main-quiz-tree-panel h3{font-size:1rem;line-height:1.5;margin:6px 28px 8px 0}
@@ -123,7 +125,7 @@
 .main-quiz-tree-link:hover{color:var(--accent-ink);text-decoration:underline}
 .main-quiz-tree-outline{padding-left:18px;line-height:1.7}
 .main-quiz-tree-outline ol{padding-left:18px}
-@media(max-width:760px){.main-quiz-tree-frame{flex-direction:column}
+@media(max-width:760px){.main-quiz-tree-frame{flex-direction:column}.main-quiz-tree-frame>.mq-map-back{position:static;align-self:flex-start;margin:8px 8px 0}
   .main-quiz-tree-panel{position:absolute;z-index:5;left:6px;right:6px;bottom:52px;max-width:none;max-height:55%;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:14px}
   .main-quiz-tree-tools{left:6px;right:6px;bottom:6px;flex-wrap:nowrap;overflow-x:auto;max-width:none}.main-quiz-tree-tools button{flex:0 0 auto;min-height:30px;padding:3px 8px}}
 @media(max-width:600px){.main-quiz-learning{padding:0 8px 100px}.main-quiz-tools{gap:0}.main-quiz-learning .main-quiz-tools button,.main-quiz-menu>summary{padding:6px}.main-quiz-learning .quiz-bar{padding:10px 8px;gap:5px}.main-quiz-learning .quiz-bar button{font-size:12px}.main-quiz-learning .quiz-bar .quiz-undo{min-width:48px;font-size:11px;flex-basis:56px}.main-quiz-map .root-card{padding:14px}}

@@ -7,7 +7,7 @@ import { decksIn, useBundleDecks } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
 import { Link } from "react-router-dom";
 import { useMe } from "../useMe";
-import { bankHref, lectureHref, legacyMainHref, quizHref } from "../links";
+import { bankHref, lectureHref, legacyMainHref, mapHref, quizHref } from "../links";
 import { FeedbackButton } from "../feedback/FeedbackButton";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
@@ -356,13 +356,15 @@ function KeyActions({
         base={base}
         onError={setError}
         open
-        trailing={opened ? (
+        trailing={opened ? (<>
           <Link className="action-button is-quiz is-review" to={bankHref(lecture)}>
             ▶ 복습 퀴즈{questions?.reviewDue ? <b>{questions.reviewDue}</b> : null}
           </Link>
-        ) : (
+          <Link className="action-button" to={mapHref(lecture)}>개념 지도</Link>
+        </>) : (<>
           <span className="action-button is-quiz is-review is-disabled" aria-disabled="true">▶ 복습 퀴즈</span>
-        )}
+          <span className="action-button is-disabled" aria-disabled="true">개념 지도</span>
+        </>)}
       />
 
       {jokbo}
