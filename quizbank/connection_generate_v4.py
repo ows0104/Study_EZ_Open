@@ -116,6 +116,13 @@ def check_stage(kind, value, ctx, state, scratch):
     if kind == 'supplement-normalize':
         return v3.check_supplement_normalize(value, ctx, state)
     if kind == 'supplement':
+        # A duplicate names a point the model was shown: the late round is shown none (late-new-points), and this check
+        # also runs inside the model session, so such an answer goes back to the model.
+        shown = {p['point_id'] for p in ctx.get('points', [])}
+        v3.require(type(value) is not dict or type(value.get('rows')) is not list
+                   or all(type(r) is not dict or r.get('decision') != 'duplicate_of' or r.get('duplicate_of') in shown for r in value['rows']),
+                   'late supplement: input.points is empty; decide point or out_of_scope, not duplicate_of' if not shown
+                   else 'supplement: duplicate_of names a point of input.points')
         return v4.check_supplement(value, ctx, state)
     scratch = Path(scratch)
     scratch.mkdir(parents=True, exist_ok=True)

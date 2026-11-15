@@ -157,3 +157,40 @@ def test_korean_check():
         _check_repair(before, {'brief': after}, {'R1'})
     after['relations'][0]['condition'] = 'Rhinovirus의 80% 초과가 ICAM-1에 결합'
     assert _check_repair(before, {'brief': after}, {'R1'})['brief'] == after
+
+
+def test_a_list_of_names_and_numbers_needs_no_korean():
+    """261106_06 PR014 (2026-11-15): the repaired chart row is organism names and percentages."""
+    from quizbank.connection_replace import _check_repair, _english
+    assert not _english('B. fragilis 25%, Cutibacterium acnes 19%, C. perfringens 6%')
+    assert _english('More than 80% of Rhinovirus, and several Coxsackieviruses, bind ICAM-1.')
+    before = {'relations': [{'relation_id': 'R1', 'from_id': 'C1', 'to_id': 'C2', 'condition': 'B. fragilis가 최다'}],
+              'concepts': [{'concept_id': 'C1', 'label': '분리 빈도', 'parent_ids': []}, {'concept_id': 'C2', 'label': 'B. fragilis가 최다', 'parent_ids': []}]}
+    after = copy.deepcopy(before)
+    after['relations'][0]['condition'] = after['concepts'][1]['label'] = 'B. fragilis 25%, Cutibacterium acnes 19%'
+    assert _check_repair(before, {'brief': after}, {'R1'})['brief'] == after
+
+
+def test_the_repair_check_runs_inside_the_model_session():
+    from runner.root_native_json import v3_check
+    before = {'relations': [{'relation_id': 'R1', 'from_id': 'C1', 'to_id': 'C2', 'condition': '리노바이러스 수용체'}],
+              'concepts': [{'concept_id': 'C1', 'label': '수용체', 'parent_ids': []}, {'concept_id': 'C2', 'label': 'ICAM-1', 'parent_ids': []}]}
+    after = copy.deepcopy(before)
+    after['relations'][0]['condition'] = 'Rhinovirus binds ICAM-1.'
+    import runner.root_native_json as native
+    from studyez_contracts.roots import generation_v3 as v3
+    real = v3.check_brief_fix
+    v3.check_brief_fix = lambda value, ctx: value   # the shape check is the contract's own; this test is about the repair
+    try:
+        with pytest.raises(ValueError, match='한국어'):
+            v3_check('v4-brief-fix-late', {'brief': before}, {'brief': after}, {'repair': ['R1']})
+        assert v3_check('v4-brief-fix-late', {'brief': before}, {'brief': after}, None) == {'brief': after}
+    finally:
+        v3.check_brief_fix = real
+
+
+def test_a_supplement_duplicate_must_name_a_point_it_was_shown():
+    from quizbank.connection_generate_v4 import check_stage
+    value = {'rows': [{'question_id': 'Q1', 'decision': 'duplicate_of', 'duplicate_of': 'P1', 'point': None, 'reason': 'x'}]}
+    with pytest.raises(ValueError, match='input.points is empty'):
+        check_stage('supplement', value, {'points': []}, {'points_doc': {}}, None)

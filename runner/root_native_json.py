@@ -140,7 +140,12 @@ def v3_check(stage,ctx,value,state=None,work=None):
     if kind=='fix':return v3.check_fixed(value,ctx)
     if kind=='supplement':return v3.check_supplement(value,ctx)
     if kind=='supplement-normalize':return v3.check_supplement_normalize(value,ctx)
-    return v3.check_brief_fix(value,ctx)
+    value=v3.check_brief_fix(value,ctx)
+    if state is not None and state.get('repair'):
+        # unplaced-only/1 relation repair (docs/changes/2026-11-15-unplaced-replace R4): only the listed relations change.
+        from quizbank.connection_replace import _check_repair
+        _check_repair(ctx['brief'],value,set(state['repair']))
+    return value
 
 # docs/changes/2026-11-11-pipeline-overlap: of 211 model minutes in two clean /4 runs (101 stage sessions) the one
 # long thinking step took 40%; shell commands took 24% and the short model turns between them 26%. A review call
