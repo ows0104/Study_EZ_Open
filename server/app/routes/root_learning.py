@@ -486,7 +486,8 @@ def project_session(db, row, doc, user, when):
                                     content.optional_excluded(db, user.id))}
     if task and task['task_id'] in ready and not expired:
         q = content.question(mine_doc.document, task)
-        shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
+        shown = mine.with_hint(content.with_tier(with_personal(q, personal_edits(db, doc, user.id)),
+                                                 state.personal_tiers(doc.document, events)), mine.hints(events, doc.revision))
         reveal = row.state['reveals'].get(task['task_id'])
         out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
                        'answer': with_memo(revealed_answer(db, doc, shown), mine.memos(events, doc.revision), q) if reveal else None,
@@ -626,8 +627,9 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                             highlighted=payload.report, correction=correction))
     db.commit()
     current = content.with_tier(bank_personal.apply_edit(original, edit), content.tiers_for(db, doc, user.id))
-    notes = mine.memos(content.events_for(db, subject, run_id, user.id), doc.revision)
-    return {'question': learner_front(doc, current, db, user.id),
+    events = content.events_for(db, subject, run_id, user.id)
+    notes = mine.memos(events, doc.revision)
+    return {'question': learner_front(doc, mine.with_hint(current, mine.hints(events, doc.revision)), db, user.id),
             'answer': with_memo(revealed_answer(db, doc, current), notes, current),
             'reported': reported, 'highlighted': reported and payload.report}
 
@@ -665,7 +667,8 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
     # Only target-scheduled ratings move with the tier; earlier ones keep their own schedule.
     rescheduled = any(e['kind'] == 'rate' and e['revision'] == doc.revision and e['payload'].get('targetParameters')
                       and questions.get(e['payload'].get('task_id')) == question_id for e in events)
-    result = {'question': learner_front(doc, current, db, user.id), 'rescheduled': rescheduled}
+    result = {'question': learner_front(doc, mine.with_hint(current, mine.hints(events, doc.revision)), db, user.id),
+              'rescheduled': rescheduled}
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
                      revision=doc.revision, kind='tier', payload=data, result=result, created_at=when))
     try:
@@ -677,7 +680,7 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
 
 
 # ── 내 문제와 뒷면 메모 (2026-11-15) ────────────────────────────────────────
-# docs/changes/2026-11-15-root-personal-questions. 내 계정·이 판에만. append-only root_event(kind='mine'·'memo'),
+# docs/changes/2026-11-15-root-personal-questions. 내 계정·이 판에만. append-only root_event(kind='mine'·'memo'·'hint'),
 # 표 추가 없음. 내 문제는 기준 문항 옆(같은 방향)에서 복습 일정을 받고 학습률·카드 수에는 세지 않는다(mine.py).
 # 원본 문항·기록은 건드리지 않으므로 문제은행과 연결된 판에서도 만들 수 있다.
 
@@ -701,6 +704,10 @@ class MineSave(Start):
 
 class Memo(Start):
     text: str = Field(default='', max_length=mine.MEMO_LIMIT)
+
+
+class Hint(Start):
+    text: str = Field(default='', max_length=mine.HINT_LIMIT)
 
 
 def replayed(db, user, request_id, kind, request):
@@ -808,7 +815,8 @@ def save_mine(subject: str, run_id: str, mine_id: str, payload: MineSave, user: 
     data = {**live[mine_id], '_request': request, 'action': payload.action, 'seq': mine.next_seq(events, 'mine')}
     if payload.action == 'save':
         data.update(mine_text(payload))
-    result = {'question': learner_front(doc, mine.question_of(data), db, user.id) if payload.action == 'save' else None}
+    result = {'question': learner_front(doc, mine.with_hint(mine.question_of(data), mine.hints(events, doc.revision)), db, user.id)
+              if payload.action == 'save' else None}
     return store_mine(db, doc, user, payload.requestId, 'mine', data, result, now())
 
 
@@ -824,6 +832,23 @@ def save_memo(subject: str, run_id: str, question_id: str, payload: Memo, user: 
     text = payload.text.strip()
     data = {'_request': request, 'question_id': question_id, 'text': text, 'seq': mine.next_seq(events, 'memo')}
     return store_mine(db, doc, user, payload.requestId, 'memo', data, {'memo': text}, now())
+
+
+@router.put(BASE + '/questions/{question_id}/hint')
+def save_hint(subject: str, run_id: str, question_id: str, payload: Hint, user: CurrentUser = Depends(require_approved_user),
+              db: Session = Depends(get_db)):
+    """내 힌트(2026-11-16). 나만 보고 이 판에만. 빈 글이면 원래 힌트(없으면 힌트 칸 없음)로 돌아간다."""
+    request = {**payload.model_dump(), 'question_id': question_id}
+    if (done := replayed(db, user, payload.requestId, 'hint', request)) is not None:
+        return done
+    doc = active(db, subject, run_id, user)
+    events = content.events_for(db, subject, run_id, user.id)
+    q = visible_question(db, doc, user.id, events, question_id)
+    text = payload.text.strip()
+    data = {'_request': request, 'question_id': question_id, 'text': text, 'seq': mine.next_seq(events, 'hint')}
+    original = q.get('clue') if type(q.get('clue')) is str and q['clue'].strip() else ''
+    result = {'hint': text, 'clue': text or original, 'personalClue': bool(text)}
+    return store_mine(db, doc, user, payload.requestId, 'hint', data, result, now())
 
 
 # ── Optional 계산 제외 (2026-11-13) ──────────────────────────────────────────
@@ -982,6 +1007,7 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
     events = content.events_for(db, row.subject, row.run_id, user.id)
     mine_doc, available, problems = with_mine(db, doc, user.id, events)
     notes = mine.memos(events, doc.revision)
+    hints = mine.hints(events, doc.revision)
     generation = active_generation(db, doc)
     edits = personal_edits(db, doc, user.id)
     tiers = content.tiers_for(db, doc, user.id)
@@ -990,7 +1016,7 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
         frame = {'position': position, 'taskId': task['task_id'], 'blocked': problems.get(task['task_id']), 'task': None}
         if task['task_id'] in available:
             q = content.question(mine_doc.document, task)
-            shown = content.with_tier(with_personal(q, edits), tiers)
+            shown = mine.with_hint(content.with_tier(with_personal(q, edits), tiers), hints)
             frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
                              'answer': with_memo(revealed_answer(db, doc, shown, generation), notes, q),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}

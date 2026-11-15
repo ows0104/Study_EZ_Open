@@ -266,6 +266,8 @@ def front(q):
     if type(q.get('clue')) is str and q['clue'].strip():
         # 사진 반입 판의 힌트(docs/changes/2026-11-15-photo-quiz-import): 발문에서 뺀 단서, 답 보기 전에 펼친다.
         result['clue']=q['clue']
+        if q.get('personalClue'):
+            result['personalClue']=True  # 내 힌트(2026-11-16, mine.with_hint)
     if q.get('personalEdited'):
         result['personalEdited']=True
     if q.get('personalAdded'):

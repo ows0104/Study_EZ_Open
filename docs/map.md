@@ -29,7 +29,7 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | (legacy) Quiz Bank 시작·개념 지도 | [BankStart.tsx](../web/src/bank/BankStart.tsx), [ConceptMap.tsx](../web/src/bank/ConceptMap.tsx) |
 | 뿌리 학습·목표 집계·오늘 추천 | [RootLearning.tsx](../web/src/bank/RootLearning.tsx), [전용 API](../server/app/routes/root_learning.py), [구현 기록](changes/2026-11-02-root-learning-product/implementation.md) |
 | Optional 계산 제외 토글(학습률·카드 수) | [state.py](../server/app/root_learning/state.py) `optional_tasks`, [score.py](../server/app/root_learning/score.py), [optionalExclusion.ts](../web/src/bank/optionalExclusion.ts), [설계](changes/2026-11-13-exclude-optional/spec.md) |
-| Main-Quiz 내 문제(새 문제·복사해서 고치기)·뒷면 메모 | [mine.py](../server/app/root_learning/mine.py), [API](../server/app/routes/root_learning.py) `create_mine`·`save_memo`, [MineQuestionDialog.tsx](../web/src/bank/MineQuestionDialog.tsx), [설계](changes/2026-11-15-root-personal-questions/spec.md) |
+| Main-Quiz 내 문제(새 문제·복사해서 고치기)·뒷면 메모·내 힌트 | [mine.py](../server/app/root_learning/mine.py), [API](../server/app/routes/root_learning.py) `create_mine`·`save_memo`·`save_hint`, [MineQuestionDialog.tsx](../web/src/bank/MineQuestionDialog.tsx), [설계](changes/2026-11-15-root-personal-questions/spec.md) |
 | 강의별 연결 학습·근거·자료 등록 | [ConnectionLearning.tsx](../web/src/bank/ConnectionLearning.tsx), [서버 API](../server/app/routes/connections.py), [제품 구현 기록](changes/2026-11-03-connection-learning-product/implementation.md) |
 | (legacy) Quiz Bank 풀이·문항 표시 | [BankSolve.tsx](../web/src/bank/BankSolve.tsx), [BankQuestion.tsx](../web/src/bank/BankQuestion.tsx) |
 | (legacy) Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [publication.py](../server/app/routes/bank_api/publication.py) |

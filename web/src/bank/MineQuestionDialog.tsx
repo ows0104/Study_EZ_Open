@@ -68,6 +68,43 @@ export function MineQuestionDialog({ base, mode, questionId, onClose, onSaved }:
 }
 
 /** 답을 연 뒤 뒷면의 「내 메모」. 나만 본다. 입력하는 동안 풀이 단축키는 textarea라 동작하지 않는다. */
+export type HintResult = { hint: string; clue: string; personalClue: boolean };
+
+/** 내 힌트(2026-11-16): 답 보기 전에 펼치는 힌트 칸을 내 것으로 쓴다. 나만 보고, 비우면 원래 힌트(없으면 칸 없음)로. */
+export function HintBox({ value, mine, path, onDone, onSaved, onError }: {
+  value: string; mine: boolean; path: string; onDone: () => void;
+  onSaved: (result: HintResult) => void; onError: (message: string) => void;
+}) {
+  const [text, setText] = useState(mine ? value : "");
+  const [busy, setBusy] = useState(false);
+  const area = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { area.current?.focus(); }, []);
+  async function save(next: string) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      onSaved(await api<HintResult>(path, { method: "PUT", body: JSON.stringify({ requestId: crypto.randomUUID(), text: next }) }));
+      onDone();
+    } catch (cause) { onError((cause as Error).message); }
+    finally { setBusy(false); }
+  }
+  return <div className="mq-memo mq-hint-edit">
+    {value && !mine ? <p className="mq-memo-label">원래 힌트: {value}</p> : null}
+    <label>내 힌트<textarea ref={area} rows={2} maxLength={1000} disabled={busy} value={text}
+      placeholder={value && !mine ? "원래 힌트 대신 나에게만 보입니다." : "나만 보는 힌트. 답 보기 전에 「힌트 보기」로 펼칩니다."}
+      onChange={e => setText(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void save(text); }
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onDone(); }
+      }} /></label>
+    <div className="mq-memo-actions">
+      {mine ? <button type="button" className="is-quiet" disabled={busy} onClick={() => void save("")}>내 힌트 지우기</button> : null}
+      <button type="button" className="is-quiet" disabled={busy} onClick={onDone}>취소</button>
+      <button type="button" disabled={busy || !text.trim()} onClick={() => void save(text)}>{busy ? "저장하는 중…" : "저장"} <kbd>Ctrl+Enter</kbd></button>
+    </div>
+  </div>;
+}
+
 export function MemoBox({ value, path, disabled, onEditing, onSaved, onError }: {
   value: string; path: string; disabled: boolean; onEditing: (on: boolean) => void;
   onSaved: (memo: string) => void; onError: (message: string) => void;

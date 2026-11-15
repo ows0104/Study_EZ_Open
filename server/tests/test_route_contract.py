@@ -245,6 +245,7 @@ POST /api/jokbo/events/{event_id}/rounds
 PUT /api/admin/jokbo/events/{event_id}
 GET /api/admin/jokbo/figures/{name}
 PUT /api/admin/jokbo/figures/{name}"""
+    # 2026-11-16: root-learning hint — 내 힌트(나만, 원래 clue 대신 보임, root_event kind='hint').
     # 2026-11-15: root-learning mine·mine-draft·memo — 내 문제(추가·복사 후 수정)와 뒷면 메모(root_event kind='mine'·'memo').
     # 2026-11-13: root-learning/optional — Optional 계산 제외(계정 단위, root_event kind='optional').
     # 2026-11-12: root-learning lectures/{subject}/{run_id}/focus — 오늘 학습 중요도 필터(root_event kind='focus').
@@ -275,6 +276,7 @@ PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/perso
 PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/tier
 GET /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/mine-draft
 PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/memo
+PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/hint
 POST /api/root-learning/lectures/{subject}/{run_id}/mine
 PUT /api/root-learning/lectures/{subject}/{run_id}/mine/{mine_id}
 PUT /api/root-learning/lectures/{subject}/{run_id}/focus

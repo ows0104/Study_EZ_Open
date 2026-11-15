@@ -4,7 +4,7 @@ import type { BankQuestion as BankQuestionData, BankRating, BankTier } from '../
 import { api } from '../api';
 import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './BankQuestion';
 import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQuestionDialog';
-import { MemoBox, MineQuestionDialog, type MineMode } from './MineQuestionDialog';
+import { HintBox, MemoBox, MineQuestionDialog, type HintResult, type MineMode } from './MineQuestionDialog';
 import { RootSummaryPanel } from './RootToday';
 import { ANSWER_SECONDS, questionSeconds, readTimerOn, saveTimerOn, useQuizTimer } from './quizTimer';
 import { mcqChoices, recallChoices, readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
@@ -33,10 +33,10 @@ function clearSavedPicks() {
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 const TIER_LABEL: Record<BankTier,string> = {Essential:'★ Must-Know', Core:'Core', Important:'Important', Optional:'Optional'};
 
-export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier,mineBase,onMineChanged,onMemo}:{view:RootView;title?:string;scope:string;disabled:boolean;
+export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier,mineBase,onMineChanged,onMemo,onHint}:{view:RootView;title?:string;scope:string;disabled:boolean;
   editPath?:(questionId:string)=>string;onEdited?:(result:PersonalQuestionResult)=>void;
   /** 내 문제·뒷면 메모(2026-11-15) API 기준 주소. 없으면 메뉴·메모를 그리지 않는다. */
-  mineBase?:string;onMineChanged?:()=>void;onMemo?:(questionId:string,memo:string)=>void;
+  mineBase?:string;onMineChanged?:()=>void;onMemo?:(questionId:string,memo:string)=>void;onHint?:(questionId:string,hint:HintResult)=>void;
   /** 「내 중요도」 저장 경로(2026-11-09). 없으면 선택을 그리지 않는다. */
   tierPath?:(questionId:string)=>string;onTier?:(question:BankQuestionData)=>void;
   advancing:boolean;onAction:(a:RootAction)=>void;onToday:()=>void;onError:(message:string)=>void;onMap?:()=>void}) {
@@ -60,6 +60,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   // 내 문제 창(2026-11-15)과 메모 입력: 열려 있는 동안 타이머를 멈춘다(해설 40초가 쓰는 중에 Again을 누르지 않게).
   const [mineMode,setMineMode]=useState<MineMode|null>(null);
   const [memoEditing,setMemoEditing]=useState(false);
+  const [hintEditing,setHintEditing]=useState(false);
   const mineQuestion=!!task?.question.personalAdded;
   const mineTools=!!(mineBase&&view.mineEnabled&&task);
   const [tierBusy,setTierBusy]=useState(false);
@@ -84,7 +85,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       const saved=localStorage.getItem(key+':choices');
       setChoices(saved==='shown',saved==='shown'||saved==='seen');
     }catch{setChoices(false);onError('보관된 선지 보기 기록을 읽지 못했습니다. 원본을 보존했습니다.');}
-    menu.current?.removeAttribute('open');setEditing(false);setEditNote('');setMineMode(null);setMemoEditing(false);
+    menu.current?.removeAttribute('open');setEditing(false);setEditNote('');setMineMode(null);setMemoEditing(false);setHintEditing(false);
     heading.current?.focus();window.scrollTo(0,0);
   },[key]);
   function save(suffix:string,text:string) {
@@ -148,7 +149,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const timer=useQuizTimer({
     phase:task&&!view.finished?`${task.id}:${task.answer?'answer':'question'}`:null,
     seconds:task?.answer?ANSWER_SECONDS:questionSeconds(mcq&&task?.question.format!=='ox'?'mcq':task?.question.format??'basic'),
-    enabled:timerOn,running:!locked&&!editing&&!mineMode&&!memoEditing&&(!!task?.answer||imagesReady),
+    enabled:timerOn,running:!locked&&!editing&&!mineMode&&!memoEditing&&!hintEditing&&(!!task?.answer||imagesReady),
     onExpire:()=>{if(task?.answer)rate('Again');else reveal();},
   });
   function toggleTimer(){const on=!timerOn;saveTimerOn(on);setTimerOn(on);heading.current?.focus({preventScroll:true});}
@@ -219,6 +220,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
           {mineTools&&!mineQuestion&&<button disabled={disabled||advancing} onClick={()=>setMineMode('copy')}>복사해서 고치기</button>}
           {mineTools&&mineQuestion&&<button disabled={disabled||advancing} onClick={()=>setMineMode('edit')}>내 문제 고치기</button>}
           {mineTools&&mineQuestion&&<button disabled={disabled||advancing} onClick={()=>void removeMine()}>내 문제 지우기</button>}
+          {/* 내 힌트(2026-11-16): 힌트가 없는 문항엔 칸이 없으니 여기서 쓴다. 모든 판에서(메모처럼). */}
+          {task&&mineBase&&!task.answer&&<button disabled={disabled||advancing} onClick={()=>setHintEditing(true)}>{clue?'힌트 고치기':'힌트 쓰기'}</button>}
           {/* 기록은 평가마다 저장된다. 이 버튼은 풀이를 멈추고 오늘 현황(시작 화면)으로 간다. */}
           <button disabled={disabled||advancing} onClick={onToday}>오늘 현황 보기</button>
         </div>
@@ -271,12 +274,15 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
           <path d="M9 18h6m-5 3h4M9 15c0-2-3-3-3-7a6 6 0 0 1 12 0c0 4-3 5-3 7"/></svg>
         <span>{clueOpen?'힌트 접기':'힌트 보기'}</span> <kbd>H</kbd>
         <svg className="quiz-hint-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-      </button>{clueOpen&&<p>{clue}</p>}</div>}
+      </button>{clueOpen&&<p>{task.question.personalClue&&<span className="tag">내 힌트</span>} {clue}{mineBase&&!task.answer&&<button type="button" className="is-quiet mq-clue-edit" disabled={locked} onClick={()=>setHintEditing(true)}>고치기</button>}</p>}</div>}
+      {hintEditing&&mineBase&&!task.answer&&<HintBox key={`hint-${task.id}`} value={clue} mine={!!task.question.personalClue}
+        path={`${mineBase}/questions/${encodeURIComponent(task.question.question_id)}/hint`} onDone={()=>setHintEditing(false)} onError={onError}
+        onSaved={result=>{onHint?.(task.question.question_id,result);if(result.clue)setClueKey(key);}}/>}
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
       {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
-        {mineBase&&task.answer.memo!==undefined&&<MemoBox key={task.id} value={task.answer.memo} disabled={disabled||advancing}
+        {mineBase&&task.answer.memo!==undefined&&<MemoBox key={`memo-${task.id}`} value={task.answer.memo} disabled={disabled||advancing}
           path={`${mineBase}/questions/${encodeURIComponent(task.question.question_id)}/memo`} onEditing={setMemoEditing} onError={onError}
           onSaved={memo=>onMemo?.(task.question.question_id,memo)}/>}
         <AnswerSlides key={task.id} answer={task.answer}/>

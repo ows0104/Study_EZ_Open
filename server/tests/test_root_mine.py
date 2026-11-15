@@ -121,6 +121,34 @@ assert view(client, sid)['task']['answer'] is None                     # the fro
 frames = client.get('/api/root-learning/sessions/' + sid + '/prepare').json()['frames']
 assert frames[0]['task']['answer']['memo'] == '내 말로 정리'
 
+# ── 내 힌트(2026-11-16): 없으면 칸이 없고, 쓰면 앞면 힌트 칸에. 나만, 비우면 원래대로 ──────
+def hint(request, qid, text):
+    return client.put(BASE + '/questions/' + qid + '/hint', json={'requestId': request, 'text': text})
+
+
+assert 'clue' not in view(client, sid)['task']['question']
+assert hint('h1', 'Q1', '  콕 집어  ').json() == {'hint': '콕 집어', 'clue': '콕 집어', 'personalClue': True}
+assert hint('h1', 'Q1', '  콕 집어  ').json()['hint'] == '콕 집어'
+assert hint('h1', 'Q1', 'other').status_code == 409
+assert hint('h0', 'NOPE', 'x').status_code == 404
+front = view(client, sid)['task']['question']
+assert front['clue'] == '콕 집어' and front['personalClue'] is True and view(client, sid)['task']['answer'] is None
+assert client.get('/api/root-learning/sessions/' + sid + '/prepare').json()['frames'][0]['task']['question']['clue'] == '콕 집어'
+user('b')
+bsid = start(client, 'b-hint')
+assert not any((f['task'] or {}).get('question', {}).get('clue')
+               for f in client.get('/api/root-learning/sessions/' + bsid + '/prepare?count=8').json()['frames'])
+user('a')
+assert hint('h2', 'Q1', '   ').json() == {'hint': '', 'clue': '', 'personalClue': False}
+assert 'clue' not in view(client, sid)['task']['question']
+assert hint('h3', 'Q1', '다시 내 힌트').status_code == 200
+# 원래 힌트(사진 판 clue)가 있는 문항: 내 것이 대신 보이고, 비우면 원래 것.
+from app.root_learning import content as root_content
+photo = {'question_id': 'P1', 'question': 'What is it?', 'clue': '원래 단서'}
+assert mine.with_hint(photo, {}) is photo and 'personalClue' not in root_content.front(photo)
+mine_front = root_content.front(mine.with_hint(photo, {'P1': '내 단서'}))
+assert mine_front['clue'] == '내 단서' and mine_front['personalClue'] is True and photo['clue'] == '원래 단서'
+
 # ── 풀기: 내 문제도 평가를 받고 기록은 task_id = mine_id ──────────────────────
 seen = []
 for step in range(12):

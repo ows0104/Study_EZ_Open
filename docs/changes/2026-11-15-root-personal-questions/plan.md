@@ -9,6 +9,7 @@
      summary·question_progress·칩 개수는 원래 사본·원래 준비 상태 그대로. 「오늘 복습」 수에서 내 문제 제외.
    - 답에 `memo`, 투영에 `mineEnabled`. act의 건너뛰기에 지운 내 문제 포함.
    - 새 API 4개(mine-draft·mine 만들기·mine 고치기/지우기·memo).
+   - 2026-11-16: 내 힌트 API `PUT …/questions/{id}/hint`(kind=hint), 앞면 `clue`·`personalClue`. 웹 `HintBox`(MineQuestionDialog.tsx)·RootSolve 메뉴·RootLearning `onHint`.
    - 내 문제에 대한 개인 수정·내 중요도 API는 404(원래 문항에만).
 4. 서버 테스트 `server/tests/test_root_mine.py`(새): 만들기·복사·고치기·지우기·멱등·상한·이전 정책 409,
    계획에 나옴·평가 저장, 학습률·카드 수 불변, 메모 저장·답에 붙음·다른 사용자 안 보임, 은행 연결 판 허용.

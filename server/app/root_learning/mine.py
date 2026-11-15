@@ -3,6 +3,7 @@
 둘 다 새 표 없이 append-only `root_event`에 남는다(내 중요도·Optional 제외와 같다).
 - kind='mine': 내 문제 하나의 저장·삭제. 같은 mine_id의 마지막 기록이 현재 값이다.
 - kind='memo': 문항 하나의 뒷면 메모. 문항마다 마지막 기록이 현재 값이고 빈 글은 지운 것이다.
+- kind='hint': 문항 하나의 내 힌트(2026-11-16). 메모와 같은 모양. 있으면 원래 힌트(`clue`) 대신 보이고, 비우면 원래 것으로 돌아간다.
 둘 다 판(revision)별이다. 새 판으로 옮기지 않는다(ID만으로 승계하지 않는 규칙).
 
 내 문제는 판 사본에 요청마다 덧붙인다(`overlay`). 캐시된 사본은 고치지 않는다. 덧붙인 사본은 계획·오늘 흐름·풀이에만
@@ -25,6 +26,7 @@ PREFIX = 'mine-'
 LIMIT = 300
 TEXT_LIMIT = 4000
 MEMO_LIMIT = 2000
+HINT_LIMIT = 1000
 DELETED = '내가 지운 문제입니다. 「이 문제 보류」로 넘어가세요.'
 UNANCHORED = '이 내 문제의 기준 문항이 지금 준비되지 않았습니다.'
 
@@ -54,16 +56,26 @@ def current(events, revision):
     return dict(sorted(live.items(), key=lambda kv: order[kv[0]])), deleted
 
 
-def memos(events, revision):
-    """question_id -> 지금 메모(빈 글은 없음)."""
+def memos(events, revision, kind='memo'):
+    """question_id -> 지금 메모(kind='hint'면 내 힌트). 빈 글은 없음."""
     out = {}
-    for event in _ordered(events, 'memo', revision):
+    for event in _ordered(events, kind, revision):
         p = event['payload']
         if p['text']:
             out[p['question_id']] = p['text']
         else:
             out.pop(p['question_id'], None)
     return out
+
+
+def hints(events, revision):
+    return memos(events, revision, 'hint')
+
+
+def with_hint(q, hints):
+    """내 힌트가 있으면 문항의 힌트 칸(`clue`)을 그것으로. 원래 힌트는 판 사본에 그대로 있다."""
+    text = hints.get(q['question_id'])
+    return {**q, 'clue': text, 'personalClue': True} if text else q
 
 
 def next_seq(events, kind):

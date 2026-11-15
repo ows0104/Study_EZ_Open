@@ -27,6 +27,13 @@
 - 메모 칸에 입력하는 동안 풀이 단축키(1–4·Space·Z 등)는 동작하지 않는다(기존 키 처리가 textarea를 이미 건너뛴다).
 - 내 문제에도 메모를 달 수 있다.
 
+### 내 힌트(2026-11-16)
+- 앞면 힌트 칸(`clue`)이 있을 때만 「힌트 보기」(H)가 보인다(기존 photo-quiz-import 동작 그대로). 없으면 화면에 아무것도 없다.
+- 답 보기 전 「더 보기」에 「힌트 쓰기」(힌트 없을 때)·「힌트 고치기」(있을 때). 펼친 힌트 옆에도 「고치기」.
+- 내 힌트가 있으면 원래 힌트 대신 보이고 「내 힌트」 표시. 「내 힌트 지우기」(빈 글 저장)로 원래 힌트(없으면 칸 없음)로 돌아간다.
+- 나만, 이 판에만. 원래 `clue`·판 사본·문항 지문은 바꾸지 않는다. 1000자. 모든 판(메모처럼 이전 정책 판 포함)·내 문제에도.
+- 쓰는 동안 타이머가 멈추고 풀이 단축키는 동작하지 않는다. Ctrl/⌘+Enter 저장, Escape 취소.
+
 ## 책임·입출력 계약·오류 상태
 
 ### 저장(새 표 없음)
@@ -52,6 +59,8 @@
 - `POST BASE/mine` `{requestId, anchorQuestionId, copy: bool, question, answer, explanation}` → `{mineId, question(front)}`. 201.
 - `PUT BASE/mine/{mine_id}` `{requestId, action:'save'|'delete', question?, answer?, explanation?}` → `{question(front)|null}`.
 - `PUT BASE/questions/{question_id}/memo` `{requestId, text}` → `{memo}`.
+- `PUT BASE/questions/{question_id}/hint` `{requestId, text}` → `{hint, clue(지금 보일 힌트, 없으면 ''), personalClue: bool}`.
+  앞면에 내 힌트를 `clue`로, `personalClue: true`. root_event kind='hint'(메모와 같은 payload).
 - 답(answer)에 `memo: string`, 앞면(front)에 `personalAdded: true`(내 문제), 회차 투영에 `mineEnabled: bool`.
 - 같은 requestId 재전송은 처음 결과를 돌려준다. 다른 내용이면 409.
 - 오류: 판에 없는 기준 문항 404, 이전 정책 판 409, 상한 초과 409, 빈 발문·정답 422, 남의 것·지운 mine 404.
