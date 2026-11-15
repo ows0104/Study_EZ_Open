@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
@@ -20,12 +20,44 @@ function QuestionStimulus({image,onReady}:{image:NonNullable<BankQuestion['stimu
     :<img src={image.url} alt={image.alt} width={image.width} height={image.height} onLoad={()=>onReady(true)} onError={()=>{setFailed(true);onReady(false);}}/>;
 }
 
-function QuestionStimuli({images,onReady}:{images:NonNullable<BankQuestion['stimuli']>;onReady?:(ready:boolean)=>void}) {
+function QuestionStimuli({images,onReady,viewer=false}:{images:NonNullable<BankQuestion['stimuli']>;onReady?:(ready:boolean)=>void;viewer?:boolean}) {
   const loaded=useRef(new Set<number>());const failed=useRef(false);
-  return <div className="bank-stimuli">{images.map((s,i)=><figure key={s.sha256+':'+i}><QuestionStimulus image={s} onReady={ready=>{
-    if(ready)loaded.current.add(i);else failed.current=true;
+  const ready=(i:number)=>(ok:boolean)=>{
+    if(ok)loaded.current.add(i);else failed.current=true;
     onReady?.(!failed.current&&loaded.current.size===images.length);
-  }}/></figure>)}</div>;
+  };
+  if(viewer&&images.length>1)return <StimulusViewer images={images} ready={ready}/>;
+  return <div className="bank-stimuli">{images.map((s,i)=><figure key={s.sha256+':'+i}><QuestionStimulus image={s} onReady={ready(i)}/></figure>)}</div>;
+}
+
+/**
+ * 사진 여러 장을 한 장씩(2026-11-16 사용자 「사진 배치가 너무 제멋대로」·「너무 사진이 많아. 정보가 너무 많은듯」).
+ * 큰 자리에 한 장, 아래에 A·B·C 썸네일. 발문이 「A는 저배율, B는 고배율」처럼 사진을 글자로 부르므로 글자를 붙인다.
+ * 모든 사진은 처음부터 불러 둔다(숨긴 장도) — 다 떠야 답 보기가 열리는 규칙은 그대로다. ←·→로도 넘긴다.
+ */
+function StimulusViewer({images,ready}:{images:NonNullable<BankQuestion['stimuli']>;ready:(i:number)=>(ok:boolean)=>void}) {
+  const [at,setAt]=useState(0);
+  const count=images.length;
+  useEffect(()=>{
+    const handler=(event:KeyboardEvent)=>{
+      if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight'||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+      const target=event.target instanceof HTMLElement?event.target:document.body;
+      if(document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')||target.closest('input,textarea,select,[contenteditable="true"]'))return;
+      event.preventDefault();
+      setAt(i=>(i+(event.key==='ArrowRight'?1:count-1))%count);
+    };
+    window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
+  },[count]);
+  return <div className="bank-stimuli is-viewer">
+    <div className="stimulus-stage">{images.map((s,i)=><figure key={s.sha256+':'+i} hidden={i!==at} aria-label={`사진 ${letter(i)} (${i+1}/${count})`}>
+      <span className="stimulus-label" aria-hidden="true">{letter(i)}</span>
+      <QuestionStimulus image={s} onReady={ready(i)}/>
+    </figure>)}</div>
+    <div className="stimulus-strip" role="group" aria-label="사진 고르기 (← →)" aria-keyshortcuts="ArrowLeft ArrowRight">
+      {images.map((s,i)=><button key={s.sha256+':'+i} type="button" className={i===at?'is-current':''} aria-pressed={i===at}
+        aria-label={`사진 ${letter(i)}`} onClick={()=>setAt(i)}><img src={s.url} alt=""/><b>{letter(i)}</b></button>)}
+    </div>
+  </div>;
 }
 
 /** 객관식 선지는 저장 ID(A·B…) 대신 화면 순서 번호로 보인다(2026-11-12) — 키 1–4와 같은 번호. 저장·전송 값은 ID 그대로다. */
@@ -59,7 +91,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes, choiceGroups }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, photoViewer = false, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes, choiceGroups }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -70,6 +102,8 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   disabled?: boolean;
   showChoiceScore?: boolean;
   onStimuliReady?:(ready:boolean)=>void;
+  /** 사진 여러 장을 한 장씩 크게, A·B·C 썸네일로 넘긴다(Main-Quiz). */
+  photoViewer?: boolean;
   /** 단답·나열에 덧붙인 선지(Main-Quiz 「선지 보기」). 주면 q.options 대신 그리고, 답을 본 뒤 선지마다 결과를 표시한다. */
   recallChoices?: { id: string; text: string }[];
   /** recallChoices의 정답 ID를 직접 줄 때(객관식 모드). 없으면 answer.recallCorrectIds. */
@@ -113,7 +147,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   return (
     <>
       <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
-      {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady}/>}
+      {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady} viewer={photoViewer}/>}
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
       {recallChoices && choiceHint && showOptions && !answer ? <p className="bank-note">{

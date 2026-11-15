@@ -3,6 +3,8 @@
  * 힌트도 예습 퀴즈와 같은 버튼 형태로」). 실제 화면 틀 안에서 큰 사진 한 장·두 장을 그려
  * ① 사진이 화면 높이를 다 먹지 않고 카드 가운데에 놓이는지 ② 힌트가 누르기 좋은 알약 버튼인지
  * ③ 답을 열면 답 첫 줄이 스크롤 없이 아래 바 위에 보이는지 잰다. 서버·운영 DB를 부르지 않는다.
+ * `?images=4`(2026-11-16 사용자 「사진 배치가 너무 제멋대로」·「정보가 너무 많은듯」): 여러 장은 한 장씩 같은 자리에,
+ * A·B·C·D 썸네일과 ←·→로 넘기는지 잰다.
  */
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
@@ -33,7 +35,9 @@ function photo(width: number, height: number, hue: number) {
 }
 
 const params = new URLSearchParams(location.search);
-const images = params.get("images") === "2" ? [photo(1600, 1200, 330), photo(900, 1400, 20)] : [photo(2400, 1800, 330)];
+const images = params.get("images") === "2" ? [photo(1600, 1200, 330), photo(900, 1400, 20)]
+  : params.get("images") === "4" ? [photo(1642, 820, 330), photo(946, 1118, 20), photo(310, 300, 200), photo(820, 1640, 120)]
+  : [photo(2400, 1800, 330)];
 const view = (answered: boolean): RootView => ({
   sessionId: "s1", revision: "v1", version: 1, day: "2026-11-15", policy: {} as RootView["policy"], position: 0, count: 5,
   finished: false, blocked: null, canUndo: true, mapSeen: false, summary: {} as RootView["summary"],
@@ -58,15 +62,38 @@ try {
   const imgs = () => [...document.querySelectorAll<HTMLImageElement>(".mq-card .bank-stimuli img")];
   for (let i = 0; i < 50 && !imgs().every(img => img.complete && img.naturalWidth); i++) await wait(50);
   await frame(); scrollTo(0, 0); await frame();
+  /** 화면에 보이는 문항 사진(썸네일·숨긴 장 제외). */
+  const shown = () => imgs().filter(img => !img.closest(".stimulus-strip") && img.getBoundingClientRect().height > 0);
+  check(!document.querySelector<HTMLButtonElement>(".quiz-submit")!.disabled, "answer button opens once every photo has loaded (hidden ones too)");
+
+  if (images.length > 2) {
+    const stage = () => document.querySelector(".mq-card .stimulus-stage")!.getBoundingClientRect();
+    const label = () => document.querySelector(".mq-card .stimulus-stage figure:not([hidden]) .stimulus-label")?.textContent;
+    const thumbs = [...document.querySelectorAll<HTMLButtonElement>(".mq-card .stimulus-strip button")];
+    check(shown().length === 1 && label() === "A", `one photo at a time, labelled A (shown ${shown().length}, label ${label()})`);
+    check(thumbs.map(b => b.textContent).join("") === "ABCD" && thumbs[0].getAttribute("aria-pressed") === "true", "thumbnails A–D under the photo, A current");
+    const height = stage().height, top = document.querySelector(".mq-card .stimulus-strip")!.getBoundingClientRect().top;
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await frame();
+    check(label() === "B" && thumbs[1].getAttribute("aria-pressed") === "true", "→ moves to B");
+    thumbs[3].click(); await frame();
+    check(label() === "D" && shown().length === 1, "clicking thumbnail D shows D");
+    check(Math.abs(stage().height - height) < 1 && Math.abs(document.querySelector(".mq-card .stimulus-strip")!.getBoundingClientRect().top - top) < 1,
+      "switching photos does not move the thumbnails (fixed stage)");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await frame();
+    check(label() === "A", "→ after the last photo wraps to A");
+    const lr = document.querySelector(".mq-card .stimulus-stage figure:not([hidden]) .stimulus-label")!.getBoundingClientRect();
+    const pr = shown()[0].getBoundingClientRect();
+    check(lr.left >= pr.left && lr.top >= pr.top && lr.right <= pr.right, "the letter sits on the photo's own corner");
+  }
 
   const card = document.querySelector(".mq-card")!.getBoundingClientRect();
   const box = document.querySelector(".mq-card .bank-stimuli")!.getBoundingClientRect();
-  for (const img of imgs()) {
+  for (const img of shown()) {
     const r = img.getBoundingClientRect();
     check(r.height <= innerHeight * 0.56 + 1, `photo before answer is at most ~55% of the screen (got ${Math.round(r.height)} of ${innerHeight})`);
     check(Math.abs(r.width / r.height - img.naturalWidth / img.naturalHeight) < 0.02, "photo keeps its aspect ratio");
   }
-  const left = Math.min(...imgs().map(i => i.getBoundingClientRect().left)), right = Math.max(...imgs().map(i => i.getBoundingClientRect().right));
+  const left = Math.min(...shown().map(i => i.getBoundingClientRect().left)), right = Math.max(...shown().map(i => i.getBoundingClientRect().right));
   check(Math.abs((left + right) / 2 - (card.left + card.right) / 2) <= 2, `photos sit in the middle of the card (photos ${Math.round(left)}–${Math.round(right)}, card ${Math.round(card.left)}–${Math.round(card.right)})`);
   check(box.right <= card.right + 1, "photos stay inside the card");
 
