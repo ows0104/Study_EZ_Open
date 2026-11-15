@@ -120,13 +120,24 @@ with SessionLocal() as db:
 set_state(r.json()['generation']['jobId'], 'done')
 with SessionLocal() as db:
     db.get(RootGeneration, r.json()['generation']['id']).result_digest = 'e' * 64; db.commit()
+# docs/changes/2026-11-15-replace-published-target: a reuse path takes the run of the revision published now. The
+# published 'published-pub' was made by no request here, so there is nothing to take as it is.
+assert client.post(PUB, json={**RESTART, 'requestId': 'pub-dup-none', 'replacePublished': True, 'duplicatesOnly': True}).status_code == 409
+
+
+def publish_run(generation_id):
+    with SessionLocal() as db:
+        db.get(RootControl, ('test', 'pub')).revision = db.get(RootGeneration, generation_id).packet['revision']; db.commit()
+
+
+published_run = r.json()['generation']['id']; publish_run(published_run)
 r = client.post(PUB, json={**RESTART, 'requestId': 'pub-dup', 'replacePublished': True, 'duplicatesOnly': True}); assert r.status_code == 200, r.text
 dup = r.json()['generation']
 with SessionLocal() as db:
     row = db.get(RootGeneration, dup['id'])
     assert row.packet['duplicatesOnly'] is True and row.packet['replacePublished'] is True
-    assert row.packet['restartOf'] == r.json()['generation']['restartOf'] and packet_hash(row.packet) == row.packet['inputHash']
-    assert db.get(RootControl, ('test', 'pub')).revision == 'published-pub'  # the old revision stays until the new one publishes
+    assert row.packet['restartOf'] == published_run and packet_hash(row.packet) == row.packet['inputHash']
+    assert db.get(RootControl, ('test', 'pub')).revision == db.get(RootGeneration, published_run).packet['revision']
 # 「못 붙은 문항만 재배치」(docs/changes/2026-11-15-unplaced-replace): the same conditions, never with duplicatesOnly.
 for bad in ({**NEW, 'unplacedOnly': True}, {**RESTART, 'unplacedOnly': True},
             {**RESTART, 'replacePublished': True, 'unplacedOnly': True, 'pipeline': map_tree.PIPELINE2},
@@ -135,13 +146,28 @@ for bad in ({**NEW, 'unplacedOnly': True}, {**RESTART, 'unplacedOnly': True},
 set_state(dup['jobId'], 'done')
 with SessionLocal() as db:
     db.get(RootGeneration, dup['id']).result_digest = 'f' * 64; db.commit()
+publish_run(dup['id'])
 r = client.post(PUB, json={**RESTART, 'requestId': 'pub-unplaced', 'replacePublished': True, 'unplacedOnly': True}); assert r.status_code == 200, r.text
 with SessionLocal() as db:
     row = db.get(RootGeneration, r.json()['generation']['id'])
     assert row.packet['unplacedOnly'] is True and 'duplicatesOnly' not in row.packet and packet_hash(row.packet) == row.packet['inputHash']
+    assert row.packet['restartOf'] == dup['id']
     # docs/changes/2026-11-15-replace-carry-records R2: reviewed root-generation/4 revisions only (this one is older).
     assert type(row.packet['carrySources']) is list and 'carrySources' not in plain
-    assert db.get(RootControl, ('test', 'pub')).revision == 'published-pub'
+    assert db.get(RootControl, ('test', 'pub')).revision == dup['revision']
+# The replacement failed (261106_06, 2026-11-15): the next attempt still takes the published run, not the failed one.
+failed = r.json()['generation']; set_state(failed['jobId'], 'failed')
+# (The same reason again is the same input: that returns the failed request itself, as for any request.)
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-unplaced-2', 'replacePublished': True, 'unplacedOnly': True})
+assert r.status_code == 200 and r.json()['reused'] and r.json()['generation']['id'] == failed['id'], r.text
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-unplaced-3', 'replacePublished': True, 'unplacedOnly': True,
+                           'resumeReason': 'the first replacement failed; again'}); assert r.status_code == 200, r.text
+again = r.json()['generation']
+assert again['id'] != failed['id'] and again['restartOf'] == dup['id'], (again, failed)
+# A plain restart still sets aside the newest request (the failed attempt), as before.
+set_state(again['jobId'], 'failed')
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-plain-after', 'replacePublished': True}); assert r.status_code == 200, r.text
+assert r.json()['generation']['restartOf'] == again['id']
 user('student')
 assert client.post(URL, json={**RESTART, 'requestId': 'student'}).status_code == 403
-print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only, unplaced only')
+print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only, unplaced only, reuse paths take the published run')
