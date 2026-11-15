@@ -23,6 +23,7 @@ from studyez_contracts.roots import generation_v2 as v2
 from studyez_contracts.roots import generation_v3 as v3
 from studyez_contracts.roots import generation_v4 as v4
 from studyez_contracts.roots import map_tree
+from studyez_contracts.roots import presuppose as pre
 from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.bank.validate import validate_bank
 from . import connection_batches as batches
@@ -113,6 +114,8 @@ def _intake(packet, out):
 
 def check_stage(kind, value, ctx, state, scratch):
     """/4 version of connection_generate_v3.check_stage: the same merge and render, with the /4 output shapes."""
+    if kind == 'presuppose-normalize':
+        return pre.check_normalize(value, ctx, state)
     if kind == 'supplement-normalize':
         return v3.check_supplement_normalize(value, ctx, state)
     if kind == 'supplement':
@@ -207,7 +210,10 @@ def run(packet, out, model, invoke, resume=None):
     # review-relations/2 (docs/changes/2026-11-14-map-relation-guard): a new run also checks the map's content relations
     # after normalize (A), places a question its review ties to nothing by its coverage evidence (B), sends what is
     # still unplaced to the supplement once more after the review (C) and reports what is left (D).
-    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES}}
+    # presuppose/1 (docs/changes/2026-11-15-tree-edge-goals): a new run judges what each question's stem gives as known,
+    # makes an existence goal for a link no question recalls and orders it before the goals that presuppose it.
+    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES},
+             'presuppositions': {'policy': pre.PRESUPPOSE}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
@@ -220,6 +226,7 @@ def run(packet, out, model, invoke, resume=None):
     guarded = placement == 'review-coverage'
     # goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): a ledger made without it keeps its add and re-check inputs.
     goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
+    presuppose_on = ledger.get('presuppositions') == {'policy': pre.PRESUPPOSE}
 
     def merge_row(old, new, goal, replaced=()):
         return _merge_row(old, new, goal, replaced, by_evidence=goal_dups)
@@ -266,11 +273,17 @@ def run(packet, out, model, invoke, resume=None):
     dids = [d['direction_id'] for t in brief['targets'] for d in t['directions']]
     calls = [(f'{X}coverage-0-{k}', ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
              for k, ctx in enumerate(v3.coverage_input(brief, bank, part) for part in chunks(dids, COVERAGE_CHUNK))]
+    covered_calls = len(calls)
+    if presuppose_on:
+        qids = [q['question_id'] for q in bank['questions']]
+        calls += [(f'{X}presuppose-{k}', ctx, lambda raw, ctx=ctx: pre.check(raw, ctx))
+                  for k, ctx in enumerate(pre.stage_input(bank, part, page_counts) for part in chunks(qids, pre.CHUNK))]
     ctx = v4.map_check_input(brief)
     calls.append((X + 'map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
     values = batches.judgments(st, calls)
-    for value in values[:-1]:
+    for value in values[:covered_calls]:
         rows.update({r['direction_id']: r for r in value['rows']})
+    presupposed = values[covered_calls:-1]
     map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points (no basis) ------------------
@@ -337,6 +350,26 @@ def run(packet, out, model, invoke, resume=None):
     off_goal = v4.off_goal(bank, rows.values(), placement)
     if off_goal:
         supplement_round(off_goal)
+
+    # 2p: links a stem gives as known that no question recalls → existence goals (presuppose/1) ---------------
+    presuppositions, made_points = None, []
+    if presuppose_on:
+        points_doc, presuppositions, made_points = pre.records(presupposed, bank, points_doc,
+                                                               [p['point_id'] for p in brief['points']])
+        print(f"── 전제 판정: 발문이 전제로 준 연결 {len(presuppositions)}개 · 답으로 묻는 문항 없음 {len(made_points)}개 → 존재 목표", flush=True)
+        if made_points:
+            allowed = v3.supplement_ids(brief, len(made_points))
+            ctx = pre.normalize_input(brief, made_points, allowed)
+            state = {'brief': brief, 'blank': True}
+            addition = st.run(X + 'supplement-normalize-presuppose', ctx,
+                              lambda raw: check_stage('presuppose-normalize', raw, ctx, state, None), state)
+            brief, new_tids = pre.extend(brief, addition, [p['point_id'] for p in made_points])
+            new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
+            origins = sorted({p['origin_question_id'] for p in made_points})
+            value = judge(X + 'coverage-presuppose', v3.coverage_input(brief, bank, new_dids, origins))
+            rows.update({r['direction_id']: r for r in value['rows']})
+            ctx = v4.map_check_input(brief, new_tids)
+            map_checks.append(st.judged(X + 'map-check-presuppose', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
     bank = _join_points(bank, brief, rows)
 
     def review_ctx(bank_, conflicts_, basis_, qids):
@@ -620,7 +653,11 @@ def run(packet, out, model, invoke, resume=None):
     basis = {q['question_id']: basis[q['question_id']] for q in bank['questions']}
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile,
                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
-                                      placement=placement)
+                                      placement=placement, presuppositions=presuppositions)
+    if presuppositions is not None:
+        counts = pre.report(presuppositions, doc)
+        print(f"── 전제 정리: {counts['presupposed']}개 중 답으로 묻는 과제 있음 {counts['recalledByTask']} · 존재 목표 {counts['existenceGoal']} · "
+              f"남음 {len(counts['open'])} · 선행 연결 {counts['prerequisites']}개", flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "
@@ -658,7 +695,8 @@ def run(packet, out, model, invoke, resume=None):
                   **({'operatorExclusions': exclusions} if exclusions else {}),
                   'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedIgnored': restated,
                   **({'intakeClozeUnits': intake_cloze} if intake_cloze else {}),
-                  'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
+                  'supplement': supplement, 'supplementPoints': points_doc if supplement or made_points else None,
+                  **({'presuppositions': presuppositions} if presuppositions is not None else {}),
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'contextJudgments': context_judgments,
                   'medicalUnreviewed': medical_unreviewed, 'readiness': ready_rows, 'clinicalConflicts': conflicts,

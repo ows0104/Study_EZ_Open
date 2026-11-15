@@ -44,10 +44,11 @@ class Model:
     """D1 is asked by both Q1 and Q2 (one asks it whole, one too); D2 has no question until an add stage writes Q003.
     `duplicate`: the coverage judgment calls Q1 and Q2 the same recall in other words."""
 
-    def __init__(self, duplicate=False, design_doubt=('Q1',), relations=None):
+    def __init__(self, duplicate=False, design_doubt=('Q1',), relations=None, presupposes=None):
         self.calls, self.inputs = [], {}
         self.duplicate, self.design_doubt = duplicate, set(design_doubt)
         self.relations = relations  # review-relations/1: question -> [(relation_id, part)] the item review names
+        self.presupposes = presupposes or {}  # presuppose/1: question -> links its stem gives (none by default)
 
     def __call__(self, stage, ctx, material, model):
         self.calls.append(stage)
@@ -73,6 +74,9 @@ class Model:
                 rows.append({'direction_id': goal['direction_id'], 'status': 'covered' if ev else 'missing', 'evidence': ev,
                              'duplicates': dup, 'reason': 'Synthetic'})
             return {'rows': rows}, {}
+        if stage.startswith('v4-presuppose'):
+            return {'rows': [{'question_id': q['question_id'], 'presupposes': copy.deepcopy(self.presupposes.get(q['question_id'], []))}
+                             for q in ctx['questions']]}, {}
         if stage.startswith('v4-map-check'):
             assert all('importance_basis' not in t for t in ctx['targets'])
             return {'relation_checks': [{'relation_id': r['relation_id'], 'status': 'supported', 'reason': 'x'} for r in ctx['relations']],
