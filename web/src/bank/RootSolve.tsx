@@ -236,13 +236,19 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
         setEditNote(reset?'원본으로 되돌렸습니다.':(result.highlighted?'강조 제보를 보냈습니다.':'관리자에게 전달했습니다.')+(result.question.personalEdited?' 내 수정본을 저장했습니다.':''));
       }}/>}
     {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
-    {task&&<div className="quiz-card bank-card mq-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
+    {task&&<div className={`quiz-card bank-card mq-card${task.answer?' is-answered':''}`}><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
       recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
       choiceNotes={task.answer?.mcqWrongNotes} choiceGroups={(mcq??recallSet)?.groups}/>
-      {clue&&<div className="mq-clue"><button className="is-quiet" disabled={locked} onClick={toggleClue} aria-expanded={clueOpen}
-        aria-keyshortcuts="H">{clueOpen?'힌트 접기':'힌트 보기'} <kbd>H</kbd></button>{clueOpen&&<p>{clue}</p>}</div>}
+      {/* 예습 퀴즈와 같은 알약 버튼(2026-11-15 사용자). 문항마다 접힌 채로 시작하고 H로도 편다. */}
+      {clue&&<div className="quiz-hint mq-clue"><button type="button" className="quiz-hint-toggle" disabled={locked} onClick={toggleClue}
+        aria-expanded={clueOpen} aria-keyshortcuts="H">
+        <svg className="quiz-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 18h6m-5 3h4M9 15c0-2-3-3-3-7a6 6 0 0 1 12 0c0 4-3 5-3 7"/></svg>
+        <span>{clueOpen?'힌트 접기':'힌트 보기'}</span> <kbd>H</kbd>
+        <svg className="quiz-hint-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+      </button>{clueOpen&&<p>{clue}</p>}</div>}
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
