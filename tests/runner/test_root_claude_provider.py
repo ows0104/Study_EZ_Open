@@ -146,3 +146,21 @@ def test_claude_편만_전체_시한이_길다():
     assert agent.build_timeout(bank + ['--model', 'gpt-6.1-sol'], agent.BUILD_TIMEOUT) == agent.BUILD_TIMEOUT
     assert agent.build_timeout(bank, agent.BUILD_TIMEOUT) == agent.BUILD_TIMEOUT
     assert agent.build_timeout(bank + ['--model'], 60) == 60
+
+
+def test_재개할_때_다른_모델로_완료된_단계는_다시_돈다(tmp_path):
+    from quizbank import connection_generate_v3 as v3gen
+    out = tmp_path / 'generation'; out.mkdir()
+    ledger = {'pipelineVersion': v3gen.POLICY, 'inputHash': 'p' * 64, 'identity': 'old', 'stages': {
+        'normalize': {'status': 'completed', 'inputHash': 'a'}, 'v4-brief-fix': {'status': 'completed', 'inputHash': 'b'},
+        'v4-coverage-0-0': {'status': 'failed', 'inputHash': 'c'}}}
+    g.write(out / 'ledger.json', ledger)
+    for name, model in (('normalize', CLAUDE), ('v4-brief-fix', 'claude-opus-5')):
+        g.write(out / (name + '.usage.json'), {'fileReceipt': {'proof': {'model': model}}})
+        g.write(out / (name + '.json'), {'stage': name})
+    stages = v3gen.Stages({'inputHash': 'p' * 64}, out, 'claude-opus-5', invoke=None, resume='Opus 5로 이어 가기')
+    kept = stages.ledger['stages']
+    assert 'normalize' not in kept and kept['v4-brief-fix']['status'] == 'completed'
+    assert [row['name'] for row in stages.resume_row['superseded']] == ['normalize']
+    archived = [p for p in out.glob('.resume-*/normalize.json')]
+    assert len(archived) == 1 and not (out / 'normalize.json').exists()

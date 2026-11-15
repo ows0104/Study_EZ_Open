@@ -120,6 +120,7 @@ class Stages:
                 self.resume_row = {'reason': resume, 'identityBefore': self.ledger.get('identity'), 'identity': identity, 'superseded': []}
                 self.ledger.setdefault('stageResumes', []).append(self.resume_row)
                 self.ledger['identity'] = identity
+                self._retire_other_model()
         else:
             v3.require(not any(p.name != 'packet.json' for p in self.out.glob('*.json')), '기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
             self.out.mkdir(parents=True, exist_ok=True)
@@ -156,6 +157,22 @@ class Stages:
             if self.ledger.get('reviewRetries'):
                 self.ledger['reviewRetries'].sort(key=lambda r: position.get(r['stage'], len(position)))
             self.save()
+
+    def _retire_other_model(self):
+        """On an operator resume with another model, a completed stage whose native receipt names a different model
+        moves to the resume archive and runs again with this one: the ledger never mixes models it cannot verify
+        (docs/changes/2026-11-14-root-claude-provider). A stage without a native receipt keeps the old rule."""
+        current = codex.model_name(self.model)
+        for name, entry in list(self.ledger['stages'].items()):
+            if entry.get('status') != 'completed':
+                continue
+            usage = self.out / (name + '.usage.json')
+            receipt = json.loads(usage.read_text(encoding='utf-8')).get('fileReceipt') if usage.exists() else None
+            recorded = ((receipt or {}).get('proof') or {}).get('model')
+            if recorded and recorded != current:
+                self._archive(name)
+                print('── 모델이 달라 다시 실행: ' + name + ' (' + recorded + ' → ' + current + ')', flush=True)
+        self.save()
 
     def retire_legacy(self):
         """Stage names this code no longer produces (the lecture-wide `context-0`/`context-1` of the first /3
