@@ -8,7 +8,7 @@
   로컬에 `pymupdf`가 없어서이며 master(382dd17b)에서도 같다. 나머지 전부 통과(격리 SQLite, 운영 DB 미사용).
 - web `npm --prefix web run typecheck` 통과. 새 고정물 `web/tests/root-prerequisite-tag.html` 브라우저에서 ALL PASSED(4개), 화면 확인.
 - 구현 중 결정(spec R1): 계획의 「명시적 선행 연결」(고른 중요도 안의 후보에서만 안 배운 앞 목표를 당겨 옴)은 남겼다.
-  지우면 의도된 설계를 검사하는 11개가 실패하고, 신고 사례에서는 결과가 같았다. 사용자에게 보고.
+  지우면 의도된 설계를 검사하는 11개가 실패하고, 신고 사례에서는 결과가 같았다. 사용자 확인(2026-11-16): 유지.
 - 운영 사본 재현(읽기 전용 조회 → 로컬 계산, 2026-11-16): 판 `auto-2bcdcf1f…`
   - Essential만: 52과제(Essential 17 + 끌려온 35) → 18과제(Essential 17 + 문항 선행 Core 1). 두 학습자 모두 같은 모양.
   - 10문항을 제외한 학습자: master 코드로는 계획이 「Prepared prerequisite became unavailable」로 실패하거나(닫힘 없이 계산 시)
