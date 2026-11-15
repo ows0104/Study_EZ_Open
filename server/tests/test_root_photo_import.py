@@ -3,7 +3,7 @@ import base64
 import copy
 import hashlib
 import struct
-from tests.root_support import setup, publish, start, view, document, ADMIN
+from tests.root_support import setup, publish, start, view, action, document, ADMIN, BASE
 from studyez_contracts.learning_links.validate import question_hash
 from studyez_contracts.roots import document_hash
 from studyez_contracts.roots.media import PHOTO_MAX_COUNT
@@ -54,3 +54,25 @@ assert question['question_id'] == doc['tasks'][0]['question_id'], question['ques
 assert question['clue'] == '피부. 어린이.'
 assert len(question['stimuli']) == 70 and question['stimuli'][0]['url'].startswith('data:image/jpeg;base64,')
 print('PASS: photo-import revision accepts JPEG and >64 images, other revisions reject them, learner front carries clue')
+
+# Reference slides (docs/changes/2026-11-15-photo-quiz-slides): a photo revision has no generation record, so its
+# source PDFs come from fingerprint-named copies. Until a copy is uploaded the answer has no slide; after, it does.
+from app.root_learning.evidence import photo_snapshot_key
+from app.storage import ObjectStorage
+r = action(client, sid, 'photo-reveal', 'reveal', attempted=False)
+assert r.status_code == 200, r.text
+answer = view(client, sid)['task']['answer']
+assert not answer.get('pdfSlides') and not answer.get('jokboPdfSlides'), answer.get('pdfSlides')
+source = doc['review']['sources'][0]
+pdf = b'%PDF-1.4\n% photo source copy\n%%EOF\n'
+ObjectStorage().put_bytes(photo_snapshot_key(source['sha256']), pdf)
+answer = view(client, sid)['task']['answer']
+pages = [(s['sourceId'], s['page']) for s in answer['pdfSlides']]
+assert pages == [(source['source_id'], 1)], pages
+assert answer['pdfSlides'][0]['proxyPath'].endswith(f"/sources/{source['source_id']}?sha={source['sha256']}")
+streamed = client.get(answer['pdfSlides'][0]['proxyPath'])
+assert streamed.status_code == 200 and streamed.content == pdf, streamed.status_code
+assert any(link['label'] == source['label'] for link in answer['sourceLinks'])
+# Other sources of the same revision without a copy stay off the answer; a non-photo revision is untouched.
+assert client.get(f"{BASE}/sources/NOPE?sha=x").status_code == 404
+print('PASS: photo revision shows the cited page once its fingerprint-named source copy exists')
