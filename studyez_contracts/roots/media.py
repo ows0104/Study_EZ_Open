@@ -62,8 +62,10 @@ def jpeg_size(body):
     require(size is not None,'stimuli: JPEG without frame')
     return size
 
-def validate_images(bank,sources=None,*,photo=False):
-    """photo=True: a photo-import revision — JPEG allowed, higher count/size/pixel totals."""
+def validate_images(bank,sources=None,*,photo=False,replaced=None):
+    """photo=True: a photo-import revision — JPEG allowed, higher count/size/pixel totals.
+    replaced: {source_id: [sha256]} earlier files of the same pages a source replaces (notes-update/1); a figure
+    cropped before the notes were corrected keeps the file it came from."""
     max_total,max_count,max_pixels=(PHOTO_MAX_TOTAL,PHOTO_MAX_COUNT,PHOTO_MAX_PIXELS)if photo else(MAX_TOTAL,MAX_COUNT,16*1024*1024)
     total=0;count=0;pixels=0;known={s['source_id']:s for s in sources}if sources is not None else None
     for q in bank['questions']:
@@ -98,7 +100,8 @@ def validate_images(bank,sources=None,*,photo=False):
             require(s['width']*s['height']<=4*1024*1024 and pixels<=max_pixels,'stimuli: pixel limit exceeded')
             if known is not None:
                 src=known.get(s['source_id'])
-                require(src is not None and src['sha256']==s['source_sha256']and type(src['page_count'])is int and s['page']<=src['page_count'],'stimuli: source/page mismatch')
+                files=[src['sha256'],*(replaced or{}).get(s['source_id'],[])]if src is not None else[]
+                require(s['source_sha256']in files and type(src['page_count'])is int and s['page']<=src['page_count'],'stimuli: source/page mismatch')
             total+=len(body);count+=1
             require(total<=max_total and count<=max_count,'stimuli: total limit exceeded')
     return bank
