@@ -187,6 +187,17 @@ def _reaches(graph, start, goal):
     return False
 
 
+def existence_relation_id(before, after):
+    return 'PRE-' + document_hash([before, after])[:12]
+
+
+def is_existence_edge(edge):
+    """A target prerequisite order_edges made: an existence goal before the goal that presupposes it. The study plan
+    brings these forward even outside today's chosen tiers; other target prerequisites (map relations) only within
+    them (docs/changes/2026-11-16-prereq-question-only). A pair that already had a map edge keeps that edge."""
+    return re.fullmatch(r'PRE-[0-9a-f]{12}', edge.get('relation_id') or '') is not None
+
+
 def order_edges(brief, tasks, presuppositions, relations, edges):
     """Target prerequisites from the presupposition records: the existence goal (the goal of a question that recalls
     the link, or the goal made from its point) before the goal of the question that presupposes it.
@@ -221,7 +232,7 @@ def order_edges(brief, tasks, presuppositions, relations, edges):
             evidence = copy.deepcopy(targets[before].get('evidence') or [])
             if source is None or sink is None or not evidence or _reaches(concept_graph, sink, source):
                 continue
-            rid = 'PRE-' + document_hash([before, after])[:12]
+            rid = existence_relation_id(before, after)
             new_relations.append({'relation_id': rid, 'from_id': source, 'to_id': sink, 'kind': 'prerequisite',
                                   'condition': f"{rec['a']} → {rec['b']}: 먼저 회상한다", 'evidence': evidence,
                                   'review_status': 'reviewed',

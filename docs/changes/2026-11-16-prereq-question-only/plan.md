@@ -7,7 +7,8 @@
 1. `studyez_contracts/roots/generation_v2.py`: `question_dependencies` 추가, `order_plan` 따라가기 규칙(spec R1·R2·R3).
 2. `tests/contracts/test_generation_v2.py`: 목표 선행 순서만·끌어오지 않음, 준비 안 된 선행 건너뜀.
 3. `server/app/root_learning/content.py`: `close_prerequisites` 삭제, 두 분기 모두 자기 이유만.
-4. `server/app/root_learning/planning.py`: 문서 설명만(후보 안 「명시적 선행 연결」은 유지 — spec R1).
+4. `server/app/root_learning/planning.py`: 후보 안 「명시적 선행 연결」 유지(spec R1). master(#190) 병합 뒤 필터 밖 끌어오기는
+   존재 목표 간선만(spec R1a, `studyez_contracts/roots/presuppose.py`의 `is_existence_edge`). `server/tests/test_root_prereq_release.py` 갱신.
 5. `server/app/routes/root_learning.py`: `project_session`·`prepare`에 `prerequisite`.
 6. `server/tests/test_root_prereq_closure.py`: 새 규칙으로 갱신.
 7. `web/src/types/rootLearning.ts`, `web/src/bank/RootSolve.tsx`, `web/src/bank/RootLearning.tsx`(프레임→화면 복사): 「선행 문항」 태그.

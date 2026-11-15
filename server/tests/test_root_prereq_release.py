@@ -12,6 +12,7 @@ setup()
 from app.root_learning.planning import plan
 from studyez_contracts.roots import validate_document, document_hash
 from studyez_contracts.learning_links import question_hash
+from studyez_contracts.roots.presuppose import existence_relation_id
 
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures/root_generation_v2_import.json').read_text(encoding='utf-8'))
 
@@ -42,7 +43,8 @@ def two_goal_document(prerequisite=True):
     second.update(target_id='T2', directions=[d for d in goal['directions'] if d['direction_id'] == 'D2'])
     doc['review']['targets'] = [first, second]
     doc['adopted_target_ids'] = ['T1', 'T2']
-    doc['prerequisites'] = [{'before_target': 'T1', 'after_target': 'T2', 'relation_id': 'R1'}] if prerequisite else []
+    # 존재 목표 선행(presuppose/1이 만든 간선 ID). 지도 관계에서 온 선행은 필터 밖에서 끌려오지 않는다(아래 7, 2026-11-16).
+    doc['prerequisites'] = [{'before_target': 'T1', 'after_target': 'T2', 'relation_id': existence_relation_id('T1', 'T2')}]         if prerequisite else []
     return doc
 
 
@@ -98,4 +100,12 @@ assert [t for t, _ in fresh] == EXISTENCE + ['task-q2'], fresh
 plain = two_goal_document(prerequisite=False)
 assert ids(plan(plain, studied('missed', 'missed', 'missed'), every, later, POLICY, focus=focus)) == [('task-q2', '새 목표')]
 
-print('PASS: 선행 목표는 쉽게 맞혔을 때만 복습에서 풀어 주고, 틀렸으면 필터 밖이어도 세부 앞에 끌어온다; 오늘 푼 것은 다시 끌어오지 않는다')
+# 7. 지도 관계에서 온 목표 선행(존재 목표가 아님)은 필터 밖이면 끌어오지 않는다. 필터 안이면 끌어온다
+#    (docs/changes/2026-11-16-prereq-question-only: 261109_02 Essential만 고른 목록에 35과제가 끌려왔다).
+mapped = two_goal_document()
+mapped['prerequisites'] = [{'before_target': 'T1', 'after_target': 'T2', 'relation_id': 'RP-C007-C022'}]
+assert ids(plan(mapped, [], every, later, POLICY, focus=focus)) == [('task-q2', '새 목표')]
+inside = ids(plan(mapped, [], every, later, POLICY, focus={'task-q1', 'task-q2'}))
+assert [t for t, _ in inside] == ['task-q1', 'task-q2'], inside
+
+print('PASS: 선행 목표는 쉽게 맞혔을 때만 복습에서 풀어 주고, 틀렸으면 필터 밖이어도 세부 앞에 끌어온다; 오늘 푼 것은 다시 끌어오지 않는다; 지도 관계 선행은 필터 안에서만')
