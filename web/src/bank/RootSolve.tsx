@@ -281,10 +281,10 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
       {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
-      {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
-        {mineBase&&task.answer.memo!==undefined&&<MemoBox key={`memo-${task.id}`} value={task.answer.memo} disabled={disabled||advancing}
+      {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}
+        afterAnswer={mineBase&&task.answer.memo!==undefined&&<MemoBox key={`memo-${task.id}`} value={task.answer.memo} disabled={disabled||advancing}
           path={`${mineBase}/questions/${encodeURIComponent(task.question.question_id)}/memo`} onEditing={setMemoEditing} onError={onError}
-          onSaved={memo=>onMemo?.(task.question.question_id,memo)}/>}
+          onSaved={memo=>onMemo?.(task.question.question_id,memo)}/>}/>
         <AnswerSlides key={task.id} answer={task.answer}/>
         <AnswerRecords task={task}/>
       </>}

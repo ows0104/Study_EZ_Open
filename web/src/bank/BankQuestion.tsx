@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
@@ -181,8 +181,10 @@ export function AnswerReviewItems({ answer }: { answer: BankAnswer }) {
 
 /** `reviewInline={false}`: 검토 기록을 그리지 않는다 — 호출한 화면이 참고 슬라이드 아래에 따로 둔다.
  *  자료 충돌은 접힌 기록만으로는 놓치므로 답 위에 배지로 함께 보인다. */
-export function AnswerBody({ question: q, answer, preload, reviewInline = true }: {
+export function AnswerBody({ question: q, answer, preload, reviewInline = true, afterAnswer }: {
   question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader; reviewInline?: boolean;
+  /** 정답 바로 밑에 둘 것(Main-Quiz 「내 메모」, 2026-11-16 사용자 「메모는 정답 바로 밑에」). 짝짓기는 짝 목록이 답이라 그 밑. */
+  afterAnswer?: ReactNode;
 }) {
   const hasReviewNotes = reviewInline && hasAnswerReview(answer);
   const layout = q.format === "matching" ? matchingLayout(q) : { left: [], right: [] };
@@ -209,6 +211,7 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
   const numbers = choice ? optionNumbers(q) : new Map<string, string>();
   const label = (text: string) => numberChoiceLabels(text, numbers);
   const extraChoiceUnits = remainingPoints.filter(unit => !linkedUnits.has(unit));
+  const pairsAreAnswer = q.format === "matching" && answer.answerPairs.length > 0;
   return (
     <>
       {/* 검토 기록을 접어 따로 두는 화면(Main-Quiz)은 자료 충돌만 답 위에 배지로 띄운다(2026-11-13). */}
@@ -233,6 +236,7 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
           <AnswerPoints text={label(answer.answer)} units={q.format === "ox" ? [] : answer.answerUnits.map(label)} readable list={q.format === "list"} />
         </p>
       )}
+      {pairsAreAnswer ? null : afterAnswer}
       {answer.explanation?.trim() && !answer.personalAnswer ? (
         <section className="quiz-explanation bank-explanation" aria-label="해설">
           <h2>해설</h2>
@@ -282,6 +286,7 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
           ))}
         </ul>
       ) : null}
+      {pairsAreAnswer ? afterAnswer : null}
       {answer.correctOrder.length ? (
         <section className="bank-correct-order" aria-label="정답 순서">
           <p className="bank-note">정답 순서</p>
