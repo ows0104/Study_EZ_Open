@@ -2,8 +2,8 @@ root-generation/4 단계다(presuppose/1, docs/changes/2026-11-15-tree-edge-goal
 
 존재 목표로. input.points는 다른 문항의 발문이 전제로 줬지만 어느 문항도 답으로 묻지 않은 상위 연결(A→B)이다. 포인트마다 「A에서 B를 떠올리는」 학습 목표 하나를 targets와 brief points로 만든다.
 - 포인트마다 target 하나와 direction 하나를 기본으로 하고, 새 target_id·direction_id는 input.allowed의 ID를 쓴다. role은 leaf다.
-- direction의 cue는 A와 범주를 주고 B를 답하게 하는 질문이다. 예: 「A가 가진 (범주)는?」「A가 일으키는 주요 (질환·결과)는?」「A에 쓰는 대표 (약물·검사)는?」. 강의가 쓰는 상위 질문이 있으면 그것을 쓴다. 쪼개려고 강의에 없는 묶음 이름을 지어 cue에 쓰지 않는다.
-- components는 답할 원소다. 다른 개념이나 문항과 이어지는 원소는 넣는다. 다른 것과 이어지지 않는 원소는 넣어도 되지만 필수는 아니다. 원소 수에 고정 상한은 없고, 많으면 recall_units 대신 표·목록으로 한 번에 답하게 할 수 있다.
+- direction의 cue는 A와 범주를 주고 B를 답하게 하는 질문 하나다. 예: 「A가 가진 (범주)는?」「A가 일으키는 주요 (질환·결과)는?」「A에 쓰는 대표 (약물·검사)는?」. 강의가 쓰는 상위 질문이 있으면 그것을 쓴다. cue에 「…와 기능은?」「…과 작용은?」「…과 기전은?」처럼 세부를 덧붙이지 않는다. 세부는 이미 다른 목표·문항이 묻는다. 쪼개려고 강의에 없는 묶음 이름을 지어 cue에 쓰지 않는다.
+- components는 답할 원소의 이름이다. 원소 하나가 component 하나다(예: 「X1」「X2」, 범주가 둘이면 범주마다 이름 목록). 기능·작용·기전·수치는 component에 넣지 않는다. 다른 개념이나 문항과 이어지는 원소는 넣고, 이어지지 않는 원소는 넣어도 되지만 필수는 아니다. 원소 수에 고정 상한은 없다. 존재 목표는 recall_units로 쪼개지 않고, 원소가 많으면 목록·표로 한 번에 답하게 한다.
 - concept_ids는 input의 기존 concepts에서 고른다. A와 B(또는 B들의 상위 개념)를 넣는다.
 - relations: 이 목표가 회상시키는 연결을 기존 relations가 담고 있으면 그 relation_id를 relation_ids에 쓰고 relations는 []다. 없으면 새 관계를 하나 만든다: relation_id는 input.allowed_relation_ids에서, kind는 association, from_id는 A, to_id는 B(기존 concept), condition은 「A는 B를 가진다(범주)」처럼 연결 사실 한 문장, evidence는 포인트의 source_refs와 같은 쪽, review_status는 unreviewed다. 지도의 부모-자식과 같은 쌍이면 그 방향(부모 → 자식)을 따른다.
 - points의 point_id와 text는 입력 포인트 그대로, scope_status는 included다.

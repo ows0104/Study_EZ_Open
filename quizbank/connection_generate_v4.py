@@ -412,6 +412,8 @@ def run(packet, out, model, invoke, resume=None):
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
         ctx = v4.add_input(brief, bank, gaps, allowed, rows if goal_dups else None)
+        if presuppositions:
+            pre.mark_existence(ctx, brief, presuppositions, bank)
         if ledger['addRounds'] < n + 1:
             ledger['addRounds'] = n + 1
             st.save()

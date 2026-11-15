@@ -84,6 +84,10 @@ def test_a_presupposed_link_nobody_asks_becomes_an_existence_goal_studied_first(
     assert [p['point_id'] for p in meta['supplementPoints']['points'] if p.get('origin') == pre.ORIGIN] == ['P002']
     assert 'TQ001' in {t['target_id'] for t in brief['targets']} and 'RQP001' in {r['relation_id'] for r in brief['relations']}
     assert model.calls.index('v4-presuppose-0') < model.calls.index('v4-supplement-normalize-presuppose') < model.calls.index('v4-add-0')
+    # The add stage is told which goal is an existence goal and which stems presuppose it.
+    goals = {gl['direction_id']: gl for gl in model.inputs['v4-add-0']['goals']}
+    assert goals['DQ001']['existence'] == {'presupposed_by': [{'question_id': 'Q2', 'question': goals['DQ001']['existence']['presupposed_by'][0]['question']}]}
+    assert 'existence' not in goals.get('D2', {})
     # The existence goal's question is a task, and its goal comes before the goal of the question that presupposed it.
     owners = {d['direction_id']: t['target_id'] for t in doc['review']['targets'] for d in t['directions']}
     task_of = {t['question_id']: owners[t['direction_id']] for t in doc['tasks']}

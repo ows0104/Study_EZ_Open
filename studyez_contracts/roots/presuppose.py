@@ -246,3 +246,24 @@ def report(presuppositions, doc):
     open_ = [r for r in rows if r not in recalled and r not in goal]
     return {'presupposed': len(rows), 'recalledByTask': len(recalled), 'existenceGoal': len(goal), 'open': open_,
             'prerequisites': len(edges)}
+
+
+def mark_existence(ctx, brief, presuppositions, bank):
+    """Add input: a goal made from a presupposition point carries `existence` (the stems that presuppose its link), so
+    the author writes the question that recalls A→B instead of another detail (2026-11-15 콜레라 실측: 26 such goals,
+    12 questions, several asking a function the bank already asked). Changes `ctx` in place and returns it."""
+    stems = {q['question_id']: v3._front(q).get('question', '') for q in bank['questions']}
+    by_point = {}
+    for r in presuppositions or []:
+        if r['point_id']:
+            by_point.setdefault(r['point_id'], []).append(r['question_id'])
+    owners = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
+    targets = {}
+    for p in brief['points']:
+        for tid in p['target_ids']:
+            targets.setdefault(tid, []).extend(by_point.get(p['point_id'], []))
+    for goal in ctx['goals']:
+        qids = sorted(set(targets.get(owners.get(goal['direction_id']), [])))
+        if qids:
+            goal['existence'] = {'presupposed_by': [{'question_id': q, 'question': stems.get(q, '')} for q in qids]}
+    return ctx

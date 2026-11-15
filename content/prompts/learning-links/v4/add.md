@@ -2,6 +2,7 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 
 빈 목표 추가 출제. input.json의 goals는 아직 어느 문항도 답으로 묻지 않은 component가 남은 목표다. goals[].components에는 그 빠진 component만 남아 있고, missing_component_ids가 그 ID 목록이다. 목표마다 그 component들을 답으로 요구하는 새 문항을 원본(input.pages와 첨부 PNG, material의 글)에서 쓴다. 이미 다른 문항이 묻는 component는 다시 묻지 않아도 되고, 목표 전체를 한 문항에 담지 않아도 된다.
 - missing_component_ids가 []인 목표는 내용은 모두 물었지만 원본 그림으로 묻는 문항이 없는 그림 목표(requires_visual)다. 그 목표의 component를 하나 이상 식별된 원본 그림 자극(visual_stimuli)으로 답하게 하는 새 문항을 쓴다.
+- goals[].existence가 있으면 그 목표는 존재 목표다(presuppose/1). existence.presupposed_by의 문항들은 이 연결(A→B)을 발문에 사실로 주고 그 위에서 세부를 묻는다. 학생이 A→B를 먼저 떠올리게 하는 문항을 반드시 쓴다: A(와 범주)를 발문에 주고 components의 원소 이름을 답으로 요구한다(목록·표 가능). 기능·작용을 묻는 기존 문항(asked)은 이 목표를 대신하지 못한다. presupposed_by 발문의 문장을 그대로 옮겨 답을 알려 주지 않는다.
 - goals[].asked가 있으면 그 목표를 이미 묻는 기존 문항과, 빠진 component에 대해 커버 확인이 남긴 판정(location·reason)이다. 문항 본문은 existing에서 같은 question_id로 찾는다. asked 문항이 이미 답으로 요구하는 내용을 발문·형식·보기만 바꿔 다시 쓰지 않는다. reason이 말하는 빠진 부분만 답으로 요구하는 문항을 쓴다.
 - 빠진 부분이 답으로 회상할 내용이 아니라 해석상 주의(일반화 한계·예외 단서)뿐이고 나머지는 asked 문항이 이미 묻고 있으면, 그 목표에는 새 문항을 쓰지 않는다. 그 주의를 구체적 조건·사례로 판단하게 할 학습 가치가 있을 때만 그렇게 묻는 문항을 쓴다. 어느 목표에도 쓸 문항이 없으면 questions와 question_importance는 []다.
 - 출력은 새 문항과 그 문항에 필요한 새 개념·회상 계획·충돌·그림, 그리고 새 문항의 중요도 근거(question_importance)뿐이다. 기존 문항(input.existing)과 지도는 출력하지 않으며 바꿀 수 없다. existing은 중복을 피하려고 준 목록이다.
