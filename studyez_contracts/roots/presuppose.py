@@ -88,15 +88,20 @@ def check(value, ctx):
     return value
 
 
+def _norm(text):
+    return re.sub(r'\s+', ' ', text).strip().casefold()
+
+
 def _key(link):
-    norm = lambda s: re.sub(r'\s+', ' ', s).strip().casefold()
-    return norm(link['a']), norm(link['b'])
+    return _norm(link['a']), _norm(link['b'])
 
 
 def records(outputs, bank, points_doc, reserved=()):
-    """Every judged link in question order, and the new exam points of the links nobody recalls (one point per (A, B),
-    however many questions presuppose it). Questions that left the bank since the judgment are dropped, as are their
-    names in `recalled_by`.
+    """Every judged link in question order, and the new exam points of the links nobody recalls. One point per (A, B),
+    however many questions presuppose it, and one per point text: links the judgment gave the same point (two members
+    of one category, e.g. two accessory factors of one organism) are one existence goal, not two identical ones
+    (2026-11-15 콜레라 실측: 44 points, 7 repeated another's text). Questions that left the bank since the judgment
+    are dropped, as are their names in `recalled_by`.
 
     Returns (points_doc, records, new_points)."""
     present = [q['question_id'] for q in bank['questions']]
@@ -105,20 +110,22 @@ def records(outputs, bank, points_doc, reserved=()):
                for m in [re.fullmatch(r'P(\d+)', pid)] if m]
     nxt = max(numbers, default=0) + 1
     value = copy.deepcopy(points_doc)
-    made, out, new = {}, [], []
+    made, by_text, out, new = {}, {}, [], []
     for qid in present:
         for link in rows.get(qid, {'presupposes': []})['presupposes']:
             by = [x for x in link['recalled_by'] if x in set(present)]
             pid = None
             if not link['recalled_by']:
-                key = _key(link)
-                if key not in made:
-                    made[key] = f'P{nxt:03d}'
+                key, text = _key(link), _norm(link['point']['point'])
+                pid = made.get(key) or by_text.get(text)
+                if pid is None:
+                    pid = f'P{nxt:03d}'
                     nxt += 1
-                    point = {'point_id': made[key], **copy.deepcopy(link['point']), 'origin': ORIGIN, 'origin_question_id': qid}
+                    point = {'point_id': pid, **copy.deepcopy(link['point']), 'origin': ORIGIN, 'origin_question_id': qid}
                     value['points'].append(point)
                     new.append(point)
-                pid = made[key]
+                made.setdefault(key, pid)
+                by_text.setdefault(text, pid)
             out.append({'question_id': qid, 'a': link['a'], 'b': link['b'], 'link': link['link'],
                         'recalled_by': by, 'point_id': pid})
     return value, out, new

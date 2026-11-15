@@ -199,3 +199,17 @@ def test_report_counts_records_or_falls_back_to_the_baseline(tmp_path, capsys):
     del old['manifest']['presuppositions']
     assert rep.report(old)['policy'] is None and 'neverAnswered' in rep.report(old)['baseline']
     assert rep.main([str(tmp_path / 'new' / 'out')]) == 0 and '존재 목표 1' in capsys.readouterr().out
+
+
+def test_links_with_the_same_point_text_make_one_existence_point():
+    bank = {'questions': [{'question_id': q} for q in ('Q1', 'Q2', 'Q3')]}
+    points = {'points': [{'point_id': 'P1'}]}
+    same = {'point': 'A의 보조 인자: C, D', 'source_refs': REF}
+    out = [{'rows': [
+        {'question_id': 'Q1', 'presupposes': [{**LINK, 'b': 'C', 'point': same}, {**LINK, 'b': 'D', 'point': {**same, 'point': ' A의 보조  인자: C, D'}}]},
+        {'question_id': 'Q2', 'presupposes': [{**LINK, 'b': 'C', 'point': {'point': '다른 말로 쓴 A의 C', 'source_refs': REF}}]},
+        {'question_id': 'Q3', 'presupposes': [{**LINK, 'b': 'E', 'point': {'point': 'A의 E', 'source_refs': REF}}]}]}]
+    doc, recs, made = pre.records(out, bank, points)
+    assert [p['point_id'] for p in made] == ['P002', 'P003'] and [p['origin_question_id'] for p in made] == ['Q1', 'Q3']
+    assert [r['point_id'] for r in recs] == ['P002', 'P002', 'P002', 'P003']   # same text, same (A, B), a new one
+    assert [p['point_id'] for p in doc['points']] == ['P1', 'P002', 'P003']
