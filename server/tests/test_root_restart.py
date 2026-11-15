@@ -139,6 +139,8 @@ r = client.post(PUB, json={**RESTART, 'requestId': 'pub-unplaced', 'replacePubli
 with SessionLocal() as db:
     row = db.get(RootGeneration, r.json()['generation']['id'])
     assert row.packet['unplacedOnly'] is True and 'duplicatesOnly' not in row.packet and packet_hash(row.packet) == row.packet['inputHash']
+    # docs/changes/2026-11-15-replace-carry-records R2: reviewed root-generation/4 revisions only (this one is older).
+    assert type(row.packet['carrySources']) is list and 'carrySources' not in plain
     assert db.get(RootControl, ('test', 'pub')).revision == 'published-pub'
 user('student')
 assert client.post(URL, json={**RESTART, 'requestId': 'student'}).status_code == 403

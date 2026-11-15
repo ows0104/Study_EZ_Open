@@ -270,6 +270,27 @@ def resume_job(db, row, reason='', by=''):
 RESTARTABLE = ('failed', 'canceled')
 
 
+def carry_sources(db, subject, run_id):
+    """docs/changes/2026-11-15-replace-carry-records R2: every reviewed root-generation/4 revision of the lecture,
+    oldest first, with its tasks' (direction, question fingerprint). The replacement links each revision whose
+    questions it keeps, so learners' history on any of them continues on the new revision."""
+    from app.root_learning.light import stored
+    out = []
+    rows = db.execute(select(RootContent.revision, RootContent.light).where(
+        RootContent.subject == subject, RootContent.run_id == run_id, RootContent.reviewed.is_(True))
+        .order_by(RootContent.created_at, RootContent.revision)).all()
+    for revision, value in rows:
+        if value is None:   # a row stored before the light copy existed
+            value = stored(db.scalar(select(RootContent.document).where(RootContent.subject == subject,
+                RootContent.run_id == run_id, RootContent.revision == revision)))
+        doc, prints = value['document'], value['task_fingerprints']
+        if doc.get('generation_policy') != 'root-generation/4' or not doc.get('tasks'):
+            continue
+        out.append({'revision': revision, 'tasks': [{'direction_id': t['direction_id'], 'fingerprint': prints[t['task_id']]}
+                                                    for t in doc['tasks']]})
+    return out
+
+
 def restart_target(db, subject, run_id, user, replace_published=False):
     """The lecture's latest request, which 「새로 출제」 sets aside (kept unchanged) for a new one with fresh budgets."""
     row = db.scalars(select(RootGeneration).options(*LIGHT).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
@@ -341,7 +362,7 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raw.update(restartOf=restart_target(db, subject, run_id, user, payload.replacePublished).id, restartReason=payload.resumeReason.strip())
         if payload.replacePublished: raw['replacePublished'] = True
         if payload.duplicatesOnly: raw['duplicatesOnly'] = True
-        if payload.unplacedOnly: raw['unplacedOnly'] = True
+        if payload.unplacedOnly: raw.update(unplacedOnly=True, carrySources=carry_sources(db, subject, run_id))
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
         sources = assets_now(db, subject, run_id)

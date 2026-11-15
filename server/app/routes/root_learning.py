@@ -811,7 +811,8 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     session_state = copy.deepcopy(row.state)
     task = row.tasks[session_state['index']] if session_state['index'] < len(row.tasks) else None
     available, _ = content.availability(db, doc, user.id)
-    excluded = content.excluded_ids(content.events_for(db, row.subject, row.run_id, user.id), row.revision)
+    excluded = content.excluded_ids(content.events_for(db, row.subject, row.run_id, user.id), row.revision,
+                                    getattr(doc.document, 'carried_questions', None))
     start_index = session_state['index']
     data = {'_request': request, 'policy': row.policy, 'exam_date': current_exam_date(db, doc)}
     if payload.kind == 'map':

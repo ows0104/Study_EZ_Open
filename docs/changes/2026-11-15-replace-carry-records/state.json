@@ -1,0 +1,44 @@
+{
+  "id": "2026-11-15-replace-carry-records",
+  "title": "Main-Quiz 재배치 판에 기존 학습 기록 승계",
+  "area": "generation",
+  "created_at": "2026-11-15T10:51:29.265607+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-15T10:51:29.639223+00:00",
+      "evidence": "사용자 채팅 2026-11-15: 「결론적으로 나는 원래 지도에 붙지 못한 문제가 과제에 추가되면 좋겠고, 그 과정에서 기존 학습기록이 승계되었으면 좋겠어.」 → 계획 제시 뒤 「승인, 선택도 승계」(R4 선택 A)",
+      "scope": "plan.md 1~5: 계약 equivalence 고유 조건, 서버 packet carrySources, connection_replace 링크·manifest, state.py personal_tiers·content.py excluded_ids 승계, 운영 읽기 전용 실측·Draft PR. 병합·러너 재설치·운영 재배치 제외",
+      "evidence_version": 2,
+      "source_hash": "541bce6abca4f26672cc269659d159c91268f6039923ebe00f7597d8cc551e2b",
+      "plan_hash": "81162e25d1d1d6ec653aed093f01e74befdf02f0d734ae2533e7b9ba3da20759",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "d61b61a398dd620d9acab0db8184eaf4e47cbfba3fc01424ec30731bc43c9931"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-15T10:51:34.088694+00:00"
+}
