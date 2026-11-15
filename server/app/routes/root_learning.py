@@ -12,6 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, defer
 from studyez_contracts.roots import document_hash
+from studyez_contracts.roots.media import photo_import
 from app.auth import CurrentUser, require_admin, require_approved_user
 from app.database import get_db
 from app import bank_personal
@@ -35,6 +36,31 @@ class Strict(BaseModel):
 
 class Start(Strict):
     requestId: str = Field(pattern=r'^[A-Za-z0-9_-]{1,64}$')
+
+
+class StartSession(Start):
+    # 사진 반입 판의 문항 순서(2026-11-15 사용자 「처음할 때 랜덤으로 섞어서」). 다른 판은 무시하고 계획 순서 그대로.
+    # 없으면(옛 화면) 새 회차는 순서대로, 진행 중 회차는 지금 순서를 그대로 둔다.
+    order: Literal['ordered', 'random'] | None = None
+
+
+def orderable(document):
+    """「순서대로/랜덤」을 고를 수 있는 판: 사진 반입 판이고 선행 연결이 없다(섞어도 배우는 길이 안 깨진다)."""
+    questions = (document.get('bank_snapshot') or {}).get('questions', [])
+    return photo_import(document) and not document.get('prerequisites') and not any(q.get('prerequisites') for q in questions)
+
+
+def shuffle_seed(user_id, revision, day):
+    """랜덤 순서의 seed: 사용자·판·학습일. 같은 날의 시작·이어 풀기·칩 변경·더 풀기가 모두 같은 순서를 쓴다."""
+    return document_hash([user_id, revision, day])
+
+
+def ordered_rest(doc, session, tasks, order):
+    """사진 반입 판의 남은 과제를 고른 순서로. 랜덤은 고정 seed 순서, 순서대로는 판 문서의 과제 순서."""
+    if order == 'random':
+        return planning.shuffled(tasks, shuffle_seed(session.user_id, session.revision, session.day))
+    position = {t['task_id']: i for i, t in enumerate(doc.document['tasks'])}
+    return sorted(tasks, key=lambda t: position.get(t['task_id'], len(position)))
 
 
 class Action(Start):
@@ -113,6 +139,9 @@ def overview_data(db, row, user, when):
             'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
             'questionProgress': state.question_progress(document, events, available, when, configured, planned, skip),
             'sessionId': pending.id if pending else None, 'todayDone': stream.state['index'] if stream is not None else 0,
+            # 사진 반입 판이면 시작 화면에 「순서대로/랜덤」을 보인다. 진행 중 회차의 지금 순서도 함께 준다.
+            'orderChoice': orderable(row.document),
+            'order': (pending.state.get('order', 'ordered') if pending else None),
             'preparationProblems': len(problems)}
 
 
@@ -173,7 +202,10 @@ def refocus_stream(db, doc, user, when):
     if stream.state.get('extraGoals'):
         planned = planning.plan(document, morning, available, when, configured, focus=focused,
                                 new_goals=planned['newGoalQuota'] + stream.state['extraGoals'])
-    tasks = keep + [t for t in planned['tasks'] if t['task_id'] not in seen]
+    rest = [t for t in planned['tasks'] if t['task_id'] not in seen]
+    if stream.state.get('order') == 'random' and orderable(doc.document):
+        rest = ordered_rest(doc, stream, rest, 'random')
+    tasks = keep + rest
     if tasks != stream.tasks:
         replace_tasks(db, stream, tasks)
 
@@ -345,9 +377,9 @@ def read_source(subject: str, run_id: str, source_id: str, range_header: str | N
 
 
 @router.post(BASE + '/sessions')
-def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+def start(subject: str, run_id: str, payload: StartSession, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     row = active(db, subject, run_id, user)
-    request = payload.model_dump()
+    request = payload.model_dump(exclude_none=True)   # 순서를 안 고른 요청은 예전과 같은 모양
     previous = db.get(RootEvent, (user.id, payload.requestId))
     if previous:
         if (previous.kind, previous.subject, previous.run_id, previous.payload.get('_request')) != ('start', subject, run_id, request):
@@ -360,8 +392,15 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
     existing = db.get(RootSession, info['sessionId']) if info['sessionId'] else None
     stream = None if existing else today_stream(db, row, user, when, info['policy'])
     version = None
+    photo = orderable(row.document)
     if existing:
         session = existing
+        # 이어 풀 때 순서를 바꿨으면 아직 안 푼 뒷부분만 다시 놓는다. 앞부분·답을 연 지금 문항·되돌리기 위치는 그대로.
+        if photo and payload.order and payload.order != existing.state.get('order', 'ordered'):
+            index = existing.state['index']
+            cut = index + (1 if index < len(existing.tasks) and existing.tasks[index]['task_id'] in existing.state['reveals'] else 0)
+            tasks = existing.tasks[:cut] + ordered_rest(row, existing, existing.tasks[cut:], payload.order)
+            version = replace_tasks(db, existing, tasks, {**existing.state, 'order': payload.order})
     elif stream is not None:
         # 더 풀기(R3): 다 푼 오늘 흐름 뒤에 지금 칩의 새 계획을 붙인다. 이미 흐름에 있는 과제는 다시 넣지 않는다.
         seen = {t['task_id'] for t in stream.tasks}
@@ -370,6 +409,9 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
             raise HTTPException(409, '오늘 더 풀 과제가 없습니다.')
         session = stream
         grown = {**stream.state, 'extraGoals': stream.state.get('extraGoals', 0) + info['plan']['newGoalQuota']}
+        if photo:
+            grown['order'] = payload.order or stream.state.get('order', 'ordered')
+            extra = ordered_rest(row, stream, extra, grown['order'])
         version = replace_tasks(db, stream, stream.tasks + extra, grown)
     else:
         tasks = info['plan']['tasks']
@@ -384,6 +426,15 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
         if len(info['focus']['tiers']) < len(policy.TIERS):
             fresh['focus'] = info['focus']['tiers']
             key.append({'focus': info['focus']['tiers']})
+        if photo and payload.order == 'random':
+            # 랜덤 회차는 순서대로 회차와 다른 회차다. seed는 사용자·판·학습일 — 같은 날 다시 시작해도 같은 순서.
+            key.append({'order': 'random'})
+            fresh['order'] = 'random'
+            tasks = planning.shuffled(tasks, shuffle_seed(user.id, row.revision, day))
+        elif photo:
+            # 순서대로 = 판 문서의 과제 순서(사진 판은 강의 순서대로 엮었다: 병리 1 → 병리 2 → 실습).
+            tasks = ordered_rest(row, None, tasks, 'ordered')
+        key[6] = tasks   # key = [user, subject, run, revision, day, policy, tasks, …]
         identity = document_hash(key)
         session = db.get(RootSession, identity)
         if session is None:

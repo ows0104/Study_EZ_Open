@@ -236,3 +236,10 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(t['target_id'] not in prepared for t in target_list),
             'scopeNote': '준비된 학습 범위 기준 · 앞으로 들어올 자료량 추정 없음'}
+
+
+def shuffled(tasks, seed):
+    """사진 반입 판의 「랜덤」 순서(docs/changes/2026-11-15-photo-quiz-shuffle). 같은 seed·같은 과제 묶음이면 넣은 순서와
+    상관없이 늘 같은 순서다 — 칩을 바꿔 뒷부분을 다시 골라도 출렁이지 않는다. 선행 연결이 없는 판(사진 반입)에만 쓴다."""
+    import hashlib
+    return sorted(tasks, key=lambda t: hashlib.sha256(f"{seed}\0{t['task_id']}".encode()).hexdigest())

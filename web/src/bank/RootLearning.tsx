@@ -136,8 +136,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   // 정리 화면의 뒤로: 들어온 화면(강의 목록·캘린더)으로, 바로 열린 창이면 캘린더로.
   const navigate=useNavigate();
   const leave=()=>(window.history.state?.idx>0?navigate(-1):navigate('/'));
-  async function begin() {
-    const started=writes.run(base+'/sessions',{});
+  async function begin(order?:'ordered'|'random') {
+    const started=writes.run(base+'/sessions',order?{order}:{});
     if(!started)return;
     setAdvancing(true);
     try{const r=await started;await Promise.all([loadSession(r.sessionId),refresh()]);}
@@ -252,7 +252,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
     </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo={mapEntry.current?'back':'today'} onBack={mapBack}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
-    :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
+    :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={order=>{if(!focusing)void begin(order);}} onMap={()=>void showMap()}
       onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}
       resumeCount={info.sessionId&&openLeft?.id===info.sessionId?openLeft.left:undefined} onBack={leave}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
