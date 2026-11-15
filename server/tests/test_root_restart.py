@@ -168,6 +168,20 @@ assert again['id'] != failed['id'] and again['restartOf'] == dup['id'], (again, 
 set_state(again['jobId'], 'failed')
 r = client.post(PUB, json={**RESTART, 'requestId': 'pub-plain-after', 'replacePublished': True}); assert r.status_code == 200, r.text
 assert r.json()['generation']['restartOf'] == again['id']
+# 「존재 목표 보강」(docs/changes/2026-11-15-tree-edge-goals R6): the same conditions, never with the other two.
+for bad in ({**NEW, 'presupposeOnly': True}, {**RESTART, 'presupposeOnly': True},
+            {**RESTART, 'replacePublished': True, 'presupposeOnly': True, 'pipeline': map_tree.PIPELINE2},
+            {**RESTART, 'replacePublished': True, 'presupposeOnly': True, 'unplacedOnly': True},
+            {**RESTART, 'replacePublished': True, 'presupposeOnly': True, 'duplicatesOnly': True}):
+    assert client.post(PUB, json={**bad, 'requestId': 'presuppose-bad'}).status_code == 422, bad
+set_state(r.json()['generation']['jobId'], 'done')
+with SessionLocal() as db:
+    db.get(RootGeneration, r.json()['generation']['id']).result_digest = 'e' * 64; db.commit()
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-presuppose', 'replacePublished': True, 'presupposeOnly': True}); assert r.status_code == 200, r.text
+with SessionLocal() as db:
+    row = db.get(RootGeneration, r.json()['generation']['id'])
+    assert row.packet['presupposeOnly'] is True and 'unplacedOnly' not in row.packet and packet_hash(row.packet) == row.packet['inputHash']
+    assert type(row.packet['carrySources']) is list   # its published tasks continue their history
 user('student')
 assert client.post(URL, json={**RESTART, 'requestId': 'student'}).status_code == 403
-print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only, unplaced only, reuse paths take the published run')
+print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only, unplaced only, reuse paths take the published run, presuppose only')
