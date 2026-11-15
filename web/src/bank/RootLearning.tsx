@@ -243,7 +243,15 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
         <RootSolve view={view} title={info?.title} scope={scope} disabled={writes.blocked}
           editPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/personal`}
           onEdited={result=>{forget();const current=viewRef.current;if(!current?.task)return;
-            const next={...current,task:{...current.task,question:result.question,answer:current.task.answer?result.answer:null}};
+            const next={...current,task:{...current.task,question:result.question,answer:current.task.answer?{...result.answer,memo:current.task.answer.memo}:null}};
+            viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}}
+          mineBase={base}
+          // 내 문제를 만들거나 고치거나 지우면 서버가 오늘 흐름의 남은 뒷부분을 다시 고른다: 회차를 다시 읽는다.
+          onMineChanged={()=>{forget();const current=viewRef.current;if(!current)return;
+            void loadSession(current.sessionId).catch(e=>setError((e as Error).message));}}
+          onMemo={(qid,memo)=>{forget();const current=viewRef.current;
+            if(!current?.task?.answer||current.task.question.question_id!==qid)return;
+            const next={...current,task:{...current.task,answer:{...current.task.answer,memo}}};
             viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}}
           tierPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/tier`}
           onTier={question=>{forget();const current=viewRef.current;if(!current?.task||current.task.question.question_id!==question.question_id)return;

@@ -18,7 +18,7 @@ from app.database import get_db
 from app import bank_personal
 from app.models import BankFeedback, BankPersonalEdit, Lecture
 from app.models.root_learning import RootContent, RootControl, RootSession, RootEvent
-from app.root_learning import content, light, policy, state, planning
+from app.root_learning import content, light, mine, policy, state, planning
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -114,6 +114,18 @@ def current_exam_date(db, row):
     return registered_exam_date(db, lecture) if lecture else None
 
 
+def with_mine(db, doc, user_id, events):
+    """계획·풀이용 (덧붙인 사본, 준비된 과제, 준비 안 된 까닭) — 내 문제(2026-11-15, mine.py)를 붙인다.
+    학습률·카드 수·목표 요약은 이것 대신 원래 사본과 `content.availability`를 쓴다(내 문제를 세지 않는다)."""
+    available, problems = content.availability(db, doc, user_id)
+    return mine.overlay(doc, events, available, problems)
+
+
+def with_memo(answer, notes, q):
+    """답면에 내 뒷면 메모(2026-11-15). 나만 본다."""
+    return {**answer, 'memo': notes.get(q['question_id'], '')}
+
+
 def overview_data(db, row, user, when):
     configured = policy.configured_policy()
     if configured is None:
@@ -121,23 +133,27 @@ def overview_data(db, row, user, when):
                 'message': '초기 추천·복습 정책 선택 대기', 'summary': None, 'plan': None, 'sessionId': None}
     events = content.events_for(db, row.subject, row.run_id, user.id)
     available, problems = content.availability(db, row, user.id)
+    # 내 문제(2026-11-15)는 계획에만 붙는다. 요약·카드 수·칩 개수는 원래 사본과 원래 준비 상태로 센다.
+    mine_row, mine_ready, _ = mine.overlay(row, events, available, problems)
     stream = today_stream(db, row, user, when, configured)
     # 오늘 학습 중요도 필터(2026-11-12): only today's plan is filtered; summary and progress keep every task.
-    document = {**row.document, 'exam_date': current_exam_date(db, row)}
+    exam_date = current_exam_date(db, row)
+    document = {**row.document, 'exam_date': exam_date}
     chosen = content.focus_for(db, row.subject, user.id)
-    tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
+    tiers = content.task_tiers(mine_row.document, state.personal_tiers(row.document, events))
     narrowed = len(chosen) < len(policy.TIERS)
     # 오늘 학습 이어 풀기(2026-11-14): 칩 조합과 상관없이 오늘 흐름 하나를 이어 푼다. 끝났으면 「더 풀기」(start)가 뒤에 붙인다.
     pending = stream if stream is not None and stream.state['index'] < len(stream.tasks) else None
-    focused = {t for t in available if tiers[t] in chosen} if narrowed else None
-    planned = planning.plan(document, events, available, when, configured, focus=focused)
+    focused = {t for t in mine_ready if tiers[t] in chosen} if narrowed else None
+    planned = planning.plan({**mine_row.document, 'exam_date': exam_date}, events, mine_ready, when, configured, focus=focused)
+    counted = {**planned, 'tasks': [t for t in planned['tasks'] if not mine.is_mine(t['task_id'])]}
     # Optional 계산 제외(2026-11-13): 집계만 거른다. available·계획은 그대로다(선행 문항 500 재발 방지).
     skip = content.optional_excluded(db, user.id)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
             'scope': content.learner_scope(row.document), 'summary': state.summary(document, events, available, when, configured, skip),
             'plan': planned,
             'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
-            'questionProgress': state.question_progress(document, events, available, when, configured, planned, skip),
+            'questionProgress': state.question_progress(document, events, available, when, configured, counted, skip),
             'sessionId': pending.id if pending else None, 'todayDone': stream.state['index'] if stream is not None else 0,
             # 사진 반입 판이면 시작 화면에 「순서대로/랜덤」을 보인다. 진행 중 회차의 지금 순서도 함께 준다.
             'orderChoice': orderable(row.document),
@@ -193,10 +209,10 @@ def refocus_stream(db, doc, user, when):
     touched_ids = {e['id'] for e in touched_today}
     morning = [e for e in events if e['id'] not in touched_ids]
     seen = {t['task_id'] for t in keep} | {e['payload'].get('task_id') for e in touched_today if e['revision'] == doc.revision}
-    document = {**doc.document, 'exam_date': current_exam_date(db, doc)}
-    available, _ = content.availability(db, doc, user.id)
+    mine_doc, available, _ = with_mine(db, doc, user.id, events)
+    document = {**mine_doc.document, 'exam_date': current_exam_date(db, doc)}
     chosen = content.focus_for(db, doc.subject, user.id)
-    tiers = content.task_tiers(doc.document, state.personal_tiers(doc.document, events))
+    tiers = content.task_tiers(mine_doc.document, state.personal_tiers(doc.document, events))
     focused = {t for t in available if tiers[t] in chosen} if len(chosen) < len(policy.TIERS) else None
     planned = planning.plan(document, morning, available, when, configured, focus=focused)
     if stream.state.get('extraGoals'):
@@ -455,23 +471,25 @@ def start(subject: str, run_id: str, payload: StartSession, user: CurrentUser = 
 
 
 def project_session(db, row, doc, user, when):
+    events = content.events_for(db, row.subject, row.run_id, user.id)
     available, problems = content.availability(db, doc, user.id)
+    mine_doc, ready, problems = mine.overlay(doc, events, available, problems)
     index = row.state['index']
     task = row.tasks[index] if index < len(row.tasks) else None
     expired = row.day != policy.study_day(when, row.policy).isoformat()
-    events = content.events_for(db, row.subject, row.run_id, user.id)
     blocked = '학습일이 바뀌었습니다. 오늘 학습을 다시 계획하세요.' if expired else problems.get(task['task_id']) if task else None
     out = {'sessionId': row.id, 'revision': row.revision, 'version': row.version, 'day': row.day, 'policy': row.policy,
            'position': index, 'count': len(row.tasks), 'finished': task is None, 'blocked': blocked,
            'canUndo': bool(undo_stack(row.state)) and not expired, 'mapSeen': row.state['mapSeen'], 'task': None,
+           'mineEnabled': state.per_task(doc.document),
            'summary': state.summary(doc.document, events, available, when, row.policy,
                                     content.optional_excluded(db, user.id))}
-    if task and task['task_id'] in available and not expired:
-        q = content.question(doc.document, task)
+    if task and task['task_id'] in ready and not expired:
+        q = content.question(mine_doc.document, task)
         shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
         reveal = row.state['reveals'].get(task['task_id'])
         out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
-                       'answer': revealed_answer(db, doc, shown) if reveal else None,
+                       'answer': with_memo(revealed_answer(db, doc, shown), mine.memos(events, doc.revision), q) if reveal else None,
                        'response': reveal['response'] if reveal else None,
                        'attempted': reveal['attempted'] if reveal else None,
                        'helped': row.state['mapSeen'] or (reveal['helped'] if reveal else prior_exposure(doc.document, task, q, row.state)),
@@ -615,7 +633,9 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                             highlighted=payload.report, correction=correction))
     db.commit()
     current = content.with_tier(bank_personal.apply_edit(original, edit), content.tiers_for(db, doc, user.id))
-    return {'question': learner_front(doc, current, db, user.id), 'answer': revealed_answer(db, doc, current),
+    notes = mine.memos(content.events_for(db, subject, run_id, user.id), doc.revision)
+    return {'question': learner_front(doc, current, db, user.id),
+            'answer': with_memo(revealed_answer(db, doc, current), notes, current),
             'reported': reported, 'highlighted': reported and payload.report}
 
 
@@ -661,6 +681,156 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
         db.rollback()
         raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
     return result
+
+
+# ── 내 문제와 뒷면 메모 (2026-11-15) ────────────────────────────────────────
+# docs/changes/2026-11-15-root-personal-questions. 내 계정·이 판에만. append-only root_event(kind='mine'·'memo'),
+# 표 추가 없음. 내 문제는 기준 문항 옆(같은 방향)에서 복습 일정을 받고 학습률·카드 수에는 세지 않는다(mine.py).
+# 원본 문항·기록은 건드리지 않으므로 문제은행과 연결된 판에서도 만들 수 있다.
+
+class MineText(Start):
+    question: str = Field(min_length=1, max_length=mine.TEXT_LIMIT)
+    answer: str = Field(min_length=1, max_length=mine.TEXT_LIMIT)
+    explanation: str = Field(default='', max_length=mine.TEXT_LIMIT)
+
+
+class MineCreate(MineText):
+    anchorQuestionId: str = Field(min_length=1, max_length=128)
+    copied: bool = Field(default=False, alias='copy')  # 「복사해서 고치기」(BaseModel.copy와 이름이 겹쳐 별칭)
+
+
+class MineSave(Start):
+    action: Literal['save', 'delete'] = 'save'
+    question: str = Field(default='', max_length=mine.TEXT_LIMIT)
+    answer: str = Field(default='', max_length=mine.TEXT_LIMIT)
+    explanation: str = Field(default='', max_length=mine.TEXT_LIMIT)
+
+
+class Memo(Start):
+    text: str = Field(default='', max_length=mine.MEMO_LIMIT)
+
+
+def replayed(db, user, request_id, kind, request):
+    """같은 requestId의 재전송은 처음 결과를, 다른 작업이면 409."""
+    previous = db.get(RootEvent, (user.id, request_id))
+    if previous is None:
+        return None
+    if previous.kind != kind or previous.payload.get('_request') != request:
+        raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
+    return previous.result
+
+
+def mine_enabled(doc):
+    if not state.per_task(doc.document):
+        raise HTTPException(409, '이 Main-Quiz 판은 아직 내 문제를 지원하지 않습니다. 메모는 쓸 수 있습니다.')
+
+
+def visible_question(db, doc, user_id, events, question_id):
+    """내게 보이는 문항(개인 수정·내 중요도·내 문제 포함). 판에 없으면 404."""
+    live, _ = mine.current(events, doc.revision)
+    if mine.is_mine(question_id):
+        p = live.get(question_id)
+        if p is None:
+            raise HTTPException(404, '내 문제를 찾을 수 없습니다.')
+        return mine.question_of(p)
+    q = next((q for q in doc.document['bank_snapshot']['questions'] if q['question_id'] == question_id), None)
+    if q is None:
+        raise HTTPException(404, '문항을 찾을 수 없습니다.')
+    return content.with_tier(with_personal(q, personal_edits(db, doc, user_id)), state.personal_tiers(doc.document, events))
+
+
+def mine_text(payload):
+    question, answer = payload.question.strip(), payload.answer.strip()
+    if not question or not answer:
+        raise HTTPException(422, '발문과 정답을 비워 둘 수 없습니다.')
+    return {'question': question, 'answer': answer, 'explanation': payload.explanation.strip()}
+
+
+def store_mine(db, doc, user, request_id, kind, data, result, when):
+    db.add(RootEvent(user_id=user.id, request_id=request_id, session_id='', subject=doc.subject, run_id=doc.run_id,
+                     revision=doc.revision, kind=kind, payload=data, result=result, created_at=when))
+    db.flush()
+    if kind == 'mine':
+        # 오늘 흐름의 안 푼 뒷부분을 다시 고른다(칩 바꿀 때와 같다): 새 내 문제가 붙고 지운 것은 빠진다.
+        refocus_stream(db, doc, user, when)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
+    return result
+
+
+@router.get(BASE + '/questions/{question_id}/mine-draft')
+def read_mine_draft(subject: str, run_id: str, question_id: str, user: CurrentUser = Depends(require_approved_user),
+                    db: Session = Depends(get_db)):
+    """내 문제면 그 글, 아니면 복사에 쓸 지금 보이는 글."""
+    doc = active(db, subject, run_id, user)
+    events = content.events_for(db, subject, run_id, user.id)
+    q = visible_question(db, doc, user.id, events, question_id)
+    return {**mine.draft_text(q), 'mine': mine.is_mine(question_id), 'enabled': state.per_task(doc.document)}
+
+
+@router.post(BASE + '/mine', status_code=201)
+def create_mine(subject: str, run_id: str, payload: MineCreate, user: CurrentUser = Depends(require_approved_user),
+                db: Session = Depends(get_db)):
+    request = payload.model_dump()
+    if (done := replayed(db, user, payload.requestId, 'mine', request)) is not None:
+        return done
+    doc = active(db, subject, run_id, user)
+    mine_enabled(doc)
+    events = content.events_for(db, subject, run_id, user.id)
+    live, _ = mine.current(events, doc.revision)
+    if len(live) >= mine.LIMIT:
+        raise HTTPException(409, f'이 강의의 내 문제는 {mine.LIMIT}개까지 만들 수 있습니다.')
+    source = visible_question(db, doc, user.id, events, payload.anchorQuestionId)
+    anchor = mine.anchor_task(doc.document, live, payload.anchorQuestionId)
+    if anchor is None:
+        raise HTTPException(404, '기준 문항이 이 판의 과제에 없습니다.')
+    mine_id = mine.PREFIX + uuid4().hex[:16]
+    data = {'_request': request, 'action': 'save', 'mine_id': mine_id, 'anchor_task_id': anchor['task_id'],
+            'source_question_id': (live[payload.anchorQuestionId].get('source_question_id') if mine.is_mine(payload.anchorQuestionId)
+                                   else payload.anchorQuestionId) if payload.copied else None,
+            **mine_text(payload), 'tier': source.get('tier') or content.original_tier(source) or 'Core',
+            # 그림은 바이트 없이 sha256만(사본·hydrate가 같은 그림을 되붙인다).
+            'stimuli': [{k: v for k, v in s.items() if k != 'png_base64'} for s in source.get('stimuli', [])] if payload.copied else [],
+            'seq': mine.next_seq(events, 'mine')}
+    when = now()
+    result = {'mineId': mine_id, 'question': learner_front(doc, mine.question_of(data), db, user.id)}
+    return store_mine(db, doc, user, payload.requestId, 'mine', data, result, when)
+
+
+@router.put(BASE + '/mine/{mine_id}')
+def save_mine(subject: str, run_id: str, mine_id: str, payload: MineSave, user: CurrentUser = Depends(require_approved_user),
+              db: Session = Depends(get_db)):
+    request = {**payload.model_dump(), 'mine_id': mine_id}
+    if (done := replayed(db, user, payload.requestId, 'mine', request)) is not None:
+        return done
+    doc = active(db, subject, run_id, user)
+    mine_enabled(doc)
+    events = content.events_for(db, subject, run_id, user.id)
+    live, _ = mine.current(events, doc.revision)
+    if mine_id not in live:
+        raise HTTPException(404, '내 문제를 찾을 수 없습니다.')
+    data = {**live[mine_id], '_request': request, 'action': payload.action, 'seq': mine.next_seq(events, 'mine')}
+    if payload.action == 'save':
+        data.update(mine_text(payload))
+    result = {'question': learner_front(doc, mine.question_of(data), db, user.id) if payload.action == 'save' else None}
+    return store_mine(db, doc, user, payload.requestId, 'mine', data, result, now())
+
+
+@router.put(BASE + '/questions/{question_id}/memo')
+def save_memo(subject: str, run_id: str, question_id: str, payload: Memo, user: CurrentUser = Depends(require_approved_user),
+              db: Session = Depends(get_db)):
+    request = {**payload.model_dump(), 'question_id': question_id}
+    if (done := replayed(db, user, payload.requestId, 'memo', request)) is not None:
+        return done
+    doc = active(db, subject, run_id, user)
+    events = content.events_for(db, subject, run_id, user.id)
+    visible_question(db, doc, user.id, events, question_id)
+    text = payload.text.strip()
+    data = {'_request': request, 'question_id': question_id, 'text': text, 'seq': mine.next_seq(events, 'memo')}
+    return store_mine(db, doc, user, payload.requestId, 'memo', data, {'memo': text}, now())
 
 
 # ── Optional 계산 제외 (2026-11-13) ──────────────────────────────────────────
@@ -816,7 +986,9 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
     if row.day != policy.study_day(now(), row.policy).isoformat():
         return out
     begin = row.state['index'] if start is None else start
-    available, problems = content.availability(db, doc, user.id)
+    events = content.events_for(db, row.subject, row.run_id, user.id)
+    mine_doc, available, problems = with_mine(db, doc, user.id, events)
+    notes = mine.memos(events, doc.revision)
     generation = active_generation(db, doc)
     edits = personal_edits(db, doc, user.id)
     tiers = content.tiers_for(db, doc, user.id)
@@ -824,10 +996,10 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
         task = row.tasks[position]
         frame = {'position': position, 'taskId': task['task_id'], 'blocked': problems.get(task['task_id']), 'task': None}
         if task['task_id'] in available:
-            q = content.question(doc.document, task)
+            q = content.question(mine_doc.document, task)
             shown = content.with_tier(with_personal(q, edits), tiers)
             frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db, user.id),
-                             'answer': revealed_answer(db, doc, shown, generation),
+                             'answer': with_memo(revealed_answer(db, doc, shown, generation), notes, q),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state),
                              'prerequisite': is_prerequisite(task)}
         out['frames'].append(frame)
@@ -869,9 +1041,11 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
         raise HTTPException(409, '다른 탭에서 변경되었습니다. 서버 기록을 다시 불러오세요.')
     session_state = copy.deepcopy(row.state)
     task = row.tasks[session_state['index']] if session_state['index'] < len(row.tasks) else None
-    available, _ = content.availability(db, doc, user.id)
-    excluded = content.excluded_ids(content.events_for(db, row.subject, row.run_id, user.id), row.revision,
-                                    getattr(doc.document, 'carried_questions', None))
+    events = content.events_for(db, row.subject, row.run_id, user.id)
+    mine_doc, available, _ = with_mine(db, doc, user.id, events)
+    # 지운 내 문제(2026-11-15)도 제외한 문항처럼 건너뛴다.
+    excluded = (content.excluded_ids(events, row.revision, getattr(doc.document, 'carried_questions', None))
+                | mine.current(events, row.revision)[1])
     start_index = session_state['index']
     data = {'_request': request, 'policy': row.policy, 'exam_date': current_exam_date(db, doc)}
     if payload.kind == 'map':
@@ -896,16 +1070,16 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
         set_undo_stack(session_state, undo_stack(session_state) + [
             {'requestId': payload.requestId, 'kind': payload.kind, 'index': session_state['index']}])
         session_state['index'] += 1
-        data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(doc.document, task))
+        data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(mine_doc.document, task))
         if payload.kind == 'exclude':
             data['question_id'] = task['question_id']
             excluded.add(task['question_id'])
     else:
         if task['task_id'] not in available:
             raise HTTPException(409, '문항/개인 설정이 바뀌었습니다. 연결을 다시 확인하거나 이 과제를 보류하세요.')
-        q = content.question(doc.document, task)
+        q = content.question(mine_doc.document, task)
         reveal = session_state['reveals'].get(task['task_id'])
-        data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(doc.document, task))
+        data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(mine_doc.document, task))
         if payload.kind == 'reveal':
             if reveal:
                 raise HTTPException(409, '이미 답을 확인했습니다.')

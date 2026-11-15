@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-16-cloze-label-cue",
+  "title": "빈칸 묶음 선지에서 정답에만 붙은 항목 머리 떼기",
+  "area": "contracts",
+  "created_at": "2026-11-15T15:44:04.540819+00:00",
+  "required_checks": [
+    "contracts",
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-15T15:44:04.540846+00:00"
+}

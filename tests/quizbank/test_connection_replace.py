@@ -223,3 +223,145 @@ def test_a_supplement_duplicate_must_name_a_point_it_was_shown():
     value = {'rows': [{'question_id': 'Q1', 'decision': 'duplicate_of', 'duplicate_of': 'P1', 'point': None, 'reason': 'x'}]}
     with pytest.raises(ValueError, match='input.points is empty'):
         check_stage('supplement', value, {'points': []}, {'points_doc': {}}, None)
+
+
+# ---------------------------------------------------------------- notes-update/1 (docs/changes/2026-11-16-replace-updated-notes)
+import hashlib  # noqa: E402
+
+import fitz  # noqa: E402
+
+from quizbank import source_update  # noqa: E402
+
+
+def notes_pdf(path, lines):
+    doc = fitz.open()
+    for line in lines:
+        doc.new_page().insert_text((72, 72), line)
+    doc.save(path)
+    doc.close()
+    return path
+
+
+def use_notes(source, path, version):
+    body = path.read_bytes()
+    source.update(filename=path.name, localPath=str(path.resolve()), sizeBytes=len(body), assetId=version,
+                  sha256=hashlib.sha256(body).hexdigest(), originalKey=f'notes/{path.name}', uploadedAt=f'2026-11-1{version}T00:00:00')
+
+
+class PdfLateModel(LateModel):
+    """LateModel whose item reviews name page 2 of the notes PDF (review-evidence/1, as test_review_evidence)."""
+
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage.startswith('v4-review') and 'evidence_source' in ctx:
+            for r in value['reviews']:
+                r['evidence'] = {'mode': 'single', 'reason': 'Synthetic proof',
+                                 'slides': [{'page': 2, 'evidence': 'Synthetic line on page 2'}]}
+        return value, info
+
+
+def published_pdf(tmp_path, monkeypatch):
+    """The published run of a three-page notes PDF whose questions all cite page 2."""
+    import tests.quizbank.test_root_generation_v4 as gen_v4
+    base = gen_v4.packet
+
+    def with_pdf(path):
+        p = base(path)
+        use_notes(p['sources'][0], notes_pdf(path / 'notes-v1.pdf', [f'Synthetic notes page {i}' for i in (1, 2, 3)]), 1)
+        for q in p['intakeBank']['bank']['questions']:
+            q['source_refs'] = [{'source_id': 'S1', 'locator': 'PDF 물리 2쪽'}]
+        p['inputHash'] = packet_hash(p)
+        return p
+    monkeypatch.setattr(gen_v4, 'packet', with_pdf)
+    return published(tmp_path, PdfLateModel())
+
+
+def corrected(tmp_path, packet, lines):
+    packet = copy.deepcopy(packet)
+    use_notes(packet['sources'][0], notes_pdf(tmp_path / 'notes-v4.pdf', lines), 4)
+    packet['inputHash'] = packet_hash(packet)
+    return packet
+
+
+def test_corrected_notes_of_the_same_pages_replace_the_source_and_nothing_else(tmp_path, monkeypatch):
+    previous, old, packet = published_pdf(tmp_path, monkeypatch)
+    old_page = (previous / 'material' / 'S1-0002.png').read_bytes()
+    packet = corrected(tmp_path, packet, ['Synthetic notes page 1', 'Synthetic notes page 2 (corrected)', 'Synthetic notes page 3'])
+    result = g.run(packet, tmp_path / 'new', invoke=PdfLateModel(), unplaced_of=previous)
+    assert consume(result, packet) == result['document']
+    sources = {s['source_id']: s for s in result['document']['review']['sources']}
+    assert sources['S1']['sha256'] == packet['sources'][0]['sha256'] and sources['S1']['label'] == 'notes-v4.pdf'
+    assert sources['S1']['page_count'] == 3
+    v1 = old['brief']['sources'][0]['sha256']
+    assert result['document']['replaced_sources'] == [{'source_id': 'S1', 'sha256': v1}]
+    # The brief and every judgment stay those of the earlier file (the stage receipts are checked against them).
+    assert result['brief']['sources'] == old['brief']['sources']
+    update = result['manifest']['unplacedOnly']['sourceUpdate']
+    assert update['policy'] == 'notes-update/1'
+    assert [(r['source_id'], r['fromFilename'], r['toFilename'], r['changedPages']) for r in update['sources']] == \
+        [('S1', 'notes-v1.pdf', 'notes-v4.pdf', [2])]
+    cited = {q['question_id'] for q in old['document']['bank_snapshot']['questions']}
+    assert {q['question_id'] for q in update['questionsOnChangedPages']} == cited
+    assert all(q['pages'] == [2] for q in update['questionsOnChangedPages'])
+    # Questions, reviews and the medical review are the previous run's; every task continues its history.
+    assert result['document']['bank_snapshot']['questions'] == old['document']['bank_snapshot']['questions']
+    assert result['medical'] == old['medical'] and result['manifest']['itemReviews'] == old['manifest']['itemReviews']
+    n = len(old['document']['tasks'])
+    assert (old['document']['revision'], n, n) in [(r['revision'], r['tasks'], r['of']) for r in result['manifest']['unplacedOnly']['carry']]
+    # The material the receipts were made from is not rewritten, here or in the previous run.
+    assert (tmp_path / 'new' / 'material' / 'S1-0002.png').read_bytes() == old_page
+    assert (previous / 'material' / 'S1-0002.png').read_bytes() == old_page
+    # The record must name the files the brief and the packet name.
+    bad = copy.deepcopy(result)
+    bad['manifest']['unplacedOnly']['sourceUpdate']['sources'][0]['fromSha256'] = '0' * 64
+    with pytest.raises(Exception, match='notes update'):
+        consume(bad, packet)
+    assert json.loads((previous / 'result.json').read_text(encoding='utf-8')) == old
+
+
+def test_the_same_file_again_is_no_update(tmp_path, monkeypatch):
+    previous, _, packet = published_pdf(tmp_path, monkeypatch)
+    result = g.run(packet, tmp_path / 'new', invoke=PdfLateModel(), unplaced_of=previous)
+    assert 'sourceUpdate' not in result['manifest']['unplacedOnly'] and 'replaced_sources' not in result['document']
+
+
+def test_notes_with_another_page_count_are_refused(tmp_path, monkeypatch):
+    previous, _, packet = published_pdf(tmp_path, monkeypatch)
+    packet = corrected(tmp_path, packet, ['Synthetic notes page 1', 'Synthetic notes page 2'])
+    model = PdfLateModel()
+    with pytest.raises(ValueError, match='쪽 수'):
+        g.run(packet, tmp_path / 'new', invoke=model, unplaced_of=previous)
+    assert model.calls == []
+
+
+def test_only_source_files_may_differ():
+    notes = {'id': 'S1', 'kind': 'notes_current', 'filename': 'a.pdf', 'sha256': 'a', 'sizeBytes': 1}
+    jokbo = {'id': 'S2', 'kind': 'jokbo', 'filename': 'j.pdf', 'sha256': 'j', 'sizeBytes': 1}
+    old = {'title': 'T', 'sources': [notes, jokbo]}
+    assert source_update.changed_sources(old, copy.deepcopy(old), 'x') == []
+    assert source_update.changed_sources(old, {**old, 'sources': [{**notes, 'sha256': 'b', 'filename': 'b.pdf'}, jokbo]}, 'x') == [0]
+    with pytest.raises(ValueError, match='강의 입력'):
+        source_update.changed_sources(old, {'title': 'U', 'sources': [{**notes, 'sha256': 'b'}, jokbo]}, 'x')
+    with pytest.raises(ValueError, match='원본 구성'):
+        source_update.changed_sources(old, {**old, 'sources': [notes]}, 'x')
+    with pytest.raises(ValueError, match='원본 구성'):
+        source_update.changed_sources(old, {**old, 'sources': [{**notes, 'kind': 'notes_prev'}, jokbo]}, 'x')
+    with pytest.raises(ValueError, match='족보'):
+        source_update.changed_sources(old, {**old, 'sources': [notes, {**jokbo, 'sha256': 'k'}]}, 'x')
+
+
+def test_a_figure_cropped_from_the_replaced_file_is_accepted():
+    """Figures keep the crop and the hash of the file they came from (their content carries the learning history)."""
+    import base64
+    from studyez_contracts.roots.media import validate_images
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 4, 4), False)
+    body = pix.tobytes('png')
+    figure = {'source_id': 'S1', 'source_sha256': 'a' * 64, 'page': 2, 'crop': [0, 0, 1, 1], 'width': 4, 'height': 4,
+              'sha256': hashlib.sha256(body).hexdigest(), 'png_base64': base64.b64encode(body).decode()}
+    bank = {'questions': [{'question_id': 'Q1', 'stimuli': [figure]}]}
+    source = {'source_id': 'S1', 'sha256': 'b' * 64, 'page_count': 3}
+    with pytest.raises(Exception, match='source/page mismatch'):
+        validate_images(bank, [source])
+    assert validate_images(bank, [source], replaced={'S1': ['a' * 64]}) == bank
+    with pytest.raises(Exception, match='source/page mismatch'):
+        validate_images(bank, [source], replaced={'S2': ['a' * 64]})
