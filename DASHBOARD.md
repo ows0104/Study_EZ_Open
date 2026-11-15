@@ -51,7 +51,7 @@
 
 ## 완료 기록 (최근 것만)
 
-- 2026-11-15 사진 실습 Main-Quiz 수작업 반입 코드(PR #178, 병합 a0fc7b8d): 문항 힌트 칸(clue)·「힌트 보기」/H, photo-import/1 판만 JPEG·200장/24MB, 관리자 업로드 30MB, scripts/photo_quiz_import.py. 배포 확인(API health a0fc7b8d, studyez.kr 번들). 261104_05 반입은 사용자가 관리자 화면에서 document.json 업로드·「나만」 활성화로 진행 — 학생 공개는 별도 결정.
+- 2026-11-15 사진 실습 Main-Quiz 수작업 반입 코드(PR #178, 병합 a0fc7b8d): 문항 힌트 칸(clue)·「힌트 보기」/H, photo-import/1 판만 JPEG·200장/24MB, 관리자 업로드 30MB, scripts/photo_quiz_import.py. 배포 확인(API health a0fc7b8d, studyez.kr 번들). 261104_05 운영 반입 완료(사용자 「그냥 네가 해줘」·「모두에게 공개」): 판 photo-261104-05-r1 86과제, 그림 137장, 전체 공개, 공개 기록 1건. 관리자 등록·게시 경로와 같은 로직을 운영 master 04c657fe 코드로 실행.
 
 | 2026-11-15 | 족보 풀이 Z·Ctrl+Z 되돌리기: 직전 표시를 되돌려 그 문제 답 화면으로, 오답노트 표시는 고르기 전 값으로, 끝 화면에서도(회독 1회 유지). 웹만. PR #175 병합 3a4fd3fb. 운영 배포 반영은 미확인 |
 | 2026-11-15 | Main-Quiz 지도 관계 검사·지도에 못 붙은 문항 살리기(review-relations/2: 지도 내용 관계 검사→brief-fix, 범위 점검 판정 배치, 늦은 보충, 남은 문항은 관리자 결과에 목록). PR #174 병합 bc89bfa9, API health bc89bfa9, 러너 .runtime/main-quiz-bc89bfa99424. 261105_03 장내세균 공개판 교체 재출제 job 621 → auto-31af7e00 공개: 과제 69→195(문항 206, 남은 6) |
