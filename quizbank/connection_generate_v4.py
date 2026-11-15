@@ -231,8 +231,21 @@ def run(packet, out, model, invoke, resume=None):
         review as C with tag '-late'). Updates the brief, points, coverage rows and map checks in place."""
         nonlocal brief, points_doc, bank, stimuli, basis
         ctx = v3.supplement_input(bank, off_ids, points_doc, page_counts)
+        # late-new-points (docs/changes/2026-11-15-unplaced-replace): after the review a question no goal took cannot
+        # be placed as a duplicate of an existing point (261111_02: 12 of 13 named a point, none was placed), so the
+        # late round sees no existing point and decides a new point or out of scope.
+        fresh_only = tag == '-late'
+        if fresh_only:
+            ctx['points'] = []
         state = {'points_doc': points_doc}
-        value = st.run(X + 'supplement' + tag, ctx, lambda raw: check_stage('supplement', raw, ctx, state, None), state)
+
+        def accept(raw):
+            rows_ = raw.get('rows') if type(raw) is dict else None
+            v3.require(not fresh_only or type(rows_) is not list
+                       or all(type(r) is not dict or r.get('decision') != 'duplicate_of' for r in rows_),
+                       'late supplement: input.points is empty; decide point or out_of_scope, not duplicate_of')
+            return check_stage('supplement', raw, ctx, state, None)
+        value = st.run(X + 'supplement' + tag, ctx, accept, state)
         points_doc, decided = v4.attach_points(points_doc, value, off_ids, page_counts,
                                                [p['point_id'] for p in brief['points']])
         supplement.extend(decided)

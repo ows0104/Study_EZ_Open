@@ -26,6 +26,7 @@ class LateModel(NoRelationModel):
 
     def __call__(self, stage, ctx, material, model):
         if stage in LATE:
+            self.inputs[stage] = copy.deepcopy(ctx)
             self.calls.append(stage)
             value, info = super().__call__(stage[:-len('-late')], ctx, material, model)
             self.calls.pop()
@@ -83,6 +84,28 @@ def test_c_a_question_off_the_map_after_the_review_gets_a_late_supplement_goal(t
     assert placed['Q2'].startswith('DQ')
     assert result['manifest']['coverageFallback'] == [{'question_id': 'Q2', 'direction_id': placed['Q2']}]
     assert result['manifest']['unplacedQuestions'] == []
+
+
+def test_c_the_late_supplement_sees_no_existing_point(tmp_path):
+    """2026-11-15 (unplaced-replace): a question no goal took after its review cannot be placed as a duplicate of an
+    existing point, so the late round is not offered one."""
+    p, model, result = run(tmp_path, LateModel())
+    assert model.inputs['v4-supplement-late']['points'] == []
+    assert [q['question_id'] for q in model.inputs['v4-supplement-late']['questions']] == ['Q2']
+
+
+class DuplicateLateModel(LateModel):
+    def __call__(self, stage, ctx, material, model):
+        if stage == 'v4-supplement-late':
+            self.calls.append(stage)
+            return {'rows': [{'question_id': q['question_id'], 'decision': 'duplicate_of', 'duplicate_of': 'P1', 'point': None,
+                              'reason': 'Same as P1'} for q in ctx['questions']]}, {}
+        return super().__call__(stage, ctx, material, model)
+
+
+def test_c_a_late_duplicate_of_answer_is_refused(tmp_path):
+    with pytest.raises(ValueError, match='late supplement: input.points is empty'):
+        run(tmp_path, DuplicateLateModel())
 
 
 def test_d_an_ok_question_left_off_the_map_is_reported_and_the_run_goes_on(tmp_path):

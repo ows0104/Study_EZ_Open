@@ -62,7 +62,9 @@ def test_a_run_not_published_here_is_refused(tmp_path, derive):
         worker.duplicates_front(request(), runs / '_root-generation' / NEW)
 
 
-def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_reused(tmp_path, derive, monkeypatch):
+@pytest.mark.parametrize('flags, flag', [({}, '--duplicates-of'),
+                                          ({'duplicatesOnly': False, 'unplacedOnly': True}, '--unplaced-of')])   # 2026-11-15-unplaced-replace
+def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_reused(tmp_path, derive, monkeypatch, flags, flag):
     runs = tmp_path / 'runs'
     root = previous_run(runs)
     out = runs / '_root-generation' / NEW
@@ -89,11 +91,12 @@ def test_the_generator_is_called_with_the_previous_run_and_the_old_evidence_is_r
     choices = []   # the new revision still gets its recall choices (2026-11-14 choices-by-default)
     monkeypatch.setattr(root_mcq, 'publish', lambda client, subject, run_id, folder, payload, **k: choices.append(payload['document']['revision']))
     client = SimpleNamespace(call=lambda method, path, payload=None: {'status': 'ready', 'revision': 'auto-' + NEW})
-    packet = request()
+    packet = request(**flags)
     assert worker._generate(client, 'S', 'R', '/api/x', packet, out / 'packet.json', out) == 0
     args = commands[0]
     assert args[2] == 'runner.root_native_json'   # the native transport, whose main takes the flag
-    assert Path(args[args.index('--duplicates-of') + 1]) == (root / 'generation').resolve() and '--resume' not in args
+    assert Path(args[args.index(flag) + 1]) == (root / 'generation').resolve() and '--resume' not in args
+    assert {'--duplicates-of', '--unplaced-of'} - {flag} & set(args) == set()
     assert [p.name for p in uploads] == ['auto-' + NEW + '.json']
     assert choices == ['auto-' + NEW]
     assert json.loads(uploads[0].read_text(encoding='utf-8')) == {'schema': 'root-evidence/1', 'revision': 'auto-' + NEW, 'sources': {'S1': 'x'}}
@@ -119,3 +122,7 @@ def test_the_native_transport_takes_the_flag_to_the_generator(tmp_path, monkeypa
     monkeypatch.setattr('sys.argv', ['x', '--packet', str(tmp_path / 'packet.json'), '--out', str(tmp_path / 'o'), '--duplicates-of', str(tmp_path / 'prev')])
     assert native.main() == 0
     assert seen['duplicates_of'] == tmp_path / 'prev' and isinstance(seen['invoke'], native.NativeJson)
+    assert seen['unplaced_of'] is None
+    monkeypatch.setattr('sys.argv', ['x', '--packet', str(tmp_path / 'packet.json'), '--out', str(tmp_path / 'o'), '--unplaced-of', str(tmp_path / 'prev')])
+    assert native.main() == 0
+    assert seen['unplaced_of'] == tmp_path / 'prev' and seen['duplicates_of'] is None

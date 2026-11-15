@@ -67,6 +67,10 @@ class RequestIn(BaseModel):
     # published run it replaces as it is and judges only its duplicate tasks again (duplicates-only/1). Questions,
     # reviews and importance stay; the new revision differs only in which same-answer tasks are merged.
     duplicatesOnly: bool = False
+    # 「못 붙은 문항만 재배치」(docs/changes/2026-11-15-unplaced-replace): with restart + replacePublished, the runner takes
+    # the published run as it is and places again only the questions no goal took (unplaced-only/1). Questions,
+    # reviews, importance and the medical review stay; the map gains the late goals of those questions.
+    unplacedOnly: bool = False
 
 
 def control_hash(db, subject, run_id):
@@ -99,6 +103,7 @@ def generation_input(packet):
         'inputMode':packet.get('inputMode','provided'),'authoring':packet.get('authoring','cli'),
         'parallelAuthoring':packet.get('parallelAuthoring',False),'pipeline':packet.get('pipeline'),
         'restartOf':packet.get('restartOf'),'duplicatesOnly':packet.get('duplicatesOnly',False),
+        'unplacedOnly':packet.get('unplacedOnly',False),
         'sources':[{k:v for k,v in s.items() if k!='snapshotKey'} for s in packet['sources']]}
 
 
@@ -306,6 +311,10 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(422, '공개된 판 교체는 이유를 적은 새로 출제 요청에서만 받습니다.')
     if payload.duplicatesOnly and not (payload.restart and payload.replacePublished and payload.pipeline == map_tree.PIPELINE3):
         raise HTTPException(422, '중복만 다시 판정은 공개된 새 구조 2(map-tree/3) 판을 교체하는 새로 출제 요청에서만 받습니다.')
+    if payload.unplacedOnly and not (payload.restart and payload.replacePublished and payload.pipeline == map_tree.PIPELINE3):
+        raise HTTPException(422, '못 붙은 문항만 재배치는 공개된 새 구조 2(map-tree/3) 판을 교체하는 새로 출제 요청에서만 받습니다.')
+    if payload.unplacedOnly and payload.duplicatesOnly:
+        raise HTTPException(422, '중복만 다시 판정과 못 붙은 문항만 재배치는 함께 요청하지 않습니다.')
     if payload.restart and (payload.resume or not payload.pipeline or not payload.resumeReason.strip()):
         raise HTTPException(422, '새로 출제는 이유를 적은 Main-Quiz 앞 단계(map-tree) 새 요청만 받습니다.')
     if payload.examDate:
@@ -332,6 +341,7 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raw.update(restartOf=restart_target(db, subject, run_id, user, payload.replacePublished).id, restartReason=payload.resumeReason.strip())
         if payload.replacePublished: raw['replacePublished'] = True
         if payload.duplicatesOnly: raw['duplicatesOnly'] = True
+        if payload.unplacedOnly: raw['unplacedOnly'] = True
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
         sources = assets_now(db, subject, run_id)

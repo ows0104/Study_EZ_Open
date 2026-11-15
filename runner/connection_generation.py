@@ -210,7 +210,8 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
 def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=None, resume=None):
     # map-tree/1 runs the front stages first; the generator then works in <run>/generation on the derived packet.
     gen_out, gen_packet, gen_packet_path = out, packet, packet_path
-    previous = duplicates_front(packet, out) if packet.get('duplicatesOnly') else None
+    # duplicates-only/1 and unplaced-only/1 (docs/changes/2026-11-15-unplaced-replace) start from the published run.
+    previous = duplicates_front(packet, out) if packet.get('duplicatesOnly') or packet.get('unplacedOnly') else None
     if packet.get('pipeline') is not None:
         gen_packet = map_tree_front(packet, out, model=model, resume=resume)
         if gen_packet is None: return 1
@@ -221,8 +222,8 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
     if previous is not None:
         # A map-tree packet is a source-assessment/2 packet: the native transport runs it (runner.root_native_json).
-        if module != 'runner.root_native_json': raise ValueError('중복 재판정은 map-tree 생성 packet만 받습니다.')
-        args += ['--duplicates-of', str(previous.resolve())]
+        if module != 'runner.root_native_json': raise ValueError('중복 재판정·못 붙은 문항 재배치는 map-tree 생성 packet만 받습니다.')
+        args += ['--unplaced-of' if packet.get('unplacedOnly') else '--duplicates-of', str(previous.resolve())]
     if previous is None and (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)

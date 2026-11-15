@@ -127,6 +127,19 @@ with SessionLocal() as db:
     assert row.packet['duplicatesOnly'] is True and row.packet['replacePublished'] is True
     assert row.packet['restartOf'] == r.json()['generation']['restartOf'] and packet_hash(row.packet) == row.packet['inputHash']
     assert db.get(RootControl, ('test', 'pub')).revision == 'published-pub'  # the old revision stays until the new one publishes
+# 「못 붙은 문항만 재배치」(docs/changes/2026-11-15-unplaced-replace): the same conditions, never with duplicatesOnly.
+for bad in ({**NEW, 'unplacedOnly': True}, {**RESTART, 'unplacedOnly': True},
+            {**RESTART, 'replacePublished': True, 'unplacedOnly': True, 'pipeline': map_tree.PIPELINE2},
+            {**RESTART, 'replacePublished': True, 'unplacedOnly': True, 'duplicatesOnly': True}):
+    assert client.post(PUB, json={**bad, 'requestId': 'unplaced-bad'}).status_code == 422, bad
+set_state(dup['jobId'], 'done')
+with SessionLocal() as db:
+    db.get(RootGeneration, dup['id']).result_digest = 'f' * 64; db.commit()
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-unplaced', 'replacePublished': True, 'unplacedOnly': True}); assert r.status_code == 200, r.text
+with SessionLocal() as db:
+    row = db.get(RootGeneration, r.json()['generation']['id'])
+    assert row.packet['unplacedOnly'] is True and 'duplicatesOnly' not in row.packet and packet_hash(row.packet) == row.packet['inputHash']
+    assert db.get(RootControl, ('test', 'pub')).revision == 'published-pub'
 user('student')
 assert client.post(URL, json={**RESTART, 'requestId': 'student'}).status_code == 403
-print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only')
+print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused, duplicates only, unplaced only')
