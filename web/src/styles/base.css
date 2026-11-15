@@ -772,7 +772,7 @@ button.resource.is-download:hover:not(:disabled)::after {
   overflow-wrap: anywhere;
 }
 .quiz-hint { text-align: center; }
-.quiz-hint summary {
+.quiz-hint summary, .quiz-hint-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -792,16 +792,19 @@ button.resource.is-download:hover:not(:disabled)::after {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .quiz-hint summary::-webkit-details-marker { display: none; }
-.quiz-hint summary:hover {
+.quiz-hint summary:hover, .quiz-hint-toggle:hover:not(:disabled) {
   border-color: var(--fam-pre);
   background: color-mix(in srgb, var(--fam-pre) 16%, var(--surface));
 }
-.quiz-hint summary:focus-visible { outline: 2px solid var(--fam-pre); outline-offset: 4px; }
+.quiz-hint summary:focus-visible, .quiz-hint-toggle:focus-visible { outline: 2px solid var(--fam-pre); outline-offset: 4px; }
 .quiz-hint-icon { width: 18px; height: 18px; flex-shrink: 0; }
 .quiz-hint-chevron { width: 14px; height: 14px; flex-shrink: 0; }
 .quiz-hint-open, .quiz-hint[open] .quiz-hint-closed { display: none; }
 .quiz-hint[open] .quiz-hint-open { display: inline; }
-.quiz-hint[open] .quiz-hint-chevron { transform: rotate(180deg); }
+.quiz-hint[open] .quiz-hint-chevron, .quiz-hint-toggle[aria-expanded="true"] .quiz-hint-chevron { transform: rotate(180deg); }
+/* 문항마다 상태를 따로 쥐는 화면(Main-Quiz)은 details 대신 같은 모양의 버튼을 쓴다. */
+.quiz-hint-toggle { font-family: inherit; }
+.quiz-hint-toggle:disabled { opacity: 0.55; cursor: default; }
 .quiz-hint > p {
   margin: 12px 0 0;
   padding: 16px 20px;

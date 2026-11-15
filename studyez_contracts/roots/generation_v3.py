@@ -1269,6 +1269,35 @@ def _judgments3(value, packet, brief, reviewed, meta, doc):
 FLAVOR = {'policy': POLICY, 'keys': MANIFEST_KEYS, 'judgments': _judgments3}
 
 
+BACKFILL_MEDICAL = 'medical-presuppose'
+
+
+def _check_backfill_medical(value, packet, reviewed, meta, stages, POLICY, backfill):
+    """presuppose-only/1 (docs/changes/2026-11-15-tree-edge-goals R6): the published medical review (its stage record and
+    output carried over) stands for the published questions; `medical-presuppose` reviewed only the questions the run
+    added, with the same input a whole review would give them. The stored review holds exactly those rows."""
+    added = backfill['addedQuestions']
+    prev, more = backfill['previousMedical'], backfill['addedMedical']
+    require(stages['medical-0']['outputHash'] == document_hash(prev), 'result3: the carried medical review is not the published one')
+    ids = [q['question_id'] for q in reviewed['questions']]
+    require(set(added) <= set(ids) and not set(added) & {r['question_id'] for r in prev['reviews']},
+            'result3: added questions are not new questions of this bank')
+    if added:
+        sub = {**reviewed, 'questions': [q for q in reviewed['questions'] if q['question_id'] in set(added)]}
+        sub_input, _ = medical_parts(sub, context_sent(meta['clinicalConflicts'], meta['clinicalContext']))
+        med_input = {'title': packet['title'], 'bank': sub, 'clinicalInput': sub_input, 'medicalFinal': True, '_pipeline_version': POLICY}
+        require(BACKFILL_MEDICAL in stages and stages[BACKFILL_MEDICAL]['inputHash'] == document_hash(med_input)
+                and stages[BACKFILL_MEDICAL]['outputHash'] == document_hash(more), 'result3: the added medical review is not of the added questions')
+        rows = [*prev['reviews'], *more['reviews']]
+    else:
+        require(BACKFILL_MEDICAL not in stages and more is None, 'result3: a medical review of no added question')
+        rows = list(prev['reviews'])
+    order = {q: i for i, q in enumerate(ids)}
+    require(set(r['question_id'] for r in rows) == set(ids), 'result3: the medical review does not cover this bank')
+    require(value['medical']['reviews'] == sorted(rows, key=lambda r: order[r['question_id']]),
+            'result3: the medical review is not the published review plus the added one')
+
+
 def _check_stages(value, packet, reviewed, meta, POLICY, X='v3-'):
     """X: the stage-name prefix of the policy (v3- for /3, v4- for /4)."""
     # Stage records: fingerprints of the stages whose output the result carries.
@@ -1293,10 +1322,14 @@ def _check_stages(value, packet, reviewed, meta, POLICY, X='v3-'):
                            repairs[0]['targets'] if repairs else ())
     require(merged == meta['clinicalContext'], 'result3: the clinical context is not the merged judgments')
     clinical_input, left_out = medical_parts(reviewed, context_sent(meta['clinicalConflicts'], meta['clinicalContext']))
-    med_input = {'title': packet['title'], 'bank': reviewed, 'clinicalInput': clinical_input,
-                 'medicalFinal': True, '_pipeline_version': POLICY}
-    require(stages['medical-0']['inputHash'] == document_hash(med_input) and stages['medical-0']['outputHash'] == document_hash(value['medical']),
-            'result3: the medical review is not of this bank')
+    backfill = meta.get('presupposeOnly')
+    if backfill is None:
+        med_input = {'title': packet['title'], 'bank': reviewed, 'clinicalInput': clinical_input,
+                     'medicalFinal': True, '_pipeline_version': POLICY}
+        require(stages['medical-0']['inputHash'] == document_hash(med_input) and stages['medical-0']['outputHash'] == document_hash(value['medical']),
+                'result3: the medical review is not of this bank')
+    else:
+        _check_backfill_medical(value, packet, reviewed, meta, stages, POLICY, backfill)
     unreviewed = {r['question_id'] for r in meta['medicalUnreviewed']}
     require(set(left_out) <= unreviewed, 'result3: a question left out of the medical review is not recorded')
     rows = {r['question_id']: r for r in value['medical']['reviews']}

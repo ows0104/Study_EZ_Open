@@ -179,10 +179,30 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
         if task['task_id'] not in chosen:
             chosen.add(task['task_id'])
             selected.append({**task, 'reason': reason})
-    def add_target(tid, reason):
+    def add_target(tid, reason, tasks=by_direction):
         for direction in authored[tid]['directions']:
-            for task in by_direction[direction['direction_id']]:
+            for task in tasks[direction['direction_id']]:
                 add(task, reason)
+    # 선행 목표는 중요도 필터 밖에 있어도 끌어온다(spec R2). 그래서 끌어올 과제는 pool이 아니라 available에서 찾는다.
+    prepared_tasks = defaultdict(list)
+    for task in doc['tasks']:
+        if task['task_id'] in available and task['direction_id'] in owners:
+            prepared_tasks[task['direction_id']].append(task)
+    target_tasks = defaultdict(list)
+    for task in doc['tasks']:
+        if task['direction_id'] in owners:
+            target_tasks[owners[task['direction_id']]].append(task['task_id'])
+    def pull(parent):
+        """복습에서 선행 목표를 세부 목표에 묶어 끌어올지(docs/changes/2026-11-15-tree-edge-goals spec R2).
+        안 배웠으면 끌어온다. 배웠으면 평가한 과제가 모두 independent(쉽게 맞힘)일 때 풀어 준다.
+        오늘 이미 푼 선행은 다시 끌어오지 않는다(같은 날 실패로 세션을 늘리지 않는 규칙과 같다)."""
+        if not by_target[parent]['learned']:
+            return True
+        values = [states.get(task_id, {}) for task_id in target_tasks[parent]]
+        if any(v.get('lastDay') == today for v in values):
+            return False
+        rated = [v['rating'] for v in values if v.get('rating') is not None]
+        return not rated or any(r != 'independent' for r in rated)
     for tid in unseen[:quota]:
         add_target(tid, '새 목표')
     due = [t for t in candidates if states.get(t['task_id'], {}).get('rating') is not None and
@@ -214,8 +234,8 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
             return
         for parent in sorted(prereqs[tid], key=lambda p: order[p]):
             prerequisites(parent, visiting | {tid})
-            if not by_target[parent]['learned']:
-                add_target(parent, '명시적 선행 연결')
+            if pull(parent):
+                add_target(parent, '명시적 선행 연결', prepared_tasks)
         expanded.add(tid)
     for tid in sorted(chosen_targets, key=lambda t: order[t]):
         prerequisites(tid, set())
@@ -236,3 +256,10 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(t['target_id'] not in prepared for t in target_list),
             'scopeNote': '준비된 학습 범위 기준 · 앞으로 들어올 자료량 추정 없음'}
+
+
+def shuffled(tasks, seed):
+    """사진 반입 판의 「랜덤」 순서(docs/changes/2026-11-15-photo-quiz-shuffle). 같은 seed·같은 과제 묶음이면 넣은 순서와
+    상관없이 늘 같은 순서다 — 칩을 바꿔 뒷부분을 다시 골라도 출렁이지 않는다. 선행 연결이 없는 판(사진 반입)에만 쓴다."""
+    import hashlib
+    return sorted(tasks, key=lambda t: hashlib.sha256(f"{seed}\0{t['task_id']}".encode()).hexdigest())

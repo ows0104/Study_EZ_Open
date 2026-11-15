@@ -104,6 +104,8 @@ def with_mine(row, live):
         from studyez_contracts.roots import task_fingerprints
         prints = task_fingerprints(doc)
     out.task_fingerprints = {**prints, **{q['question_id']: question_fingerprint(q) for q in questions}}
+    # 이전 판 기록 승계 표(2026-11-15 replace-carry-records)도 덧붙인 사본에 그대로 둔다.
+    out.carried_questions = getattr(doc, 'carried_questions', None) or {}
     return replace(row, document=out)
 
 

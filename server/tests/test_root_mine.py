@@ -180,6 +180,13 @@ mine.LIMIT = limit
 from app.root_learning import light
 row = light.revision_row(SessionLocal(), 'test', 'demo', 'v4a')
 assert not any(mine.is_mine(t['task_id']) for t in row.document['tasks'])
+# 이전 판 기록 승계 표(replace-carry-records)는 덧붙인 사본에도 그대로 간다.
+row.document.carried_questions = {('v3', 'Q9'): 'Q1'}
+from app.root_learning.content import events_for
+live, _ = mine.current(events_for(SessionLocal(), 'test', 'demo', 'a'), 'v4a')
+assert live
+assert mine.with_mine(row, live).document.carried_questions == {('v3', 'Q9'): 'Q1'}
+del row.document.carried_questions
 
 # ── 이전 정책 판: 내 문제는 409, 메모는 된다. 새 판으로 옮기지 않는다 ─────────
 old = document()

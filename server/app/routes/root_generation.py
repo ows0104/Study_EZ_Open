@@ -71,6 +71,10 @@ class RequestIn(BaseModel):
     # the published run as it is and places again only the questions no goal took (unplaced-only/1). Questions,
     # reviews, importance and the medical review stay; the map gains the late goals of those questions.
     unplacedOnly: bool = False
+    # 「존재 목표 보강」(docs/changes/2026-11-15-tree-edge-goals R6, 사용자 「옛날꺼는 보강만」): with restart + replacePublished,
+    # the runner takes the published run and only adds existence goals, their questions and study-order prerequisites
+    # (presuppose-only/1). Published questions, reviews, medical verdicts and learning records stay.
+    presupposeOnly: bool = False
 
 
 def control_hash(db, subject, run_id):
@@ -103,7 +107,7 @@ def generation_input(packet):
         'inputMode':packet.get('inputMode','provided'),'authoring':packet.get('authoring','cli'),
         'parallelAuthoring':packet.get('parallelAuthoring',False),'pipeline':packet.get('pipeline'),
         'restartOf':packet.get('restartOf'),'duplicatesOnly':packet.get('duplicatesOnly',False),
-        'unplacedOnly':packet.get('unplacedOnly',False),
+        'unplacedOnly':packet.get('unplacedOnly',False),'presupposeOnly':packet.get('presupposeOnly',False),
         'sources':[{k:v for k,v in s.items() if k!='snapshotKey'} for s in packet['sources']]}
 
 
@@ -270,8 +274,30 @@ def resume_job(db, row, reason='', by=''):
 RESTARTABLE = ('failed', 'canceled')
 
 
-def restart_target(db, subject, run_id, user, replace_published=False):
-    """The lecture's latest request, which 「새로 출제」 sets aside (kept unchanged) for a new one with fresh budgets."""
+def carry_sources(db, subject, run_id):
+    """docs/changes/2026-11-15-replace-carry-records R2: every reviewed root-generation/4 revision of the lecture,
+    oldest first, with its tasks' (direction, question fingerprint). The replacement links each revision whose
+    questions it keeps, so learners' history on any of them continues on the new revision."""
+    from app.root_learning.light import stored
+    out = []
+    rows = db.execute(select(RootContent.revision, RootContent.light).where(
+        RootContent.subject == subject, RootContent.run_id == run_id, RootContent.reviewed.is_(True))
+        .order_by(RootContent.created_at, RootContent.revision)).all()
+    for revision, value in rows:
+        if value is None:   # a row stored before the light copy existed
+            value = stored(db.scalar(select(RootContent.document).where(RootContent.subject == subject,
+                RootContent.run_id == run_id, RootContent.revision == revision)))
+        doc, prints = value['document'], value['task_fingerprints']
+        if doc.get('generation_policy') != 'root-generation/4' or not doc.get('tasks'):
+            continue
+        out.append({'revision': revision, 'tasks': [{'direction_id': t['direction_id'], 'fingerprint': prints[t['task_id']]}
+                                                    for t in doc['tasks']]})
+    return out
+
+
+def restart_target(db, subject, run_id, user, replace_published=False, from_published=False):
+    """The lecture's latest request, which 「새로 출제」 sets aside (kept unchanged) for a new one with fresh budgets.
+    With from_published, the run of the revision published now (the one a reuse path takes as it is)."""
     row = db.scalars(select(RootGeneration).options(*LIGHT).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
                      .order_by(RootGeneration.created_at.desc(), RootGeneration.id.desc()).limit(1)).first()
     if row is None: raise HTTPException(409, '새로 출제할 기존 작업이 없습니다. 「Main Quiz 만들기」로 요청하세요.')
@@ -282,7 +308,17 @@ def restart_target(db, subject, run_id, user, replace_published=False):
     if job.state not in RESTARTABLE and not (replace_published and row.result_digest is not None and job.state == 'done'):
         raise HTTPException(409, '진행·대기 중인 작업이 있습니다. 끝나거나 중지된 뒤 새로 출제하세요.')
     if row.packet['owner'] != user.id: raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
-    return row
+    if not from_published: return row
+    # docs/changes/2026-11-15-replace-published-target: 「중복만 다시 판정」·「못 붙은 문항만 재배치」 reuse the stages of the
+    # run whose revision students see now — not the newest request, which may be an earlier attempt that failed.
+    control = db.get(RootControl, (subject, run_id))
+    revision = control.revision if control else None
+    published = db.get(RootGeneration, revision[len('auto-'):], options=LIGHT) if revision and revision.startswith('auto-') else None
+    if (published is None or (published.subject, published.run_id) != (subject, run_id)
+            or published.packet['revision'] != revision or published.result_digest is None):
+        raise HTTPException(409, '지금 공개된 판을 만든 작업을 찾지 못했습니다. 공개 판을 확인하세요.')
+    if published.packet['owner'] != user.id: raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
+    return published
 
 
 @router.get(BASE)
@@ -315,6 +351,10 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(422, '못 붙은 문항만 재배치는 공개된 새 구조 2(map-tree/3) 판을 교체하는 새로 출제 요청에서만 받습니다.')
     if payload.unplacedOnly and payload.duplicatesOnly:
         raise HTTPException(422, '중복만 다시 판정과 못 붙은 문항만 재배치는 함께 요청하지 않습니다.')
+    if payload.presupposeOnly and not (payload.restart and payload.replacePublished and payload.pipeline == map_tree.PIPELINE3):
+        raise HTTPException(422, '존재 목표 보강은 공개된 새 구조 2(map-tree/3) 판을 교체하는 새로 출제 요청에서만 받습니다.')
+    if payload.presupposeOnly and (payload.unplacedOnly or payload.duplicatesOnly):
+        raise HTTPException(422, '존재 목표 보강은 중복 재판정·재배치와 함께 요청하지 않습니다. 강의별로 하나씩 차례로 요청하세요.')
     if payload.restart and (payload.resume or not payload.pipeline or not payload.resumeReason.strip()):
         raise HTTPException(422, '새로 출제는 이유를 적은 Main-Quiz 앞 단계(map-tree) 새 요청만 받습니다.')
     if payload.examDate:
@@ -338,10 +378,13 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         return {'generation': public_job(db, prior), 'reused': True}
     if payload.restart:
         # Part of the input identity: the new request differs from the one it restarts, so it is not reused.
-        raw.update(restartOf=restart_target(db, subject, run_id, user, payload.replacePublished).id, restartReason=payload.resumeReason.strip())
+        raw.update(restartOf=restart_target(db, subject, run_id, user, payload.replacePublished,
+                                            payload.duplicatesOnly or payload.unplacedOnly or payload.presupposeOnly).id, restartReason=payload.resumeReason.strip())
         if payload.replacePublished: raw['replacePublished'] = True
         if payload.duplicatesOnly: raw['duplicatesOnly'] = True
-        if payload.unplacedOnly: raw['unplacedOnly'] = True
+        if payload.unplacedOnly: raw.update(unplacedOnly=True, carrySources=carry_sources(db, subject, run_id))
+        # presuppose-only/1 keeps every published task: the new revision continues their history (replace-carry-records).
+        if payload.presupposeOnly: raw.update(presupposeOnly=True, carrySources=carry_sources(db, subject, run_id))
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
         sources = assets_now(db, subject, run_id)
@@ -355,6 +398,10 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
                                                      RootGeneration.input_digest == digest)).first()
     if existing is None:
         existing=equivalent_generation(db,{'subject':subject,'runId':run_id,'title':lecture.title,'sources':identity_sources,**raw})
+        # docs/changes/2026-11-15-replace-published-target: a reuse path restarts from the published run every time, so an
+        # attempt of it that ended (failed·canceled) has the same input. A new reason asks for a new attempt, not that one.
+        if existing is not None and payload.restart and db.get(PrequizJob, canonical_generation(db, existing).job_id).state in RESTARTABLE:
+            existing = None
     if existing:
         existing=canonical_generation(db,existing)
         if existing.packet['privatePilot'] != payload.privatePilot or existing.packet['owner'] != user.id:

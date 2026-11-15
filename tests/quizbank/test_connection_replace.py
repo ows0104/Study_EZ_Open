@@ -7,6 +7,7 @@ import pytest
 
 from quizbank import connection_generate as g
 from studyez_contracts.roots import generation_v4 as v4
+from studyez_contracts.roots import task_fingerprints
 from studyez_contracts.roots.automation import packet_hash, validate_result as consume
 from tests.quizbank.test_map_relation_guard import LateModel, DuplicateLateModel
 from tests.quizbank.test_place_by_review import run_v1
@@ -21,9 +22,19 @@ def published(tmp_path, model=None):
     (previous / 'packet.json').write_text(json.dumps(old_packet, ensure_ascii=False), encoding='utf-8')
     packet = copy.deepcopy(old_packet)
     packet.update(revision='auto-new', generationId='new', restartOf='old', replacePublished=True, unplacedOnly=True,
-                  restartReason='못 붙은 문항 재배치')
+                  restartReason='못 붙은 문항 재배치', carrySources=carry_sources(old))
     packet['inputHash'] = packet_hash(packet)
     return previous, old, packet
+
+
+def carry_sources(old):
+    """The server's packet field (2026-11-15-replace-carry-records R2): an older revision whose first task's question
+    differed, then the published one."""
+    doc = old['document']
+    prints = task_fingerprints(doc)
+    tasks_ = [{'direction_id': t['direction_id'], 'fingerprint': prints[t['task_id']]} for t in doc['tasks']]
+    older = copy.deepcopy(tasks_); older[0]['fingerprint'] = '0' * 64
+    return [{'revision': 'auto-older', 'tasks': older}, {'revision': doc['revision'], 'tasks': tasks_}]
 
 
 def test_an_unplaced_question_gets_a_late_goal_and_nothing_else_changes(tmp_path):
@@ -49,6 +60,24 @@ def test_an_unplaced_question_gets_a_late_goal_and_nothing_else_changes(tmp_path
     names = [s['name'] for s in meta['stages']]
     assert names[:len(old['manifest']['stages'])] == [s['name'] for s in old['manifest']['stages']] and names[-4:] == LATE
     assert json.loads((previous / 'result.json').read_text(encoding='utf-8')) == old
+    # 2026-11-15-replace-carry-records R1: every direction of the published revision continues its history; the older
+    # revision only where an unchanged question remains.
+    links = result['document']['equivalences']
+    old_dirs = sorted({t['direction_id'] for t in old['document']['tasks']})
+    assert [l['from_direction'] for l in links if l['revision'] == old['document']['revision']] == old_dirs
+    assert all(l['from_direction'] == l['to_direction'] for l in links)
+    n = len(old['document']['tasks'])
+    assert [(r['revision'], r['tasks'], r['of']) for r in record['carry']] == [('auto-older', n - 1, n), (old['document']['revision'], n, n)]
+
+
+def test_without_earlier_fingerprints_nothing_runs(tmp_path):
+    previous, _, packet = published(tmp_path)
+    del packet['carrySources']
+    packet['inputHash'] = packet_hash(packet)
+    model = LateModel()
+    with pytest.raises(Exception, match='carrySources'):
+        g.run(packet, tmp_path / 'new', invoke=model, unplaced_of=previous)
+    assert model.calls == []
 
 
 def test_a_second_run_reuses_the_late_stages(tmp_path):

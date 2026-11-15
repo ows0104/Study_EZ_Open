@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ROOT_TIERS } from '../types/rootLearning';
 import type { RootFocus, RootOverview, RootSummary, RootPolicy, RootTierName } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
-import { readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
+import { readQuizMode, readQuizOrder, saveQuizMode, saveQuizOrder, type QuizMode, type QuizOrder } from './quizMode';
 
 export function RootPolicyNotice({policy}:{policy?:RootPolicy}) {
   if(!policy)return null;
@@ -45,7 +45,7 @@ function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;
   </div>;
 }
 
-export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin,resumeCount,onBack}:{info:RootOverview;onStart:()=>void;disabled:boolean;
+export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin,resumeCount,onBack}:{info:RootOverview;onStart:(order?:QuizOrder)=>void;disabled:boolean;
   /** 개념 지도는 회차가 없으면 쓰기 큐를 쓰지 않아, 보관된 충돌이 있어도 열린다(2026-11-12). */
   mapDisabled?:boolean;starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;
   /** 진행 중 회차의 남은 문항 수. 읽는 동안은 undefined. */
@@ -58,6 +58,9 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
   // 주관식/객관식 모드(2026-11-14). 풀이 화면이 같은 저장값을 읽는다.
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
   const choose=(next:QuizMode)=>{saveQuizMode(next);setMode(next);};
+  // 사진 반입 판의 순서(2026-11-15). 이어 풀 때는 그 회차의 지금 순서를 먼저 보인다. 바꾸고 시작하면 남은 문항만 다시 놓는다.
+  const [order,setOrder]=useState<QuizOrder>(()=>info.order??readQuizOrder());
+  const chooseOrder=(next:QuizOrder)=>{saveQuizOrder(next);setOrder(next);};
   return <section className="mq-start">
     <header className="page-head mq-head">
       <div>
@@ -90,8 +93,13 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
               <button key={value} type="button" role="radio" aria-checked={mode===value} className={mode===value?'is-on':''}
                 disabled={starting} onClick={()=>choose(value)}>{label}</button>)}
           </div>
+          {info.orderChoice&&<div className="mq-mode" role="radiogroup" aria-label="문항 순서">
+            {([['ordered','순서대로'],['random','랜덤']] as [QuizOrder,string][]).map(([value,label])=>
+              <button key={value} type="button" role="radio" aria-checked={order===value} className={order===value?'is-on':''}
+                disabled={starting} onClick={()=>chooseOrder(value)}>{label}</button>)}
+          </div>}
         </div>
-        <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart} aria-busy={starting}>
+        <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={()=>onStart(info.orderChoice?order:undefined)} aria-busy={starting}>
           <Icon.play/>{info.sessionId?'오늘 학습 재개':info.todayDone?'더 풀기':'오늘 학습 시작'}
           {count!==undefined&&<span className="mq-card-count" aria-label={`카드 ${count}개`} aria-live="polite"
             data-busy={focusing&&!info.sessionId||undefined}>{count.toLocaleString('ko-KR')}</span>}</button>

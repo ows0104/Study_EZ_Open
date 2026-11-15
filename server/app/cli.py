@@ -7,6 +7,10 @@
     python -m app.cli purge-artifacts --apply    정말 지운다
     python -m app.cli main-quiz-light            Main-Quiz 사본 칸·그림 표: 무엇을 만들고 채울지만 본다
     python -m app.cli main-quiz-light --apply    칸·표를 만들고 비어 있는 판을 채운다(원본은 그대로)
+    python -m app.cli main-quiz-photo-sources <과목> <회차> [S1=<pdf> ...]
+                                                 사진 반입 판의 참고 원본 사본: 무엇을 올릴지만 본다
+    python -m app.cli main-quiz-photo-sources <과목> <회차> [S1=<pdf> ...] --apply
+                                                 지문이 같은 PDF만 지문 이름 키로 올린다(DB는 읽기만)
 
 마이그레이션 도구를 두지 않았다. 표가 열둘이고 고치는 사람이 한 명이라
 Alembic이 얹는 무게가 그것으로 막는 사고보다 크다. 스키마가 바뀌면 여기서
@@ -407,6 +411,71 @@ def main_quiz_light(apply: bool) -> None:
     print(f"채운 판 {filled}개, 새 그림 {images}개")
 
 
+def main_quiz_photo_sources(subject: str, run_id: str, files: dict[str, Path], apply: bool) -> None:
+    """사진 반입 판(photo-import/1)의 참고 원본(2026-11-15 photo-quiz-slides). 이 판에는 출제 기록이 없어 원본 PDF 사본이 없다.
+
+    판의 각 원본(review.sources)에 대해 지문 이름 키(`evidence.photo_snapshot_key`)에 사본이 있는지 보고, 없으면
+    ① 같은 과목의 출제 기록에 고정된 같은 지문 사본, ② 명령줄로 준 로컬 PDF 중 지문이 같은 것을 올린다.
+    지문이 다르면 올리지 않는다. 판·학습 기록·DB는 읽기만 하고, 이미 있는 키는 덮어쓰지 않는다."""
+    import hashlib
+    import io as _io
+    from sqlalchemy.orm import defer
+    from app.models.root_generation import RootGeneration
+    from app.models.root_learning import RootContent, RootControl
+    from app.root_learning.evidence import photo_snapshot_key
+    from app.root_learning.reviewed_import import source_records
+    from app.storage import ObjectStorage
+    from studyez_contracts.roots.media import photo_import
+
+    storage = ObjectStorage()
+    with SessionLocal() as db:
+        control = db.get(RootControl, (subject, run_id))
+        if control is None or not control.revision:
+            raise SystemExit(f"{subject}/{run_id}: 활성 Main-Quiz 판이 없습니다.")
+        revision = control.revision
+        row = db.scalars(select(RootContent).where(RootContent.subject == subject, RootContent.run_id == run_id,
+                                                   RootContent.revision == revision)).first()
+        document = row.document if row else None
+        if not document or not photo_import(document):
+            raise SystemExit(f"{subject}/{run_id} {revision}: 사진 반입 판(photo-import/1)이 아닙니다.")
+        frozen = {}
+        for generation in db.scalars(select(RootGeneration).where(RootGeneration.subject == subject)
+                                     .options(defer(RootGeneration.result), defer(RootGeneration.web_response))):
+            try:
+                records = source_records(generation)
+            except Exception:  # noqa: BLE001 — 고정 사본이 맞지 않는 기록은 쓰지 않는다
+                continue
+            for record in records:
+                if record.get('snapshotKey'):
+                    frozen.setdefault(record['sha256'], record['snapshotKey'])
+        db.rollback()
+    print(f"{subject}/{run_id} {revision}")
+    missing = 0
+    for source in document['review']['sources']:
+        sid, sha, key = source['source_id'], source['sha256'], photo_snapshot_key(source['sha256'])
+        if storage.head(key) is not None:
+            print(f"  {sid} 있음 {key}")
+            continue
+        body, origin = None, None
+        if sha in frozen:
+            body, origin = storage.get_bytes(frozen[sha]), f"고정 사본 {frozen[sha]}"
+        if (body is None or hashlib.sha256(body).hexdigest() != sha) and sid in files:
+            body, origin = files[sid].read_bytes(), f"로컬 {files[sid]}"
+        if body is None or hashlib.sha256(body).hexdigest() != sha or not body.startswith(b'%PDF'):
+            missing += 1
+            print(f"  {sid} 없음 — 지문 {sha[:12]}인 PDF를 {sid}=<경로>로 주세요 ({source['label']})")
+            continue
+        if not apply:
+            print(f"  {sid} 올릴 것 {len(body) / 1e6:.1f} MB ← {origin}")
+            continue
+        storage.upload_fileobj(_io.BytesIO(body), key, content_type='application/pdf')
+        print(f"  {sid} 올림 {len(body) / 1e6:.1f} MB ← {origin}")
+    if not apply:
+        print("바꾼 것 없음. 실제로 하려면 --apply")
+    if missing:
+        raise SystemExit(1)
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
@@ -419,6 +488,10 @@ def main() -> None:
         purge_artifacts(apply="--apply" in sys.argv[2:])
     elif command == "main-quiz-light":
         main_quiz_light(apply="--apply" in sys.argv[2:])
+    elif command == "main-quiz-photo-sources" and len(sys.argv) >= 4:
+        files = dict(arg.split("=", 1) for arg in sys.argv[4:] if "=" in arg)
+        main_quiz_photo_sources(sys.argv[2], sys.argv[3], {k: Path(v) for k, v in files.items()},
+                                apply="--apply" in sys.argv[4:])
     else:
         raise SystemExit(__doc__)
 

@@ -8,7 +8,11 @@ Input is a local spec JSON kept OUTSIDE the repository (it holds lecture and jok
      "authorization": "사용자 원문 승인 문장",
      "questions": [{"id", "topic", "tier", "question", "clue", "answer", "explanation", "exam",
                     "choices": [...] | null, "correct": "A".."E" | null, "learning_page",
+                    "order": [..] (optional task sort key; default [learning_page]),
                     "images": [{"file", "source_id", "page", "crop": [x0,y0,x1,y1]}]}]}
+
+`learning_page` is the page in the question's own source; when one quiz holds several lectures (병리 1, then
+병리 2, then the practical), `order` puts the lectures in sequence, e.g. [lecture_index, learning_page].
 
 Image files are the original pictures at those page positions (embedded photos, stamp captures without the
 note-taker's circles, jokbo figures), already encoded as JPEG or PNG. The document has no generation_policy:
@@ -175,7 +179,8 @@ def build(spec, base):
                       'partial_direction_ids': [], 'missing_direction_ids': [], 'unknown_direction_ids': [],
                       'reason': '수작업 반입: 문항마다 자기 방향 전체를 묻는다.', 'exclusion_basis': None}],
     }
-    order = sorted(range(len(questions)), key=lambda i: (questions[i]['learning_page'], i))
+    keys = [q.get('order') or [q['learning_page']] for q in spec['questions']]
+    order = sorted(range(len(questions)), key=lambda i: (keys[i], i))
     doc = {'schema_version': 'roots/1', 'revision': spec['revision'], 'title': spec['title'], 'review': review,
            'bank_snapshot': bank, 'bank_source': 'standalone', 'bank_build_id': None,
            'adopted_target_ids': [t['target_id'] for t in review_targets],

@@ -28,6 +28,8 @@ export type RootOverview = {revision:string; title:string; policyReady:boolean; 
   focus?:RootFocus;
   /** 오늘 학습 흐름에서 지나간 자리 수(2026-11-14 이어 풀기). sessionId가 없고 0보다 크면 오늘 목록을 다 푼 것 → 「더 풀기」. */
   todayDone?:number;
+  /** 사진 반입 판(2026-11-15): 시작 화면에 「순서대로/랜덤」을 보인다. order는 진행 중 회차의 지금 순서(없으면 null). */
+  orderChoice?:boolean; order?:'ordered'|'random'|null;
   scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;

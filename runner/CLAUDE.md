@@ -27,6 +27,8 @@ Main-Quiz 요청(generationId)마다 모델·이유·승인 발언·시각을 �
 `claude-…` 모델은 `studyez_llm.codex.run`이 Claude Code CLI(`studyez_llm/claude.py`, 이 PC의 로그인)로 넘긴다.
 프롬프트·스키마·검사·수정 상한은 같고, 원장·영수증에는 실제 모델이 남는다. 형식이 틀린 지정 파일은 그 일감을 보류한다.
 - 거절 표식(`content-block.json`)은 거절한 공급자만 막는다. 다른 공급자로 바꿔 이어 갈 때도 관리자 재개 이유가 필요하다.
+- Claude CLI는 안전 분류기 거절 뒤 세션을 한 번 이어 가고 `stop_reason`을 출력에 남기지 않는다. `claude.refusal_sign`이 CLI가 남기는
+  중단 tool_result·알림·안내 문구로 거절을 찾아 영수증이 있어도 보류한다(`docs/changes/2026-11-15-claude-refusal-classification/`).
 - 생성 단계 중 다른 모델로 완료된 단계가 있으면 모델을 바꿔 이어 가지 못한다(검증에서 멈춘다).
 - 복구 전용 도구(root_chunked_*, root_plan_repair, root_*_resume 등)는 Codex 기록 전용이다. 전역 `STUDYEZ_MODEL`을 Claude로 두지 않는다.
 - 강의 자료를 Anthropic으로 보내는 일이므로 지정 행을 쓰기 전에 사용자 확인을 받는다(docs/development/README.md 「사람에게 묻는 것」).

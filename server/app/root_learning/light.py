@@ -45,8 +45,12 @@ _cache: OrderedDict[tuple[str, str, str, str], LightDocument] = OrderedDict()
 
 
 class LightDocument(dict):
-    """원본 문서에서 그림 바이트만 뺀 dict. `task_fingerprints`는 원본으로 계산한 값(state.replay_tasks가 쓴다)."""
+    """원본 문서에서 그림 바이트만 뺀 dict. `task_fingerprints`는 원본으로 계산한 값(state.replay_tasks가 쓴다).
+
+    `carried_questions`: (이전 판, 그 판의 문항 ID) → 이 판의 문항 ID. 이 판의 equivalences가 잇는 방향에서 문항 지문이
+    같은 것만(docs/changes/2026-11-15-replace-carry-records R4). 「내 중요도」·「이 문제 제외」가 이 표로 이어진다."""
     task_fingerprints: dict[str, str]
+    carried_questions: dict = {}
 
 
 @dataclass(frozen=True)
@@ -172,8 +176,37 @@ def _load(db, cache_key):
                 RootContent.subject == subject, RootContent.run_id == run_id, RootContent.revision == revision))
             light = lighten(original)
             del original
+        light.carried_questions = carried_questions(db, subject, run_id, light)
         _put(cache_key, light)
         return light
+
+
+def carried_questions(db, subject, run_id, light) -> dict:
+    """(이전 판, 문항 ID) → 이 판의 문항 ID: 링크된 방향에서 문항 지문이 같은 과제끼리. 링크가 없으면 빈 표.
+    이전 판은 사본 칸(`light`, 문서당 약 0.5 MB)만 읽는다."""
+    by_revision = {}
+    for link in light.get('equivalences') or ():
+        by_revision.setdefault(link['revision'], {})[link['from_direction']] = link['to_direction']
+    if not by_revision:
+        return {}
+    prints = light.task_fingerprints
+    mine = {(t['direction_id'], prints[t['task_id']]): t['question_id'] for t in light.get('tasks') or ()}
+    out = {}
+    for revision, directions in by_revision.items():
+        value = db.scalar(select(RootContent.light).where(
+            RootContent.subject == subject, RootContent.run_id == run_id, RootContent.revision == revision))
+        if value is None:
+            original = db.scalar(select(RootContent.document).where(
+                RootContent.subject == subject, RootContent.run_id == run_id, RootContent.revision == revision))
+            if original is None:
+                continue
+            value = stored(original)
+        for t in value['document'].get('tasks') or ():
+            to = directions.get(t['direction_id'])
+            question = mine.get((to, value['task_fingerprints'][t['task_id']])) if to else None
+            if question:
+                out[(revision, t['question_id'])] = question
+    return out
 
 
 def revision_row(db, subject, run_id, revision) -> LightRow | None:

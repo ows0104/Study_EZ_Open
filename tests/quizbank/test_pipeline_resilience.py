@@ -114,7 +114,9 @@ def test_coverage_after_an_add_round_goes_through_the_side_by_side_judgments(tmp
     monkeypatch.setattr(batches, 'judgments', judgments)
     _, _, result = t4.run(tmp_path)
     assert ['v4-coverage-1-0'] in seen   # the add round's coverage chunks, with their unchanged names
-    assert [s['name'] for s in result['manifest']['stages']][:5] == ['normalize', 'v4-coverage-0-0', 'v4-map-check-0', 'v4-add-0', 'v4-coverage-1-0']
+    # presuppose/1 (docs/changes/2026-11-15-tree-edge-goals): the stem judgment runs beside the first coverage.
+    assert [s['name'] for s in result['manifest']['stages']][:6] == ['normalize', 'v4-coverage-0-0', 'v4-presuppose-0', 'v4-map-check-0',
+                                                                     'v4-add-0', 'v4-coverage-1-0']
 
 
 def test_six_calls_run_side_by_side_and_the_ceiling_is_configurable(monkeypatch):
