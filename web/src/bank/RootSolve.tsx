@@ -260,7 +260,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       }}/>}
     {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
     {task&&<div className={`quiz-card bank-card mq-card${task.answer?' is-answered':''}`}><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
-      onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
+      onStimuliReady={ready=>setImageState({taskId:task.id,ready})} photoViewer onPick={pick} disabled={locked}
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
       recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
       choiceNotes={task.answer?.mcqWrongNotes} choiceGroups={(mcq??recallSet)?.groups}/>
