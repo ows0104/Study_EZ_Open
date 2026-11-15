@@ -12,7 +12,7 @@ Input is a local spec JSON kept OUTSIDE the repository (it holds lecture and jok
                     "images": [{"file", "source_id", "page", "crop": [x0,y0,x1,y1]}]}]}
 
 `learning_page` is the page in the question's own source; when one quiz holds several lectures (practical, then
-병리 1, then 병리 2), `order` puts the lectures in sequence, e.g. [lecture_index, learning_page].
+병리 2, then the practical), `order` puts the lectures in sequence, e.g. [lecture_index, learning_page].
 
 Image files are the original pictures at those page positions (embedded photos, stamp captures without the
 note-taker's circles, jokbo figures), already encoded as JPEG or PNG. The document has no generation_policy:
