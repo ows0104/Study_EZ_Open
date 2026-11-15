@@ -121,11 +121,16 @@ def validate_document(doc):
         from .generation_v2 import order_plan
         require(order_plan(doc,doc['tasks'],set(tasks),set())==doc['tasks'],'roots: prerequisite order mismatch')
     require(type(doc['equivalences']) is list, 'roots: equivalences array required')
-    destinations = set()
+    # One link per (earlier revision, new direction) and per (earlier revision, old direction). A new direction may
+    # continue several earlier revisions (docs/changes/2026-11-15-replace-carry-records R3): replay merges their
+    # events in time order.
+    destinations, sources = set(), set()
     for link in doc['equivalences']:
         require(type(link) is dict and set(link) == {'revision', 'from_direction', 'to_direction', 'reason'}, 'roots: invalid equivalence')
         require(all(type(v) is str and v.strip() for v in link.values()), 'roots: equivalence needs review reason')
-        require(link['to_direction'] in directions and link['to_direction'] not in destinations, 'roots: ambiguous equivalence')
+        destination, source = (link['revision'], link['to_direction']), (link['revision'], link['from_direction'])
+        require(link['to_direction'] in directions and destination not in destinations and source not in sources,
+                'roots: ambiguous equivalence')
         require(link['revision'] != doc['revision'], 'roots: self equivalence')
-        destinations.add(link['to_direction'])
+        destinations.add(destination); sources.add(source)
     return copy.deepcopy(doc)

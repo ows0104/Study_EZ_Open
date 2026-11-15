@@ -42,7 +42,7 @@ NOT_COPIED = {'result.json', 'readiness.json', 'packet.json', 'ledger.json', 'ev
 # Packet fields that name the request, not the lecture input; everything else must be the previous run's.
 REQUEST_KEYS = {'generationId', 'revision', 'inputHash', 'derivedFrom', 'owner', 'privatePilot', 'requestedExamDate',
                 'examDate', 'restartOf', 'restartReason', 'replacePublished', 'duplicatesOnly', 'unplacedOnly', 'presupposeOnly',
-                'operatorResumes'}
+                'carrySources', 'operatorResumes'}
 SOURCE_LOCAL = {'snapshotKey', 'localPath', 'downloadUrl'}
 
 

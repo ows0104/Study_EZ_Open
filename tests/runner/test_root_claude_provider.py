@@ -102,6 +102,32 @@ def test_claude_거절은_claude만_막고_이름을_밝힌다(claude_restricted
     n.require_unblocked(out, model='gpt-6.1-sol')
 
 
+def test_거절_뒤_이어_간_claude_세션은_실행_실패가_아니라_보류다(tmp_path, monkeypatch):
+    """2026-11-15 261109_02: CLI가 거절 뒤 한 번 이어 가 영수증 없이 끝나자 'Expecting value' execution_failed로 남았다."""
+    from tests.studyez_llm.test_claude import fake_process, retried_after_refusal
+    monkeypatch.setenv('STUDYEZ_CODEX_USAGE_DIR', str(tmp_path / 'usage'))
+    monkeypatch.setenv('STUDYEZ_CLAUDE_BIN', 'claude-test-bin')
+    monkeypatch.setattr(claude, 'run_process', fake_process(retried_after_refusal(), []))
+    out = tmp_path / 'out'; out.mkdir(); packet = f.packet(tmp_path / 'source.txt'); g.write(out / 'packet.json', packet)
+
+    def invoke(prompt, **kwargs):
+        if kwargs['cwd'].parent.name == 'generate':
+            return claude.run(prompt, **{**kwargs, 'model': CLAUDE})
+        return provider(out)(prompt, **kwargs)
+    with pytest.raises(g.codex.SessionError):
+        g.run(packet, out, invoke=n.NativeJson(out, invoke=invoke))
+    failure = n.read(out / '.native/generate/failure.json')
+    assert failure['errorType'] == 'SessionError'
+    assert failure['classification'] == {'kind': 'model_content_restricted', 'message': n.CLAUDE_RESTRICTED_MESSAGE,
+                                         'automaticRetry': False}
+    proof = n.read(out / '.native/generate/content-block.json')['proof']
+    assert proof['provider'] == 'claude' and proof['classification']['message'] == n.CLAUDE_RESTRICTED_MESSAGE
+    assert not (out / '.native/generate/provider.json').exists()   # 영수증 없는 응답을 완료로 적지 않는다
+    with pytest.raises(n.ContentRestricted, match='Claude'):
+        n.require_unblocked(out, model=CLAUDE)
+    n.require_unblocked(out, model='gpt-6.1-sol')
+
+
 def test_codex_거절_표식의_모양은_그대로다(restricted):
     out, packet, calls = restricted
     assert 'provider' not in n.read(out / '.native/generate/content-block.json')['proof']

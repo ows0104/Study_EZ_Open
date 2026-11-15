@@ -1023,6 +1023,29 @@ def _placement4(value, brief, reviewed, meta):
     return compiled[0]
 
 
+CARRY_REASON = '못 붙은 문항 재배치: 같은 방향·같은 문항 지문의 학습 기록을 잇는다'
+
+
+def carry_links(doc, sources):
+    """docs/changes/2026-11-15-replace-carry-records R1: one equivalence per (earlier revision, direction) that keeps at
+    least one of that revision's questions unchanged on the same direction. The server replays an earlier event only for
+    the task whose question fingerprint equals the one the event recorded, so a changed question starts fresh.
+    `sources`: the packet's `carrySources`. Returns (links, per-revision record for the manifest)."""
+    from .validate import task_fingerprints
+    prints = task_fingerprints(doc)
+    mine = {(t['direction_id'], prints[t['task_id']]) for t in doc['tasks']}
+    links, record = [], []
+    for source in sources:
+        if source['revision'] == doc['revision']:
+            continue
+        same = [t for t in source['tasks'] if (t['direction_id'], t['fingerprint']) in mine]
+        directions = sorted({t['direction_id'] for t in same})
+        links += [{'revision': source['revision'], 'from_direction': d, 'to_direction': d, 'reason': CARRY_REASON}
+                  for d in directions]
+        record.append({'revision': source['revision'], 'links': len(directions), 'tasks': len(same), 'of': len(source['tasks'])})
+    return links, record
+
+
 def _judgments4(value, packet, brief, reviewed, meta, doc):
     placement = _placement4(value, brief, reviewed, meta)
     require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result4: not-ready goals differ')
@@ -1032,6 +1055,9 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
                                      placement=placement, presuppositions=meta.get('presuppositions'))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
+    if meta.get('unplacedOnly') and packet.get('carrySources'):
+        # A replacement continues the history of the earlier revisions it keeps questions of (replace-carry-records).
+        again['equivalences'] = carry_links(again, packet['carrySources'])[0]
     require(again == doc, 'result4: the document is not the assembly of the reviewed judgments')
     require(placed == {k: meta[k] for k in placed}, 'result4: merged duplicates or unplaced questions differ')
     require(meta['readiness'] == readiness(brief, meta['coverage'], doc), 'result4: the readiness table is not of these judgments')

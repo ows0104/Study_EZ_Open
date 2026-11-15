@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { RootMapData, RootSummary } from '../types/rootLearning';
 import { useFlagPreference } from '../preferences';
-import { ancestors, buildTree, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type TreeNode } from './rootMapTree';
+import { ancestors, buildTree, contentRelations, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type TreeNode } from './rootMapTree';
 
 /*
  * 개념 지도 — 가지 보기(2026-11-09).
@@ -95,9 +95,9 @@ export function RootMap({map,summary,title='강의 전체',onBack,backTo='questi
   const nodeOf=useMemo(()=>{const m=new Map<string,string>();
     for(const n of tree.nodes.values())if(n.kind==='concept')for(const id of n.conceptIds)m.set(id,n.id);return m;},[tree]);
   const allLinks=useMemo(()=>{const seen=new Set<string>();
-    return map.relations.map(r=>({...r,a:nodeOf.get(r.from_id),b:nodeOf.get(r.to_id)}))
+    return contentRelations(map).map(r=>({...r,a:nodeOf.get(r.from_id),b:nodeOf.get(r.to_id)}))
       .filter((r):r is typeof r&{a:string;b:string}=>{
-        if(!r.a||!r.b||r.a===r.b)return false;const key=[r.a,r.b].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;});},[map.relations,nodeOf]);
+        if(!r.a||!r.b||r.a===r.b)return false;const key=[r.a,r.b].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;});},[map,nodeOf]);
   const linked=node?.kind==='concept'?allLinks.filter(r=>r.a===node.id||r.b===node.id).slice(0,20):[];
   const linkedIds=new Set(linked.map(r=>r.a===node?.id?r.b:r.a));
 

@@ -124,6 +124,82 @@ def test_거절은_콘텐츠_제한_표식으로_올린다(monkeypatch, tmp_path
     assert not codex.network_failure(caught.value)
 
 
+INTERRUPTED, NOT_RUN = claude.REFUSAL_TOOL_RESULTS[1], claude.REFUSAL_TOOL_RESULTS[0]
+NUDGE = (claude.REFUSAL_NUDGE + " — this is not a tool or API error. The rest of it was withheld, and tool calls in it "
+         "that had not finished did not run. Do not produce that content again, even reworded.")
+NOTICE = "Opus 5.5's safeguards stopped the response above · continuing once with that noted"
+
+
+def retried_after_refusal(*, tool=True, notice=True, nudge=True, result=None):
+    """Claude Code 2.1.282가 거절 뒤 한 번 이어 간 세션의 stream-json(2026-11-15 v4-fix-1-1 세션 기록의 순서).
+    거절된 응답은 출력에 없고, 모든 assistant 이벤트의 stop_reason은 비어 있으며, result는 end_turn·성공이다."""
+    rows = [{"type": "system", "subtype": "init", "session_id": "s-r"},
+            {"type": "assistant", "session_id": "s-r",
+             "message": {"stop_reason": None, "content": [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}]}}]
+    if tool:
+        rows.append({"type": "user", "session_id": "s-r", "isSynthetic": False, "message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "t1", "is_error": True, "content": INTERRUPTED}]}})
+    if notice:
+        rows.append({"type": "system", "subtype": "informational", "session_id": "s-r", "content": NOTICE, "level": "notice"})
+    if nudge:
+        rows.append({"type": "user", "session_id": "s-r", "isSynthetic": True, "message": {"role": "user", "content": NUDGE}})
+    rows += [{"type": "assistant", "session_id": "s-r", "message": {"stop_reason": None, "content": [
+                 {"type": "text", "text": "I couldn't finish this task, so there is no result.json and no SHA256 receipt."}]}},
+             {"type": "result", "subtype": "success", "is_error": False, "stop_reason": "end_turn", "session_id": "s-r",
+              "num_turns": 13, "total_cost_usd": 0.47, "usage": {"input_tokens": 24, "output_tokens": 5991},
+              "result": "I'm not calling StructuredOutput, because the only thing I could send is a fake hash.",
+              **(result or {})}]
+    return "\n".join(json.dumps(r, ensure_ascii=False) for r in rows)
+
+
+@pytest.mark.parametrize("signs", [
+    {},                                              # 실제로 남는 셋 모두
+    {"notice": False, "nudge": False},               # 멈춘 도구 호출만
+    {"tool": False, "nudge": False},                 # 시스템 알림만
+    {"tool": False, "notice": False},                # CLI 안내만(도구 없는 가림 실행)
+])
+def test_거절_뒤_이어_간_세션도_콘텐츠_제한이다(monkeypatch, tmp_path, signs):
+    """2026-11-15: stop_reason이 어디에도 남지 않아 「Expecting value」 실행 실패로 보였다."""
+    from runner import root_native_json as native
+    monkeypatch.setattr(claude, "run_process", fake_process(retried_after_refusal(**signs), []))
+    with pytest.raises(codex.SessionError) as caught:
+        codex.run("task", blind=False, cwd=tmp_path, model=MODEL)
+    assert claude.REFUSAL_MARKER in str(caught.value) and "s-r" in str(caught.value)
+    kind = native.classify_error(caught.value)
+    assert kind == {"kind": "model_content_restricted", "message": native.CLAUDE_RESTRICTED_MESSAGE, "automaticRetry": False}
+    assert not codex.network_failure(caught.value)
+
+
+def test_거절_뒤_영수증을_냈어도_보류한다(monkeypatch, tmp_path):
+    """멈춘 내용은 버려졌다. 이어 간 결과가 그 부분을 조용히 뺐을 수 있어 영수증이 있어도 받지 않는다."""
+    receipt = {"result": "", "structured_output": {"path": "result.json", "sha256": "0" * 64}}
+    monkeypatch.setattr(claude, "run_process", fake_process(retried_after_refusal(result=receipt), []))
+    with pytest.raises(codex.SessionError, match=r"\[CLAUDE_CONTENT_RESTRICTED\]"):
+        codex.run("task", blind=False, cwd=tmp_path, model=MODEL)
+
+
+def test_결과의_정지_세부도_거절이다(monkeypatch, tmp_path):
+    out = stream({"stop_reason": None, "stop_details": {"type": "refusal", "category": "bio"}})
+    monkeypatch.setattr(claude, "run_process", fake_process(out, []))
+    with pytest.raises(codex.SessionError, match=r"\[CLAUDE_CONTENT_RESTRICTED\]"):
+        codex.run("task", blind=False, cwd=tmp_path, model=MODEL)
+
+
+def test_같은_문구를_모델이나_도구가_내면_거절이_아니다(monkeypatch, tmp_path):
+    """표식은 CLI가 만드는 자리에서만 읽는다. 모델 글·도구 출력·부분 일치는 정상 완료다."""
+    said = [
+        {"type": "assistant", "message": {"stop_reason": None, "content": [{"type": "text", "text": NUDGE + " " + NOTICE}]}},
+        {"type": "user", "message": {"role": "user", "content": [   # 도구가 그 문구를 출력했다(오류 아님)
+            {"type": "tool_result", "tool_use_id": "t1", "is_error": False, "content": INTERRUPTED}]}},
+        {"type": "user", "message": {"role": "user", "content": [   # 오류지만 전문이 아니다
+            {"type": "tool_result", "tool_use_id": "t2", "is_error": True, "content": "grep: " + NOT_RUN}]}},
+        {"type": "user", "message": {"role": "user", "content": "Please read: " + NUDGE}},
+        {"type": "system", "subtype": "notice", "content": NOTICE},
+    ]
+    monkeypatch.setattr(claude, "run_process", fake_process(stream(extra=said), []))
+    assert codex.run("task", blind=False, cwd=tmp_path, model=MODEL)["text"] == '{"ok":true}'
+
+
 def test_오류_결과와_중단은_실패다(monkeypatch, tmp_path):
     bad = stream({"is_error": True, "result": "Failed to authenticate"})
     monkeypatch.setattr(claude, "run_process", fake_process(bad, []))
