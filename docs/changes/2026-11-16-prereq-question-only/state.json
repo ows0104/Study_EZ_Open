@@ -10,11 +10,11 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-15T16:11:55.610972+00:00",
+      "at": "2026-11-15T16:20:43.439073+00:00",
       "evidence": "사용자 2026-11-15 「1+2+3 다 고치기」 / 2026-11-16 「응 그 방향으로 진행해줘」·「아니야 어느 정도의 선행은 끌어오는게 좋긴할듯.. 지금 선행이 뭔가 과도하게 엉켜서 그렇지.」·「병합해줘」·「존재 목표만 끌어오기」",
-      "scope": "plan.md 범위(+ presuppose.is_existence_edge, planning.py 필터 밖 존재 목표만, test_root_prereq_release 갱신), PR #197 master 병합(자동 배포). DB 스키마·운영 데이터·학습 기록 변경 제외",
+      "scope": "plan.md 범위(+ presuppose.is_existence_edge, planning.py 필터 밖 존재 목표만, test_root_prereq_release, master 병합에 따른 mine.py overlay 한 줄), PR #197 master 병합(자동 배포). DB 스키마·운영 데이터·학습 기록 변경 제외",
       "evidence_version": 2,
-      "source_hash": "b019f8b994c01dae8e009b0c485e048bde023ce79619d027e600427f75e0d2da",
+      "source_hash": "7579e3c00e2e5ca4a5f8c7cef3b9180d2882e15c40b9de5a264caa8cbc4cfde4",
       "plan_hash": "9e82c7dce3161a17da9b9f80caa871021456373aab4ca42c27b52233de744ba1",
       "inputs": [
         ".github",
@@ -360,13 +360,110 @@
         "web"
       ],
       "log": "runs/_development/2026-11-16-prereq-question-only/1794759529922085700-web.log"
+    },
+    {
+      "name": "contracts",
+      "at": "2026-11-15T16:21:02.071730+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "-q"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7579e3c00e2e5ca4a5f8c7cef3b9180d2882e15c40b9de5a264caa8cbc4cfde4",
+      "plan_hash": "9e82c7dce3161a17da9b9f80caa871021456373aab4ca42c27b52233de744ba1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794759644428988600-contracts.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-15T16:21:13.284517+00:00",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7579e3c00e2e5ca4a5f8c7cef3b9180d2882e15c40b9de5a264caa8cbc4cfde4",
+      "plan_hash": "9e82c7dce3161a17da9b9f80caa871021456373aab4ca42c27b52233de744ba1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794759662467153000-web.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-15T16:24:33.657622+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8'); py=r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe'; sys.exit(max(subprocess.run([py,'-m','tests',f],cwd=os.path.join(root,'server'),env=env).returncode for f in ('prereq','root','main_quiz','route_contract','bank_personal')))"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "7579e3c00e2e5ca4a5f8c7cef3b9180d2882e15c40b9de5a264caa8cbc4cfde4",
+      "plan_hash": "9e82c7dce3161a17da9b9f80caa871021456373aab4ca42c27b52233de744ba1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-16-prereq-question-only/1794759673740978500-server.log"
     }
   ],
   "review": {
-    "at": "2026-11-15T16:19:10.379873+00:00",
-    "summary": "경계: order_plan은 목표 선행으로 고르지 않은 과제를 따라가지 않고 문항 선행만 끌어오며 준비 안 된 선행은 건너뛴다. availability는 과제 자신의 이유만. 계획의 「명시적 선행 연결」은 존재 목표 간선(PRE-, presuppose.is_existence_edge)만 필터 밖 available에서, 그 밖의 목표 선행은 후보 안에서만(#190 병합 뒤 사용자 결정). 응답에 task.prerequisite 추가. 확인: contracts 416·presuppose 관련 22, server는 master와 같은 결과(map_tree 2개 로컬 pymupdf 없음), web typecheck·고정물, 레지오넬라 재현 Essential만 52→18·막힘 0. 남은 위험: 이미 지도 간선이 있던 쌍의 존재 선행은 지도 간선으로 남아 필터 안에서만 끌려온다.",
+    "at": "2026-11-15T16:24:44.823544+00:00",
+    "summary": "경계: order_plan은 목표 선행으로 고르지 않은 과제를 따라가지 않고 문항 선행만 끌어오며 준비 안 된 선행은 건너뛴다. availability·mine.overlay는 선행 때문에 막지 않는다. 계획의 「명시적 선행 연결」은 존재 목표 간선만 필터 밖에서, 그 밖은 후보 안에서만. task.prerequisite 추가. 확인: contracts, server(master와 같은 결과, map_tree 2개 로컬 pymupdf 없음), web typecheck, 레지오넬라 재현 52→18·막힘 0. 남은 위험: 지도 간선이 먼저 있던 쌍의 존재 선행은 필터 안에서만 끌려온다.",
     "evidence_version": 2,
-    "source_hash": "b019f8b994c01dae8e009b0c485e048bde023ce79619d027e600427f75e0d2da",
+    "source_hash": "7579e3c00e2e5ca4a5f8c7cef3b9180d2882e15c40b9de5a264caa8cbc4cfde4",
     "plan_hash": "9e82c7dce3161a17da9b9f80caa871021456373aab4ca42c27b52233de744ba1",
     "inputs": [
       ".github",
@@ -391,5 +488,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-15T16:19:10.831580+00:00"
+  "updated_at": "2026-11-15T16:24:59.464624+00:00"
 }

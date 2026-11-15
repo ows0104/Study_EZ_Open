@@ -11,6 +11,9 @@
   지우면 의도된 설계를 검사하는 11개가 실패하고, 신고 사례에서는 결과가 같았다. 사용자 확인(2026-11-16): 유지.
 - master 47d04aee(#188~#194) 병합 뒤: 필터 밖 목표 선행 끌어오기는 존재 목표 간선만(spec R1a, 사용자 「존재 목표만 끌어오기」).
   `test_root_prereq_release`에 지도 관계 선행 사례 추가. 레지오넬라 재현 결과는 같다(18과제).
+- master 962589d5(#185 내 문제·#166·#198·#199) 병합: `mine.overlay`가 지운 `close_prerequisites`를 부르던 한 줄을
+  `ready = available | 기준 과제가 준비된 내 문제`로(선행 때문에 막지 않음). `types/rootLearning.ts`·`project_session`·`prepare` 충돌은 두 쪽 필드 모두 유지.
+  재검사: contracts 통과, server prereq·root·main_quiz·route_contract·bank_personal은 master와 같은 결과(map_tree 2개 로컬 pymupdf 없음), web typecheck 통과.
 - 운영 사본 재현(읽기 전용 조회 → 로컬 계산, 2026-11-16): 판 `auto-2bcdcf1f…`
   - Essential만: 52과제(Essential 17 + 끌려온 35) → 18과제(Essential 17 + 문항 선행 Core 1). 두 학습자 모두 같은 모양.
   - 10문항을 제외한 학습자: master 코드로는 계획이 「Prepared prerequisite became unavailable」로 실패하거나(닫힘 없이 계산 시)
