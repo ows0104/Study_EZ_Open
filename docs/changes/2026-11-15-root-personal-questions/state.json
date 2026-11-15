@@ -233,11 +233,34 @@
       "log": "runs/_development/2026-11-15-root-personal-questions/1794738096868859900-server.log"
     }
   ],
-  "review": null,
+  "review": {
+    "at": "2026-11-15T10:22:17.011249+00:00",
+    "summary": "경계: 학습률·카드 수·요약은 원래 판 사본, 계획·풀이만 내 문제를 덧붙인 사본(요청마다 얕은 복사, 캐시 불변 검사). 준비 상태는 덧붙인 사본으로 선행을 다시 닫아 order_plan 500 방지. 발견·수정: 내 문제에 personalAnswer를 붙여 해설이 숨던 것(브라우저에서 발견, 테스트 추가), 경로 계약 목록에 새 경로 4개 등록. 남은 위험: 이전 정책(/2) 판에서는 만들 수 없음(409·메뉴 숨김), 판이 바뀌면 내 문제·메모는 옮기지 않음(기록은 보존), 지금 답을 연 내 문제를 지우면 그 자리는 「보류」로 넘겨야 함. 로컬 venv에 pymupdf가 없어 map_tree 두 검사는 로컬에서 못 돌림.",
+    "evidence_version": 2,
+    "source_hash": "abe9b8d2b8eb6ce390d4a2b5ce52e377ff2ca0d5fe790d33669bcb49d9c9bba8",
+    "plan_hash": "80b10331974f778c23b9c04d2ded9b354446aec2337539efd161f8d0c211228c",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-15T10:21:53.717464+00:00"
+  "updated_at": "2026-11-15T10:22:17.356141+00:00"
 }

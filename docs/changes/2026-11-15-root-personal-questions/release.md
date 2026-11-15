@@ -8,7 +8,9 @@
 - 서버 `-m tests root`: 46개 중 44개 통과. 실패 2개(`test_root_map_tree`, `test_root_map_tree_v3`)는
   이 로컬 서버 venv에 `pymupdf`(fitz)가 없어 `quizbank/connection_generate.py`를 import하지 못한 것 — 이번 변경이
   건드리지 않은 파일·import다. CI(PR 검사)에서 다시 본다.
-- 서버 전체·Main-Quiz 브라우저 회귀(`scripts/check_root_learning.py --check root-ui`): 아래 결과 칸.
+- 서버 전체 `-m tests`: 155개 중 153개 통과. 실패는 위와 같은 2개(pymupdf 없음)뿐.
+- `scripts/check_root_learning.py --check root-api` 통과 — 경로 계약(`test_route_contract`)에 새 경로 4개를 등록했다.
+- Main-Quiz 브라우저 회귀 `--check root-ui`: 9/9 통과(이전 정책 고정물이라 새 메뉴는 숨겨진 상태로 기존 동작 회귀만 본다).
 - 웹 `npm run typecheck`·`npm run build` 통과. `python scripts/map_numbers.py --check` 통과.
 - 브라우저(로컬 합성 v4 판, 격리 DB): 복사해서 고치기(원문 채움) → 오늘 목록 4→5, 「내 문제」 표시·내 중요도 숨김·
   해설 표시, 새 문제(빈 칸), 뒷면 메모 쓰기·Ctrl+Enter 저장(입력 중 숫자키가 평가로 가지 않음), 내 문제 지우기 →
