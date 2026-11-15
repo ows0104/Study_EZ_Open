@@ -14,7 +14,7 @@ from app.models import BankState, QuizBank
 from app.root_learning import content as root_content
 from app.root_learning import light
 from app.root_learning.policy import configured_policy
-from app.root_learning.score import lecture_score
+from app.root_learning.score import DISPLAY_TARGET_SCALE, lecture_score
 from app.study_engine import empty_state, now_ms
 from app.study_engine.mastery import lecture_mastery
 
@@ -58,7 +58,8 @@ def lecture_overviews(db: Session, user, keys: list[tuple[str, str]],
     result = {}
     for key, (doc, events) in main_quiz_inputs(db, keys, user).items():
         try:
-            mastery = as_mastery(lecture_score(doc, events, policy, at, skip_optional=skip))
+            mastery = as_mastery(lecture_score(doc, events, policy, at, skip_optional=skip,
+                                                target_scale=DISPLAY_TARGET_SCALE))  # 보이는 값만 절반 기준
         except Exception:  # 한 강의의 계산 실패가 시간표 전체를 깨지 않게 한다.
             log.exception("Main-Quiz 학습률 계산 실패 %s/%s", *key)
             mastery = None
