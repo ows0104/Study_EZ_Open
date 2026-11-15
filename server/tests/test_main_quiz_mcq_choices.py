@@ -129,6 +129,40 @@ assert sorted(c['text'] for c in front2 if c['id'] in answer['mcqCorrectIds']) =
 notes = answer['mcqWrongNotes']
 assert {c['id'] for c in front2} - set(answer['mcqCorrectIds']) <= set(notes)
 assert any(n['source'] == '2022 족보 45번' for n in notes.values())
+
+# ── 개인 수정본(2026-11-15 edited-question-choices): 판의 원문으로 선지 짝을 찾는다 ──
+from tests.root_support import BASE
+rows_v2 = asset_v2()['questions']
+
+
+def personal(qid, question=None, answer=None, action='save'):
+    path = BASE + f'/questions/{qid}/personal'
+    snap = client.get(path).json()
+    out = client.put(path, json={'revision': snap['revision'], 'action': action, 'comment': '',
+                                 'question': question or snap['original']['question'],
+                                 'answer': answer or snap['original']['answer']})
+    assert out.status_code == 200, out.text
+    return out.json()
+
+
+edited_formats = set()
+for qid3, q3 in questions.items():
+    if qid3 not in rows_v2:
+        continue
+    plain = personal(qid3, action='reset')['question']['mcq_choices']
+    worded = personal(qid3, question=q3['question'] + ' (내 발문)')
+    assert worded['question']['personalEdited'] and worded['question']['mcq_choices'] == plain, q3['format']
+    assert sorted(c['text'] for c in plain if c['id'] in worded['answer']['mcqCorrectIds']) == sorted(contract.correct_texts(q3))
+    fixed = personal(qid3, answer='내가 고친 정답')
+    if q3['format'] == 'basic' and not contract.groups(q3):
+        mine = [c for c in fixed['question']['mcq_choices'] if c['text'] == '내가 고친 정답']
+        assert mine and fixed['answer']['mcqCorrectIds'] == [mine[0]['id']]
+        assert not set(contract.correct_texts(q3)) & {c['text'] for c in fixed['question']['mcq_choices']}
+    else:
+        assert 'mcq_choices' not in fixed['question'] and 'mcqCorrectIds' not in fixed['answer']
+    edited_formats.add(q3['format'])
+    personal(qid3, action='reset')
+assert 'basic' in edited_formats, edited_formats
 patcher.stop()
 print('PASS: mcq choices attach by revision and question text, hide answers on the front, count attempts the same as recall; '
       'v2 picks 4-5 wrong options per user and day, explains them on the answer side, and V uses the same choices')
