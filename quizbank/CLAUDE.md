@@ -29,6 +29,11 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
 - 중복 묶음은 component를 온전히 답하지 못한 문항끼리도 남긴다. 남길 문항은 `merged_duplicates` 그대로다.
 - 커버 지시문은 component에 섞인 해석상 주의(일반화 한계·예외 단서)를 판정에 넣지 않는다. 주의만 빠졌다는 이유로 목표가 계속 missing이면 추가 출제가 같은 문항을 다시 쓴다(261111_02 D077: 같은 문항 3개).
 - 표시가 없는 ledger는 입력과 묶음 규칙이 이전 그대로다. 결과 manifest와 서버 검증은 바뀌지 않았다. 검사: `tests/quizbank/test_goal_duplicates.py`.
+/4의 새 실행(ledger `presuppositions`, presuppose/1, `docs/changes/2026-11-15-tree-edge-goals/`, 사용자 「B→C를 안다고 A→B를 아는 게 아니다」)은 발문이 전제로 준 상위 연결을 판정한다.
+- `v4-presuppose-<k>`(40문항씩)가 첫 커버 확인·지도 확인과 나란히 돈다. 문항마다 발문이 사실로 준 연결(A→B)과, 그 연결을 답으로 묻는 문항(`recalled_by`)을 적는다.
+- 아무도 묻지 않는 연결은 출처 `presupposition`의 포인트가 되고, `v4-supplement-normalize-presuppose`가 존재 목표로 정규화한다. 이 단계만 새 내용 관계(association, `RQP…`)를 더할 수 있다. 부모-자식 소속은 지도 관계가 아니라서다. 그 뒤 `v4-coverage-presuppose`·`v4-map-check-presuppose`를 거쳐 빈 목표 추가(기존 ≤2 회차)가 문항을 쓴다.
+- 조립(`make_document`)은 판정 기록에서 선행 연결을 결정적으로 만든다. 존재 목표 → 전제를 가진 문항의 목표이고, 관계 종류는 `prerequisite`, ID는 `PRE-…`다. 순환·개념 공유·과제 없는 목표는 건너뛴다.
+- manifest `presuppositions`(선택 키)에 남는다. 표시가 없는 ledger는 이전 그대로다. 측정은 `python -m quizbank.presuppose_report <생성 폴더>`, 검사는 `tests/quizbank/test_presuppose.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
 새 실행 정책(2026-11-09 사용자 설계 결정, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)은 새 ledger가 `runPolicies`로 적는다.
