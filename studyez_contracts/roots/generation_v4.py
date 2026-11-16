@@ -878,14 +878,31 @@ def place(brief, review, raw, parents=None, placement='evidence', prefer=frozens
     return {q: did for q, (_, did) in best.items()}
 
 
+def keep_published(where, settled_places):
+    """The placement with every published question back on the goal it was published on.
+
+    Adding goals to a published revision gives the placement rule new candidates: a question whose review names one
+    relation `whole` and another `part` goes to the goal of the `whole` one, and a new goal may be the first to use
+    that relation. The question then moves, and a moved question cannot carry its learning history — `carry_links`
+    matches (direction, fingerprint) — so presuppose-only/1 refuses the whole lecture rather than resetting it.
+    2026-11-16 job 646 / 261102_02: Q070 moved D061 → DQ011 with its content unchanged, and the run was refused;
+    replaying that run with this pin finished (과제 145 → 183).
+
+    Only questions the placement still holds are pinned: one dropped as a duplicate stays dropped."""
+    if not settled_places:
+        return where
+    return {q: settled_places.get(q, did) for q, did in where.items()}
+
+
 def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_date, snapshot=None, importance=None,
-                  placement='evidence', presuppositions=None, discriminations=None, settled=()):
+                  placement='evidence', presuppositions=None, discriminations=None, settled=(), settled_places=None):
     """roots/1 document of a /4 run and its placement record {mergedDuplicates, unplacedQuestions}.
 
     `snapshot`/`importance` as in /2 (container concepts, question-basis importance). `presuppositions` (presuppose/1
     records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals), and
     `discriminations` (discriminate/1 records) those of reverse goals, each after the forward question's goal
-    (docs/changes/2026-11-16-reverse-discriminating)."""
+    (docs/changes/2026-11-16-reverse-discriminating). `settled_places` (question_id → direction_id) pins the
+    questions a published revision already placed, so new goals cannot move them away from their learning history."""
     validate_audit(brief, bank, audit)
     # `settled`: questions whose placement stays as published (presuppose-only/1 keeps each published task on its goal,
     # so its learning history carries over); only the others may be drawn to an existence goal they ask whole.
@@ -896,7 +913,8 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
         brief = recall.project_brief(brief)[0]
     review = audit['review']
     verdict = {r['question_id']: r['verdict'] for r in audit['question_checks']['reviews']}
-    where = place(brief, review, audit['assessment']['assessment'], parents, placement, prefer)
+    where = keep_published(place(brief, review, audit['assessment']['assessment'], parents, placement, prefer),
+                           settled_places)
     weighed = snapshot if snapshot is not None else bank
     merged = merged_duplicates(coverage_rows, weighed, verdict, set(where))
     gone = {m['question_id'] for m in merged}
@@ -1000,7 +1018,7 @@ def notebook_profile(packet, meta):
 
 
 def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
-             presuppositions=None, discriminations=None, settled=()):
+             presuppositions=None, discriminations=None, settled=(), settled_places=None):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing)."""
     table = question_table(basis, profile, reviewed)
@@ -1009,7 +1027,7 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
                                 snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table),
                                 placement=placement, presuppositions=presuppositions,
-                                discriminations=discriminations, settled=settled)
+                                discriminations=discriminations, settled=settled, settled_places=settled_places)
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
 
 
@@ -1099,6 +1117,12 @@ def _settled(meta):
     return tuple(q for q in meta['questionImportance'] if q not in added)
 
 
+def _settled_places(meta):
+    """The goals a published revision placed its questions on, as the run recorded them. The consumer pins the same
+    ones, so its re-derivation matches the generator's (2026-11-16)."""
+    return (meta.get('presupposeOnly') or {}).get('settledPlaces') or None
+
+
 def _judgments4(value, packet, brief, reviewed, meta, doc):
     placement = _placement4(value, brief, reviewed, meta)
     require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result4: not-ready goals differ')
@@ -1106,7 +1130,8 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
     again, placed, proofs = assemble(brief, reviewed, value['sourceAudit'], meta['coverage'], meta['questionImportance'], profile,
                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                                      placement=placement, presuppositions=meta.get('presuppositions'),
-                                     discriminations=meta.get('discriminations'), settled=_settled(meta))
+                                     discriminations=meta.get('discriminations'), settled=_settled(meta),
+                                     settled_places=_settled_places(meta))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
     if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):
