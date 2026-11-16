@@ -369,15 +369,30 @@ def _names(text):
     return re.findall(r'[A-Za-z][A-Za-z0-9\-]{2,}', text or '')
 
 
+def placed_on_reverse(doc, records):
+    """The questions a document places on a reverse goal. Carrying a discrimination point is not the same thing:
+    `_join_points` hands that point to every question the coverage judgment ties to the goal, forward ones included,
+    and those keep their own goals. Without this the measurement read a forward stem as a give-away — all 8 hits on
+    261116_02 were forward questions (2026-11-16, 다른 세션이 짚었다). None when the document is not at hand."""
+    if not doc:
+        return None
+    pids = {r['point_id'] for r in records or [] if r['point_id']}
+    tids = {t for p in doc['review']['points'] if p['point_id'] in pids for t in p['target_ids']}
+    owners_of = {d['direction_id']: t['target_id'] for t in doc['review']['targets'] for d in t['directions']}
+    return {t['question_id'] for t in doc['tasks'] if owners_of.get(t['direction_id']) in tids}
+
+
 def answer_in_stem(doc, records, bank):
     """The reverse questions whose stem gives away the side it asks for — the one rule this policy asks for,
     measured rather than enforced (a hard failure would hold a whole lecture over one stem). A stem gives it away
-    when it carries a name of the answer, or the answer whole."""
+    when it carries a name of the answer, or the answer whole. Only the questions the document places on a reverse
+    goal are read; with no document every carrier of the point is read."""
     by_point = _by_point(records)
+    only = placed_on_reverse(doc, records)
     found = []
     for q in bank['questions']:
         mine = [p for p in q.get('point_ids', []) if p in by_point]
-        if not mine:
+        if not mine or (only is not None and q['question_id'] not in only):
             continue
         stem = _norm(v3._front(q).get('question', ''))
         hit = None
@@ -398,16 +413,25 @@ def answer_in_stem(doc, records, bank):
 
 
 def report(records, doc, bank):
-    """R9 counts of one result: goals judged worth reversing, already asked that way, given a reverse goal with a
-    task, still open, and the reverse stems that gave the answer away."""
+    """R9 counts of one result. Three numbers that are easy to mistake for each other, so each says what it counts:
+
+    - `reversible`: connections judged worth asking from the other end (one per judged goal).
+    - `goalsMade` / `goalsWithTask`: the reverse **goals** those connections became, and how many got a question.
+      Fewer than the connections, because normalize merges the ones that ask the same thing (261116_06: 19 points →
+      14 goals). An earlier draft reported the connection count under the name 역방향 목표 and read 17 there, which
+      is neither the goals made nor the goals asked (2026-11-16, 다른 세션이 짚었다).
+    - `connectionsPlaced`: connections whose goal got a question — the connection-side view of the same fact.
+    """
     owners_of = {d['direction_id']: t['target_id'] for t in doc['review']['targets'] for d in t['directions']}
     task_targets = {owners_of[t['direction_id']] for t in doc['tasks']}
     points = {p['point_id']: p['target_ids'] for p in doc['review']['points']}
+    made = {t for r in records if r['point_id'] for t in points.get(r['point_id'], ())}
     asked = [r for r in records if r['asked_by']]
     goal = [r for r in records if r['point_id'] and set(points.get(r['point_id'], [])) & task_targets]
     open_ = [r for r in records if r['point_id'] and r not in goal]
     cues = sorted(len(r['cue']) for r in records if r['point_id'])
-    return {'reversible': len(records), 'alreadyAsked': len(asked), 'reverseGoal': len(goal),
+    return {'reversible': len(records), 'alreadyAsked': len(asked), 'goalsMade': len(made),
+            'goalsWithTask': len(made & task_targets), 'connectionsPlaced': len(goal),
             'open': [r['answer'] for r in open_], 'answerInStem': answer_in_stem(doc, records, bank),
             # A distribution, not a limit: a cue that copies the whole forward answer turns the stem into 「list it
             # all and ask one thing」 (사용자 2026-11-16). The prompt asks for the narrowest clue; this shows whether
