@@ -342,6 +342,17 @@ def whole_answers(coverage_rows, brief, presuppositions):
     return {(q, did) for did in existence_directions(brief, presuppositions) if did in rows for q in _whole(rows[did], goals[did])}
 
 
+def written_for(bank, brief, presuppositions):
+    """Existence goals a question was already written for (a presupposition point in its point_ids). Each such goal
+    gets one question: a later add round does not ask it again. On the 2026-11-16 trial the first question asked the
+    members in one layer, coverage still missed the goal's other members, and the second round wrote the same question
+    again (Q244 = Q253, both tasks; docs/changes/2026-11-16-existence-question-shape R7)."""
+    pids = {r['point_id'] for r in presuppositions or [] if r['point_id']}
+    asked = {p for q in bank['questions'] for p in q.get('point_ids', []) if p in pids}
+    tids = {t for p in brief['points'] if p['point_id'] in asked for t in p['target_ids']}
+    return {d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']}
+
+
 def existence_gaps(rows, brief, presuppositions):
     """Existence goals no single question asks whole, with all their members: the add stage writes one question that
     asks the whole category, not 「…를 제외한」 the members another question happens to ask (2차 실측)."""

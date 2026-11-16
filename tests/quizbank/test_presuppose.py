@@ -281,3 +281,15 @@ def test_review_and_fix_inputs_mark_existence_questions_with_their_goal_and_the_
     # A batch without existence questions, or a run without presuppositions, gets no key.
     assert 'existence' not in pre.mark_review({'questions': copy.deepcopy(bank['questions'][:2])}, brief, recs, bank)
     assert 'existence' not in pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, None, bank)
+
+
+def test_an_existence_goal_a_question_was_written_for_is_not_asked_again():
+    """2026-11-16 trial: the second add round wrote the first round's existence question again (Q244 = Q253, both
+    tasks). A goal whose point a question already carries is out of the next round's gaps (R7)."""
+    brief = {'targets': [{'target_id': 'TQ1', 'directions': [{'direction_id': 'DQ1'}]},
+                         {'target_id': 'TQ2', 'directions': [{'direction_id': 'DQ2'}]}],
+             'points': [{'point_id': 'P8', 'target_ids': ['TQ1']}, {'point_id': 'P9', 'target_ids': ['TQ2']}]}
+    recs = [{'question_id': 'Q1', 'point_id': 'P8'}, {'question_id': 'Q2', 'point_id': 'P9'}, {'question_id': 'Q2', 'point_id': None}]
+    bank = {'questions': [{'question_id': 'Q1', 'point_ids': ['P1']}, {'question_id': 'Q5', 'point_ids': ['P8']}]}
+    assert pre.written_for(bank, brief, recs) == {'DQ1'}
+    assert pre.written_for(bank, brief, None) == set()
