@@ -316,6 +316,23 @@ def test_records_keep_map_order_make_one_point_per_reverse_and_drop_questions_th
     assert [p['point_id'] for p in points['points']] == ['P001', 'P002']
 
 
+def test_answer_in_stem_reads_only_the_questions_placed_on_a_reverse_goal():
+    """`_join_points` hands the point to forward questions too; their stems are not this rule's business."""
+    recs = [rec()]
+    bank = {'questions': [{'question_id': 'Q4', 'point_ids': ['P9'], 'question': 'Toxa의 표적은?',
+                           'answer': 'x', 'answer_units': []},
+                          {'question_id': 'Q5', 'point_ids': ['P9'], 'question': '이 작용을 하는 것은?',
+                           'answer': 'x', 'answer_units': []}]}
+    # no document: every carrier is read, so the forward stem is flagged
+    assert [r['question_id'] for r in dis.answer_in_stem(None, recs, bank)] == ['Q4']
+    doc = {'review': {'points': [{'point_id': 'P9', 'target_ids': ['TR']}],
+                      'targets': [{'target_id': 'T1', 'directions': [{'direction_id': 'DT1'}]},
+                                  {'target_id': 'TR', 'directions': [{'direction_id': 'DTR'}]}]},
+           'tasks': [{'question_id': 'Q4', 'direction_id': 'DT1'}, {'question_id': 'Q5', 'direction_id': 'DTR'}]}
+    assert dis.placed_on_reverse(doc, recs) == {'Q5'}
+    assert dis.answer_in_stem(doc, recs, bank) == []        # Q4 sits on its own forward goal
+
+
 def test_answer_in_stem_takes_the_whole_korean_answer_not_its_category_word():
     def bank(*stems):
         return {'questions': [{'question_id': f'Q{n}', 'point_ids': ['P9'], 'question': s, 'answer': 'x',

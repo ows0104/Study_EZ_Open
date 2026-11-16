@@ -369,15 +369,30 @@ def _names(text):
     return re.findall(r'[A-Za-z][A-Za-z0-9\-]{2,}', text or '')
 
 
+def placed_on_reverse(doc, records):
+    """The questions a document places on a reverse goal. Carrying a discrimination point is not the same thing:
+    `_join_points` hands that point to every question the coverage judgment ties to the goal, forward ones included,
+    and those keep their own goals. Without this the measurement read a forward stem as a give-away — all 8 hits on
+    261116_02 were forward questions (2026-11-16, 다른 세션이 짚었다). None when the document is not at hand."""
+    if not doc:
+        return None
+    pids = {r['point_id'] for r in records or [] if r['point_id']}
+    tids = {t for p in doc['review']['points'] if p['point_id'] in pids for t in p['target_ids']}
+    owners_of = {d['direction_id']: t['target_id'] for t in doc['review']['targets'] for d in t['directions']}
+    return {t['question_id'] for t in doc['tasks'] if owners_of.get(t['direction_id']) in tids}
+
+
 def answer_in_stem(doc, records, bank):
     """The reverse questions whose stem gives away the side it asks for — the one rule this policy asks for,
     measured rather than enforced (a hard failure would hold a whole lecture over one stem). A stem gives it away
-    when it carries a name of the answer, or the answer whole."""
+    when it carries a name of the answer, or the answer whole. Only the questions the document places on a reverse
+    goal are read; with no document every carrier of the point is read."""
     by_point = _by_point(records)
+    only = placed_on_reverse(doc, records)
     found = []
     for q in bank['questions']:
         mine = [p for p in q.get('point_ids', []) if p in by_point]
-        if not mine:
+        if not mine or (only is not None and q['question_id'] not in only):
             continue
         stem = _norm(v3._front(q).get('question', ''))
         hit = None
