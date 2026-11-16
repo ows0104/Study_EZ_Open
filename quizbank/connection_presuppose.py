@@ -295,10 +295,15 @@ def run(packet, out, model, invoke, previous, resume=None):
     raw = v4.assessment_raw(brief, bank, coverage_rows, map_check, review_rows, context, meta['sourceAssessment']['summary'], placement)
     audit = v4.compile_assessment(brief, bank, v2.envelope(brief, bank, raw), placement)
     basis = {q['question_id']: basis[q['question_id']] for q in bank['questions']}
+    # Where the published revision placed its tasks. The assembly keeps each of them there and merges none of them
+    # away (v4.keep_published, merged_duplicates `held`); the record carries the same map, so the consumer assembles
+    # the same document. PR #206 made the pin and its consumer side, and this call never passed the map: the pin did
+    # nothing until 2026-11-17 (docs/changes/2026-11-17-backfill-pin-callers).
+    settled_places = {t['question_id']: t['direction_id'] for t in old['document']['tasks']}
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile, revision=packet['revision'],
                                       title=packet['title'], exam_date=packet['examDate'], placement=placement,
                                       presuppositions=presuppositions, discriminations=discriminations,
-                                      settled=published)
+                                      settled=published, settled_places=settled_places)
     kept_tasks = {t['question_id'] for t in old['document']['tasks']}
     # Strict: a published task never becomes a duplicate of an added question (its history would stop).
     v3.require(kept_tasks <= {t['question_id'] for t in doc['tasks']}, f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
@@ -327,7 +332,7 @@ def run(packet, out, model, invoke, previous, resume=None):
     st.save()
 
     record = {**ledger['presupposeOnly'], 'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']),
-              'addedQuestions': added, 'previousMedical': old['medical'], 'addedMedical': added_medical,
+              'addedQuestions': added, 'settledPlaces': settled_places, 'previousMedical': old['medical'], 'addedMedical': added_medical,
               'existenceGoals': new_dids, 'reverseGoals': rev_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()},
               'reverseCounts': {k: (len(v) if k in ('open', 'answerInStem') else v) for k, v in rcounts.items()}}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "

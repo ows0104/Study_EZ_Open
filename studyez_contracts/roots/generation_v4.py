@@ -824,10 +824,16 @@ def validate_audit(brief, bank, audit):
 
 
 # ---------------------------------------------------------------- tasks (R6, R7)
-def merged_duplicates(coverage_rows, bank, verdict, placeable=None):
+def merged_duplicates(coverage_rows, bank, verdict, placeable=None, held=frozenset()):
     """One task per true-duplicate group. The kept member is an ok, placeable question: one already kept for
     another group if the group has one (a keeper is never merged away), else the highest importance, then
-    bank order. The others stay in the bank and are recorded (question_id, kept, direction_id, reason)."""
+    bank order. The others stay in the bank and are recorded (question_id, kept, direction_id, reason).
+
+    `held` (presuppose-only/1: the questions the published revision has tasks of) are never merged away, and one of
+    them is the keeper of a group no earlier group has decided. A goal added to a published revision is judged for
+    duplicates like any other, and its judgment may name two published questions, or a published and an added one;
+    merging the published one away would end its learning history, so the run was refused instead.
+    2026-11-17 job 655 / 261105_03: the new goal DQ017 named published Q025 and Q075 duplicates and Q075 lost its task."""
     order = {q['question_id']: i for i, q in enumerate(bank['questions'])}
     importance = {q['question_id']: q['importance'] for q in bank['questions']}
     merged, keepers = {}, set()
@@ -839,11 +845,11 @@ def merged_duplicates(coverage_rows, bank, verdict, placeable=None):
                   and (placeable is None or q in placeable)]
             if len(ok) < 2:
                 continue
-            kept = [q for q in ok if q in keepers]
+            kept = [q for q in ok if q in keepers] or [q for q in ok if q in held]
             keep = min(kept or ok, key=lambda q: (-importance[q], order[q]))
             keepers.add(keep)
             for q in ok:
-                if q != keep and q not in keepers:
+                if q != keep and q not in keepers and q not in held:
                     merged[q] = {'question_id': q, 'kept': keep, 'direction_id': row['direction_id'], 'reason': g['reason']}
     return [merged[q] for q in sorted(merged, key=order.get)]
 
@@ -902,7 +908,8 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
     records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals), and
     `discriminations` (discriminate/1 records) those of reverse goals, each after the forward question's goal
     (docs/changes/2026-11-16-reverse-discriminating). `settled_places` (question_id → direction_id) pins the
-    questions a published revision already placed, so new goals cannot move them away from their learning history."""
+    questions a published revision already placed, so new goals cannot move them away from their learning history,
+    and keeps them from being merged away as duplicates (`merged_duplicates` `held`)."""
     validate_audit(brief, bank, audit)
     # `settled`: questions whose placement stays as published (presuppose-only/1 keeps each published task on its goal,
     # so its learning history carries over); only the others may be drawn to an existence goal they ask whole.
@@ -916,7 +923,8 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
     where = keep_published(place(brief, review, audit['assessment']['assessment'], parents, placement, prefer),
                            settled_places)
     weighed = snapshot if snapshot is not None else bank
-    merged = merged_duplicates(coverage_rows, weighed, verdict, set(where))
+    # A published task is not merged away either: the same pin, for the duplicate judgments of the new goals.
+    merged = merged_duplicates(coverage_rows, weighed, verdict, set(where), held=frozenset(settled_places or ()))
     gone = {m['question_id'] for m in merged}
     candidates, unplaced = [], []
     for q in bank['questions']:

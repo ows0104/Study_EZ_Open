@@ -75,6 +75,9 @@ def test_an_unasked_presupposed_link_gets_an_existence_goal_and_nothing_publishe
     assert old_tasks <= {(t['question_id'], t['direction_id']) for t in doc['tasks']}
     carried = next(c for c in record['carry'] if c['revision'] == old['document']['revision'])
     assert carried['tasks'] == len(old['document']['tasks']) and doc['equivalences']
+    # ... and the run hands the assembly the published places, which the consumer reads back from the record
+    # (2026-11-17: the pin of PR #206 was never passed, so two lectures were refused for one question each).
+    assert record['settledPlaces'] == {t['question_id']: t['direction_id'] for t in old['document']['tasks']}
     assert json.loads((previous / 'result.json').read_text(encoding='utf-8')) == old
 
 
@@ -169,3 +172,37 @@ def test_runner_and_server_names():
     assert native.v3_kind('v4-add-presuppose-0') == 'add' and native.v3_kind('v4-review-presuppose-1') == 'review'
     assert native.v3_kind('v4-fix-presuppose-0') == 'fix'
     assert pre.PRESUPPOSE == 'presuppose/1'
+
+
+def test_the_backfill_passes_the_published_places_to_the_assembly(tmp_path, monkeypatch):
+    """The pin is only as good as its caller: the assembly must get the published map, whatever the placement says."""
+    from studyez_contracts.roots import generation_v4 as v4
+    previous, old, packet = published(tmp_path)
+    seen = {}
+    real = v4.assemble
+
+    def assemble(*a, **kw):
+        seen.update(settled_places=kw.get('settled_places'))
+        return real(*a, **kw)
+    monkeypatch.setattr(v4, 'assemble', assemble)
+    g.run(packet, tmp_path / 'new', invoke=Presupposing(), presuppose_of=previous)
+    assert seen['settled_places'] == {t['question_id']: t['direction_id'] for t in old['document']['tasks']}
+
+
+def test_a_published_task_is_not_merged_away_as_a_duplicate():
+    """2026-11-17 job 655 / 261105_03: the new goal DQ017 judged published Q025 and Q075 duplicates, Q075 lost its
+    task and the backfill was refused (「이전 판의 과제가 빠졌습니다」)."""
+    from studyez_contracts.roots import generation_v4 as v4
+    bank = {'questions': [{'question_id': q, 'importance': i} for q, i in (('Q025', 5), ('Q075', 4), ('Q300', 5))]}
+    ok = {q['question_id']: 'ok' for q in bank['questions']}
+    row = lambda *qs: {'direction_id': 'DQ017', 'status': 'covered', 'duplicates': [{'question_ids': list(qs), 'reason': 'same'}]}
+    merged = lambda rows, held=frozenset(): [(m['question_id'], m['kept']) for m in v4.merged_duplicates(rows, bank, ok, held=held)]
+    # a first run merges as before
+    assert merged([row('Q025', 'Q075')]) == [('Q075', 'Q025')]
+    # two published tasks both stay
+    assert merged([row('Q025', 'Q075')], {'Q025', 'Q075'}) == []
+    # a published task and an added question of the same importance or more: the added one goes
+    assert merged([row('Q075', 'Q300')], {'Q075'}) == [('Q300', 'Q075')]
+    assert merged([row('Q025', 'Q075', 'Q300')], {'Q025', 'Q075'}) == [('Q300', 'Q025')]
+    # a published question the published revision had already merged away is not held, and goes as before
+    assert merged([row('Q025', 'Q075')], {'Q025'}) == [('Q075', 'Q025')]
