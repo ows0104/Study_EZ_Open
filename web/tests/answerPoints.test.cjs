@@ -208,10 +208,12 @@ test('overlapping and repeated points retain all answer text without duplicating
   assert.ok(!html.includes('bank-units'));
 });
 
+// 2026-11-16: OX 이유는 해설 칸이 아니라 정답 줄 「X: 이유」에 보인다.
 test('single O/X explanations remain visible without coloring the whole explanation', () => {
   const html = render({ answer: 'X', answerUnits: ['말초에서만 작용한다.'] }, 'ox');
-  assert.ok(html.includes('aria-label="해설"><h2>해설</h2>'));
-  assert.ok(html.includes('<li>말초에서만 작용한다.</li>'));
+  assert.ok(html.includes('class="quiz-answer bank-ox-answer"') && !html.includes('<h2>해설</h2>'));
+  assert.ok(html.includes('X</strong>: 말초에서만 작용한다.'));
+  assert.ok(!html.includes('<strong class="bank-answer-point">말초'));
 });
 
 test('O and X show every explanation once, including a single or multiline unit', () => {
@@ -220,7 +222,8 @@ test('O and X show every explanation once, including a single or multiline unit'
     const html = render({ answer: binary, answerUnits: units }, 'ox');
     assert.ok(html.includes('<strong class="bank-answer-point">기준</strong>'));
     assert.ok(html.replace(/<[^>]+>/g, '').includes('판단의 기준이다.\n조건도 확인한다.'));
-    assert.equal((html.match(/class="bank-readable-line is-indented"/g) || []).length, 1);
+    assert.ok(html.replace(/<[^>]+>/g, '').startsWith(`${binary}: 판단의`));
+    assert.equal((html.match(/class="bank-readable-line is-indented"/g) || []).length, 2);
     assert.equal(html.split('예외를 구분한다.').length - 1, 1);
     assert.ok(!html.includes('bank-units'));
   }
@@ -241,12 +244,15 @@ test('retired experiment hints are not shown before or after revealing the answe
 });
 
 test('general explanations are separate from scoring and work for basic, cloze and O/X', () => {
-  for (const format of ['basic', 'cloze', 'ox']) {
+  for (const format of ['basic', 'cloze']) {
     const html = render({ answer: 'X', answerUnits: ['X'], explanation: '구체적인 반례와 올바른 기전' }, format);
     assert.ok(html.includes('<h2>해설</h2><p>구체적인 반례와 올바른 기전</p>'));
     assert.equal((html.match(/<h2>해설<\/h2>/g) || []).length, 1);
     assert.ok(!html.includes('이 문항에 등록된 해설이 없습니다.'));
   }
+  const ox = render({ answer: 'X', answerUnits: ['X'], explanation: '구체적인 반례와 올바른 기전' }, 'ox');
+  assert.ok(ox.includes('X</strong>: 구체적인 반례와 올바른 기전') && !ox.includes('<h2>해설</h2>'));
+  assert.ok(!ox.includes('이 문항에 등록된 해설이 없습니다.'));
   assert.ok(!render({ explanation: '오래된 설명', personalAnswer: true }).includes('오래된 설명'));
 });
 
