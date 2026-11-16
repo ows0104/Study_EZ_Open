@@ -124,6 +124,8 @@ def run(packet, out, model, invoke, previous, resume=None):
         goals = _goals(brief)
         gaps = {did: v4.missing_components(rows[did], goals[did]) for did in new_dids if rows[did]['status'] != 'covered'}
         gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # asked whole, in one question
+        for did in pre.written_for(bank, brief, presuppositions):        # one question per existence goal
+            gaps.pop(did, None)
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
@@ -162,6 +164,7 @@ def run(packet, out, model, invoke, previous, resume=None):
         if evidence_notes:
             ctx['evidence_source'] = evidence_notes
         ctx['map_relations'] = v4.map_relations(brief, map_checks)
+        pre.mark_review(ctx, brief, presuppositions, bank)   # existence questions are judged as such (2026-11-16)
         value = st.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
         by_id = {q['question_id']: q for q in bank['questions']}
         for r in value['reviews']:
@@ -188,7 +191,8 @@ def run(packet, out, model, invoke, previous, resume=None):
                 for q in v4.covering(r):
                     covered.setdefault(q, []).append(did)
             findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
-            ctx = v4.with_importance(v3.fix_input(bank, findings, targets, conflicts, covered), basis)
+            ctx = pre.mark_review(v4.with_importance(v3.fix_input(bank, findings, targets, conflicts, covered), basis),
+                                  brief, presuppositions, bank)
             state = _state(bank, conflicts, stimuli, packet)
             name = f'{X}fix{TAG}-{k}'
 
