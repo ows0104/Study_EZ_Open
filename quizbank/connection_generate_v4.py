@@ -417,9 +417,10 @@ def run(packet, out, model, invoke, resume=None):
         if placement in v4.REVIEW_RULES:
             ctx['map_relations'] = v4.map_relations(brief, map_checks)
         if presuppositions:
-            pre.mark_review(ctx, brief, presuppositions, bank_)   # existence questions are judged as such (2026-11-16)
+            # existence questions are judged as such (2026-11-16); the intake bank is not written for them (2026-11-17)
+            pre.mark_review(ctx, brief, presuppositions, bank_, exclude=intake_ids)
         if discriminations:
-            dis.mark_review(ctx, brief, discriminations, bank_)   # ... and so are reverse ones (discriminate/1)
+            dis.mark_review(ctx, brief, discriminations, bank_, exclude=intake_ids)   # ... and reverse ones too
         return ctx
 
     # The first review of a batch reads its questions, their conflicts and the map relations. Once a batch is
@@ -536,9 +537,9 @@ def run(packet, out, model, invoke, resume=None):
     def fix_round(S, stages, name, review_name, coverage_name, targets, findings):
         ctx = v4.with_importance(v3.fix_input(S.bank, findings, targets, S.conflicts, covered_by(S)), S.basis)
         if presuppositions:
-            pre.mark_review(ctx, brief, presuppositions, S.bank)
+            pre.mark_review(ctx, brief, presuppositions, S.bank, exclude=intake_ids)
         if discriminations:
-            dis.mark_review(ctx, brief, discriminations, S.bank)
+            dis.mark_review(ctx, brief, discriminations, S.bank, exclude=intake_ids)
         if S.scope:
             ctx['conflict_scope'] = S.scope
         state = _state(S.bank, S.conflicts, S.stimuli, packet)

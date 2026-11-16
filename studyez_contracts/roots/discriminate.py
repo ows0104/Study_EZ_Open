@@ -267,12 +267,19 @@ def mark_add(ctx, brief, records, bank):
     return ctx
 
 
-def mark_review(ctx, brief, records, bank):
+def mark_review(ctx, brief, records, bank, exclude=()):
     """Item review and fix input: `discrimination`, one row per question of the batch written for a reverse goal,
     with the cue it asks by and the stems of the forward questions. Without it the review reads a cue-only stem as an
     incomplete question and the fix puts the answer's own side back into it — which is the one thing this goal
     forbids (presuppose/1 hit exactly this: 「too easy, ask by a condition」,
-    docs/changes/2026-11-16-existence-question-shape). Changes `ctx` in place; no key when none."""
+    docs/changes/2026-11-16-existence-question-shape). Changes `ctx` in place; no key when none.
+
+    Only a question this run wrote may carry the label, as in `presuppose.mark_review`
+    (docs/changes/2026-11-17-existence-review-label): `exclude` holds the questions that were in the bank before this
+    run wrote any, and a question that asks the link in the forward direction is never the reverse question for it.
+    Point ids do not prove authorship — a later coverage round can give a goal's points to the questions it lists as
+    evidence. The reverse path is hit less than the existence one because a new reverse goal starts from a blank
+    coverage row (`blank_rows`), but the hole is the same."""
     pids = {r['point_id'] for r in records or [] if r['point_id']}
     if not pids:
         return ctx
@@ -280,9 +287,15 @@ def mark_review(ctx, brief, records, bank):
     by_point = _by_point(records)
     points = {p['point_id']: p for p in brief['points']}
     targets = {t['target_id']: t for t in brief['targets']}
+    forward = {p: {q for r in rs for q in list(r['forward_by']) + list(r['asked_by'])}
+               for p, rs in by_point.items()}
+    skip = set(exclude)
     rows = []
     for q in ctx['questions']:
-        mine = [p for p in q.get('point_ids', []) if p in pids and p in points]
+        if q['question_id'] in skip:
+            continue
+        mine = [p for p in q.get('point_ids', []) if p in pids and p in points
+                and q['question_id'] not in forward.get(p, ())]
         if not mine:
             continue
         got, seen = [], []
