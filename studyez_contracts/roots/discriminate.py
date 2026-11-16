@@ -361,14 +361,18 @@ def order_edges(brief, tasks, records, relations, edges):
 
 # ---------------------------------------------------------------- report (R9)
 def _names(text):
-    """The words of an answer long enough to look for in a stem: Latin names, and Korean words of two or more
-    characters. A one-letter token would match almost any stem."""
-    return re.findall(r'[A-Za-z][A-Za-z0-9\-]{2,}|[가-힣]{2,}', text or '')
+    """The names of an answer: its Latin/English words of three characters or more. A Korean word is not taken
+    apart, because the words an answer shares with its own question are its category (「내성 유형은? → 내인성
+    내성」, 「원인균은? → V. vulnificus 중증 감염」) and a stem cannot ask without them — matching those called
+    three of 17 stems a give-away on the 2026-11-16 trial when none was. The whole answer in the stem is the
+    Korean case, and `answer_in_stem` looks for that separately."""
+    return re.findall(r'[A-Za-z][A-Za-z0-9\-]{2,}', text or '')
 
 
 def answer_in_stem(doc, records, bank):
     """The reverse questions whose stem gives away the side it asks for — the one rule this policy asks for,
-    measured rather than enforced (a hard failure would hold a whole lecture over one stem)."""
+    measured rather than enforced (a hard failure would hold a whole lecture over one stem). A stem gives it away
+    when it carries a name of the answer, or the answer whole."""
     by_point = _by_point(records)
     found = []
     for q in bank['questions']:
@@ -376,11 +380,20 @@ def answer_in_stem(doc, records, bank):
         if not mine:
             continue
         stem = _norm(v3._front(q).get('question', ''))
+        hit = None
         for p in mine:
-            hit = next((w for rec in by_point[p] for w in _names(rec['answer']) if _norm(w) in stem), None)
+            for rec in by_point[p]:
+                whole = _norm(rec['answer'])
+                if whole and whole in stem:
+                    hit = rec['answer']
+                    break
+                hit = next((w for w in _names(rec['answer']) if _norm(w) in stem), None)
+                if hit:
+                    break
             if hit:
-                found.append({'question_id': q['question_id'], 'gave_away': hit})
                 break
+        if hit:
+            found.append({'question_id': q['question_id'], 'gave_away': hit})
     return found
 
 

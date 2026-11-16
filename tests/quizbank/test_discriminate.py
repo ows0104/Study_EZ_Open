@@ -316,10 +316,17 @@ def test_records_keep_map_order_make_one_point_per_reverse_and_drop_questions_th
     assert [p['point_id'] for p in points['points']] == ['P001', 'P002']
 
 
-def test_answer_in_stem_looks_for_korean_words_too():
+def test_answer_in_stem_takes_the_whole_korean_answer_not_its_category_word():
+    def bank(*stems):
+        return {'questions': [{'question_id': f'Q{n}', 'point_ids': ['P9'], 'question': s, 'answer': 'x',
+                               'answer_units': []} for n, s in enumerate(stems)]}
     recs = [{**rec(), 'answer': '수도모나스'}]
-    bank = {'questions': [{'question_id': 'Q4', 'point_ids': ['P9'], 'question': '수도모나스에서 이 작용을 하는 것은?',
-                           'answer': 'x', 'answer_units': []},
-                          {'question_id': 'Q5', 'point_ids': ['P9'], 'question': '이 작용을 하는 것은?',
-                           'answer': 'x', 'answer_units': []}]}
-    assert [r['question_id'] for r in dis.answer_in_stem(None, recs, bank)] == ['Q4']
+    got = dis.answer_in_stem(None, recs, bank('수도모나스에서 이 작용을 하는 것은?', '이 작용을 하는 것은?'))
+    assert [r['question_id'] for r in got] == ['Q0']
+    # the words an answer shares with its own question are its category: asking needs them (2026-11-16 실측 3/17)
+    recs = [{**rec(), 'answer': '획득 내성'}]
+    assert dis.answer_in_stem(None, recs, bank('수평적 내성 유전자 획득으로 생기는 내성 유형은?')) == []
+    recs = [{**rec(), 'answer': 'V. vulnificus 중증 감염'}]
+    assert dis.answer_in_stem(None, recs, bank('이 병합을 치료 예로 쓰는 중증 감염의 원인균은?')) == []
+    # a Latin name in the stem is still a give-away
+    assert [r['question_id'] for r in dis.answer_in_stem(None, recs, bank('V. vulnificus에서 쓰는 병합은?'))] == ['Q0']
