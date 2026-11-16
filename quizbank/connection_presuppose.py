@@ -36,6 +36,11 @@ from . import connection_visuals as visual
 from .connection_generate_v3 import Stages, chunks, _bank_findings, _medical_batches, _state, ADD_PER_GOAL, COVERAGE_CHUNK
 from .connection_generate_v4 import _goals, _merge_row, _first_evidence, check_stage
 
+# One add round: every existence goal gets its one question in it (pre.written_for keeps a second round from asking it
+# again). On the 2026-11-16 trial the second round only wrote four stray questions (two never placed) for about three
+# minutes a lecture (docs/changes/2026-11-16-presuppose-faster).
+ADD_ROUNDS = 1
+
 POLICY = 'presuppose-only/1'
 X = 'v4-'
 TAG = '-presuppose'
@@ -112,15 +117,19 @@ def run(packet, out, model, invoke, previous, resume=None):
         addition = st.run(X + 'supplement-normalize' + TAG, ctx, lambda raw: check_stage('presuppose-normalize', raw, ctx, state, None), state)
         brief, new_tids = pre.extend(brief, addition, [p['point_id'] for p in made])
         new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
-        got = judge(X + 'coverage' + TAG, v3.coverage_input(brief, bank, new_dids, sorted({p['origin_question_id'] for p in made})))
+        # Coverage and map check both read only the extended map: side by side (2026-11-16, about 2 minutes a lecture).
+        cov = v3.coverage_input(brief, bank, new_dids, sorted({p['origin_question_id'] for p in made}))
+        chk = v4.map_check_input(brief, new_tids)
+        got, checked = batches.judgments(st, [
+            (X + 'coverage' + TAG, cov, lambda raw, ctx=cov: v4.check_coverage(raw, ctx['goals'], ctx['questions'])),
+            (X + 'map-check' + TAG, chk, lambda raw, ctx=chk: v3.check_map_input(raw, ctx))])
         rows.update({r['direction_id']: r for r in got['rows']})
-        ctx = v4.map_check_input(brief, new_tids)
-        map_checks.append(st.judged(X + 'map-check' + TAG, ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+        map_checks.append(checked)
         st.save()
 
     # 3: their questions (add rounds on the new goals only) ---------------------
     added = []
-    for n in range(v3.ADD_LIMIT):
+    for n in range(ADD_ROUNDS):
         goals = _goals(brief)
         gaps = {did: v4.missing_components(rows[did], goals[did]) for did in new_dids if rows[did]['status'] != 'covered'}
         gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # asked whole, in one question
