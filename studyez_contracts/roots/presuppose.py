@@ -203,7 +203,7 @@ def order_edges(brief, tasks, presuppositions, relations, edges):
     the link, or the goal made from its point) before the goal of the question that presupposes it.
 
     Only goals with tasks take part; an edge that would close a cycle (targets, or the concepts of prerequisite
-    relations) is left out, so is one whose later goal has no concept of its own (its relation would have no end).
+    relations) is left out, so is one whose relation would join a concept to itself (both goals name one concept).
     Returns (relations, edges) to add."""
     targets = {t['target_id']: t for t in brief['targets']}
     owners = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
@@ -231,7 +231,9 @@ def order_edges(brief, tasks, presuppositions, relations, edges):
             # An existence goal often names only concepts its detail goal also has (A and B; the detail goal adds C):
             # the edge still stands, from A (2026-11-16 job 635: 콜레라독소 소단위 → its A1·B pentamer details had none).
             source = next((c for c in a_ids if c not in b_ids), a_ids[0] if a_ids else None)
-            sink = next((c for c in b_ids if c not in a_ids), None)
+            # The two goals may even name the same concepts (normalize copied the detail goal's; 2차 시범 TQ017 = T109):
+            # the relation then joins two of them; it records study order, not a map fact.
+            sink = next((c for c in b_ids if c not in a_ids), next((c for c in b_ids if c != source), None))
             evidence = copy.deepcopy(targets[before].get('evidence') or [])
             if source is None or sink is None or not evidence or _reaches(concept_graph, sink, source):
                 continue

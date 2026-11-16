@@ -152,7 +152,7 @@ def _brief(*targets):
             'points': [{'point_id': 'P9', 'target_ids': ['TE']}]}
 
 
-def test_order_edges_skip_cycles_shared_concepts_and_goals_without_tasks():
+def test_order_edges_skip_cycles_self_relations_and_goals_without_tasks():
     brief = _brief(('TE', ['A', 'C']), ('T1', ['A', 'B']), ('T2', ['A']))
     tasks = [{'question_id': 'QE', 'direction_id': 'DTE'}, {'question_id': 'Q1', 'direction_id': 'DT1'},
              {'question_id': 'Q2', 'direction_id': 'DT2'}]
@@ -160,8 +160,11 @@ def test_order_edges_skip_cycles_shared_concepts_and_goals_without_tasks():
     relations, edges = pre.order_edges(brief, tasks, [rec('Q1', 'P9'), rec('Q1', 'P9')], [], [])
     assert [(e['before_target'], e['after_target']) for e in edges] == [('TE', 'T1')]       # one edge per goal pair
     assert relations[0]['from_id'] == 'C' and relations[0]['to_id'] == 'B'
-    # T2's concepts are all in TE: no concept to point at, so no edge.
-    assert pre.order_edges(brief, tasks, [rec('Q2', 'P9')], [], [])[1] == []
+    # T2's concepts are all in TE: the edge still stands, its relation joins two of their concepts (R6, 2차 시범).
+    assert [(e['before_target'], e['after_target']) for e in pre.order_edges(brief, tasks, [rec('Q2', 'P9')], [], [])[1]] == [('TE', 'T2')]
+    # One concept on both sides: a relation would join it to itself, so no edge.
+    one = _brief(('TE', ['A']), ('T1', ['A', 'B']), ('T2', ['A']))
+    assert pre.order_edges(one, tasks, [rec('Q2', 'P9')], [], [])[1] == []
     # An edge back against an existing one would close a cycle.
     existing = [{'before_target': 'T1', 'after_target': 'TE', 'relation_id': 'R'}]
     assert pre.order_edges(brief, tasks, [rec('Q1', 'P9')], [], existing)[1] == []
@@ -254,9 +257,9 @@ def test_order_edges_stand_when_the_existence_goal_names_only_concepts_of_the_de
     relations, edges = pre.order_edges(brief, tasks, [rec], [], [])
     assert [(e['before_target'], e['after_target']) for e in edges] == [('TE', 'T1')]
     assert (relations[0]['from_id'], relations[0]['to_id']) == ('A', 'C')
-    # The other way round (the detail goal has no concept of its own) still makes none.
-    brief = _brief(('TE', ['A', 'B', 'C']), ('T1', ['A', 'B']))
-    assert pre.order_edges(brief, tasks, [rec], [], [])[1] == []
+    # The same concepts on both sides (2차 시범: TQ017 = T109) still make the edge.
+    brief = _brief(('TE', ['A', 'B']), ('T1', ['A', 'B']))
+    assert [(e['before_target'], e['after_target']) for e in pre.order_edges(brief, tasks, [rec], [], [])[1]] == [('TE', 'T1')]
 
 
 def test_review_and_fix_inputs_mark_existence_questions_with_their_goal_and_the_stems_that_presuppose_it():
