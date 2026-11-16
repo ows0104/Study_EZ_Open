@@ -393,5 +393,11 @@ def report(records, doc, bank):
     asked = [r for r in records if r['asked_by']]
     goal = [r for r in records if r['point_id'] and set(points.get(r['point_id'], [])) & task_targets]
     open_ = [r for r in records if r['point_id'] and r not in goal]
+    cues = sorted(len(r['cue']) for r in records if r['point_id'])
     return {'reversible': len(records), 'alreadyAsked': len(asked), 'reverseGoal': len(goal),
-            'open': [r['answer'] for r in open_], 'answerInStem': answer_in_stem(doc, records, bank)}
+            'open': [r['answer'] for r in open_], 'answerInStem': answer_in_stem(doc, records, bank),
+            # A distribution, not a limit: a cue that copies the whole forward answer turns the stem into 「list it
+            # all and ask one thing」 (사용자 2026-11-16). The prompt asks for the narrowest clue; this shows whether
+            # that held, and a long tail is a reason to look, not to fail a lecture.
+            'cueLength': {'median': cues[len(cues) // 2] if cues else 0, 'max': max(cues, default=0),
+                          'over60': sum(1 for n in cues if n > 60)}}
