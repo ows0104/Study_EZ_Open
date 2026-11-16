@@ -226,6 +226,13 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
   const shortUnits = q.format === "basic"
     ? answer.answerUnits.filter((unit) => unit.replace(/\*\*/g, "").trim()) : [];
   const conciseAnswer = shortUnits.length > 0;
+  // OX는 이유가 답이다(2026-11-15 사용자 「O/X 이유가 키 포인트이니 답에 올려라. 해설은 안 본다」).
+  // 정답 줄을 「X: 이유」로 쓰고 해설 칸은 따로 두지 않는다. 데이터는 그대로 — answer는 O/X, 이유는
+  // explanation(옛 은행은 채점 단위)에 있다. 내가 고친 답은 그 글을 그대로 보인다.
+  const oxMark = q.format === "ox" && !answer.personalAnswer ? answer.answer.trim().toUpperCase() : "";
+  const oxReason = oxMark === "O" || oxMark === "X"
+    ? (answer.explanation?.trim()
+      || answer.answerUnits.filter((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())).join("\n")) : "";
   const shortExplanation = conciseAnswer && answer.answer.trim().length > 0
     && answerPoints(answer.answer, []).text.trim() !== shortUnits.map((unit) => answerPoints(unit, []).text.trim()).join("\n");
   const choice = ["mcq", "multi_select"].includes(q.format) && !answer.personalAnswer;
@@ -262,19 +269,24 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
         </>
       ) : null}
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
-      {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
+      {oxReason ? (
+        <p className="quiz-answer bank-ox-answer">
+          <AnswerPoints text={`**${oxMark}**: ${oxReason}`} readable blueBold />
+        </p>
+      ) : null}
+      {oxReason || conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
           <AnswerPoints text={label(answer.answer)} units={q.format === "ox" ? [] : answer.answerUnits.map(label)} readable list={q.format === "list"} />
         </p>
       )}
-      {answer.explanation?.trim() && !answer.personalAnswer ? (
+      {answer.explanation?.trim() && !answer.personalAnswer && !oxReason ? (
         <section className="quiz-explanation bank-explanation" aria-label="해설">
           <h2>해설</h2>
           <p><AnswerPoints text={answer.explanation} readable blueBold={q.format === "ox"} /></p>
         </section>
       ) : null}
       {/* 이전 O/X 은행의 채점 단위에 저장된 근거도 계속 보여 준다. */}
-      {q.format === "ox" && !answer.personalAnswer && !answer.explanation?.trim() ? (
+      {q.format === "ox" && !answer.personalAnswer && !answer.explanation?.trim() && !oxReason ? (
         <section className="quiz-explanation bank-ox-explanation" aria-label="해설">
           <h2>해설</h2>
           {answer.answerUnits.some((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())) ? (

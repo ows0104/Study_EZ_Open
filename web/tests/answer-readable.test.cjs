@@ -127,7 +127,7 @@ test('main answers, general explanations, short-answer context, and scoring item
 
 test('legacy O/X and per-option explanations also use sentence rows', () => {
   const ox = body({ format: 'ox' }, { answer: 'X', answerUnits: [text] });
-  assert.ok(ox.includes('bank-ox-explanation'));
+  assert.ok(ox.includes('bank-ox-answer') && !ox.includes('bank-ox-explanation'));
   assert.equal((ox.match(/class="bank-readable"/g) || []).length, 1);
   const choice = body({ format: 'mcq', options: [{ id: 'A', text: '보기 A' }] }, {
     answer: 'A', answerUnits: [`A: ${text}`], correctOptionIds: ['A'],
@@ -142,9 +142,25 @@ test('OX explanations color only authored key phrases blue, including legacy rea
   const a = { answer: 'X', answerUnits: ['X'], explanation: '판단은 **구별 키워드**로 한다.' };
   const html = body({ format: 'ox' }, a);
   assert.ok(html.includes('판단은 <strong class="bank-answer-point">구별 키워드</strong>로 한다.'));
-  assert.ok(!html.includes('class="bank-answer-point">X</strong>'));
   const legacy = body({ format: 'ox' }, { answer: 'X', answerUnits: ['X', '근거는 **키워드**다.'] });
-  assert.ok(legacy.includes('<li>근거는 <strong class="bank-answer-point">키워드</strong>다.</li>'));
+  assert.ok(legacy.includes('근거는 <strong class="bank-answer-point">키워드</strong>다.'));
+});
+
+// 2026-11-16 사용자: OX는 이유가 답이다 — 정답 칸에 「X: 이유」, 해설 칸은 따로 없다.
+test('OX shows the reason on the answer line as "X: reason", not in a separate explanation', () => {
+  const plainText = html => html.replace(/<[^>]+>/g, '');
+  const html = body({ format: 'ox' }, { answer: 'X', answerUnits: ['X'], explanation: 'O1은 협막을 만들지 않는다.' });
+  assert.ok(html.includes('<p class="quiz-answer bank-ox-answer">'));
+  assert.ok(plainText(html).includes('X: O1은 협막을 만들지 않는다.'));
+  assert.ok(!html.includes('<h2>해설</h2>'));
+  const yes = body({ format: 'ox' }, { answer: 'o', answerUnits: ['O'], explanation: '맞다.' });
+  assert.ok(plainText(yes).includes('O: 맞다.'));
+  // 이유가 없으면 예전처럼 O/X만 두고 해설 없음을 알린다.
+  const bare = body({ format: 'ox' }, { answer: 'X', answerUnits: ['X'] });
+  assert.ok(!bare.includes('bank-ox-answer') && bare.includes('이 문항에 등록된 해설이 없습니다.'));
+  // 내가 고친 답은 쓴 글 그대로.
+  const mine = body({ format: 'ox' }, { answer: 'X 내 설명', answerUnits: ['X'], explanation: '원래 이유', personalAnswer: true });
+  assert.ok(!mine.includes('bank-ox-answer') && !plainText(mine).includes('원래 이유') && plainText(mine).includes('X 내 설명'));
 });
 
 const { clozeDraft, clozeAnswer, editorQuestion, saveQuestion } = load(path.join(__dirname, '../src/bank/authoring.ts'));

@@ -62,7 +62,10 @@
 .bank-explanation p { margin: 0; color: var(--ink); font-weight: 400; line-height: 1.75; }
 .bank-explanation strong { color: inherit; }
 .bank-explanation .bank-answer-point,
-.bank-ox-explanation .bank-answer-point { color: var(--accent-ink); font-weight: 700; }
+.bank-ox-explanation .bank-answer-point,
+.bank-ox-answer .bank-answer-point { color: var(--accent-ink); font-weight: 700; }
+/* OX 정답 줄 「X: 이유」(2026-11-16). 이유는 문장이라 본문 굵기로, O/X와 감별어만 굵게. */
+.quiz-answer.bank-ox-answer { width: min(100%, 720px); font-weight: 400; }
 @media (max-width: 520px) {
   .bank-source-content { padding-inline-start: 0; }
   .bank-source-content dl > div { grid-template-columns: 1fr; gap: 2px; }
