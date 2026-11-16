@@ -190,6 +190,43 @@ def _reaches(graph, start, goal):
     return False
 
 
+def closes_task_cycle(placed, question_deps, target_graph, before, after):
+    """True when the target edge before → after would make a task wait for itself.
+
+    A target edge makes every task of `after` wait for every task of `before`. Questions also wait for each other
+    (`questions[].prerequisites`), and the study plan combines both (generation_v2.order_plan). So the edge closes a
+    cycle when a task of `before` already waits — through question prerequisites and the target edges so far — for a
+    task of `after`. The target graph alone does not show it: 2026-11-17 job 670 / 261112_03, published Q071 (T064)
+    has the question prerequisite Q068 (T062), and the existence edge T064 → T062 stopped the lecture with
+    「prerequisites: combined target/question cycle」.
+
+    `placed`: question → its target; `question_deps`: question → its prerequisite questions. A document that is valid
+    without this guard has no such cycle, so the guard leaves every edge of it in place."""
+    if not question_deps:
+        return False
+    by_target, incoming = {}, {}
+    for q, t in placed.items():
+        by_target.setdefault(t, []).append(q)
+    for b, afters in target_graph.items():
+        for a in afters:
+            incoming.setdefault(a, set()).add(b)
+    goal = set(by_target.get(after, []))
+    seen, opened, stack = set(), set(), list(by_target.get(before, []))
+    while stack:
+        q = stack.pop()
+        if q in goal:
+            return True
+        if q in seen:
+            continue
+        seen.add(q)
+        stack.extend(d for d in question_deps.get(q, []) if d in placed)
+        if placed[q] not in opened:
+            opened.add(placed[q])
+            for b in incoming.get(placed[q], ()):
+                stack.extend(by_target.get(b, []))
+    return False
+
+
 def existence_relation_id(before, after):
     return 'PRE-' + document_hash([before, after])[:12]
 
@@ -201,12 +238,13 @@ def is_existence_edge(edge):
     return re.fullmatch(r'PRE-[0-9a-f]{12}', edge.get('relation_id') or '') is not None
 
 
-def order_edges(brief, tasks, presuppositions, relations, edges):
+def order_edges(brief, tasks, presuppositions, relations, edges, question_deps=None):
     """Target prerequisites from the presupposition records: the existence goal (the goal of a question that recalls
     the link, or the goal made from its point) before the goal of the question that presupposes it.
 
-    Only goals with tasks take part; an edge that would close a cycle (targets, or the concepts of prerequisite
-    relations) is left out, so is one whose relation would join a concept to itself (both goals name one concept).
+    Only goals with tasks take part; an edge that would close a cycle (targets, the concepts of prerequisite
+    relations, or — with `question_deps`, question → its prerequisite questions — the tasks themselves) is left out,
+    so is one whose relation would join a concept to itself (both goals name one concept).
     Returns (relations, edges) to add."""
     targets = {t['target_id']: t for t in brief['targets']}
     owners = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
@@ -229,6 +267,8 @@ def order_edges(brief, tasks, presuppositions, relations, edges):
             befores |= {t for t in from_points.get(rec['point_id'], []) if t in set(placed.values())}
         for before in sorted(befores - {after}):
             if (before, after) in pairs or _reaches(target_graph, after, before):
+                continue
+            if closes_task_cycle(placed, question_deps, target_graph, before, after):
                 continue
             a_ids, b_ids = targets[before]['concept_ids'], targets[after]['concept_ids']
             # An existence goal often names only concepts its detail goal also has (A and B; the detail goal adds C):

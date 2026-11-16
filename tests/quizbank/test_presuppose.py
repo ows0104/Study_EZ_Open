@@ -353,3 +353,22 @@ def test_a_question_from_before_the_run_or_one_that_presupposed_the_link_is_not_
     # The question this run wrote still carries it.
     ctx = pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank, exclude=['Q1'])
     assert [r['question_id'] for r in ctx['existence']] == ['Q5']
+
+
+def test_order_edges_do_not_cross_a_question_prerequisite():
+    """2026-11-17 job 670 / 261112_03: published Q071 (T064) has the question prerequisite Q068 (T062); the existence
+    edge T064 → T062 made each wait for the other and the assembly stopped (combined target/question cycle)."""
+    brief = _brief(('TE', ['A', 'C']), ('T1', ['A', 'B']), ('T2', ['B', 'D']))
+    tasks = [{'question_id': 'QE', 'direction_id': 'DTE'}, {'question_id': 'Q1', 'direction_id': 'DT1'},
+             {'question_id': 'Q2', 'direction_id': 'DT2'}]
+    rec = {'question_id': 'Q1', 'a': 'A', 'b': 'C', 'link': 'x', 'recalled_by': [], 'point_id': 'P9'}
+    edges = lambda deps, existing=(): [(e['before_target'], e['after_target'])
+                                       for e in pre.order_edges(brief, tasks, [rec], [], list(existing), deps)[1]]
+    assert edges(None) == edges({}) == edges({'QE': [], 'Q1': [], 'Q2': []}) == [('TE', 'T1')]
+    # the existence question itself waits for the question that presupposes it: no edge the other way
+    assert edges({'QE': ['Q1']}) == []
+    # ... also through another goal: QE waits for Q2, and T2 comes after T1 by a map edge
+    assert edges({'QE': ['Q2']}, [{'before_target': 'T1', 'after_target': 'T2', 'relation_id': 'R'}]) == []
+    assert edges({'QE': ['Q2']}) == [('TE', 'T1')]
+    # a prerequisite in the same direction as the edge is no cycle
+    assert edges({'Q1': ['QE']}) == [('TE', 'T1')]
