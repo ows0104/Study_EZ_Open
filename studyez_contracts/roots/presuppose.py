@@ -347,13 +347,21 @@ def whole_answers(coverage_rows, brief, presuppositions):
     return {(q, did) for did in existence_directions(brief, presuppositions) if did in rows for q in _whole(rows[did], goals[did])}
 
 
-def written_for(bank, brief, presuppositions):
+def written_for(bank, brief, presuppositions, exclude=()):
     """Existence goals a question was already written for (a presupposition point in its point_ids). Each such goal
     gets one question: a later add round does not ask it again. On the 2026-11-16 trial the first question asked the
     members in one layer, coverage still missed the goal's other members, and the second round wrote the same question
-    again (Q244 = Q253, both tasks; docs/changes/2026-11-16-existence-question-shape R7)."""
+    again (Q244 = Q253, both tasks; docs/changes/2026-11-16-existence-question-shape R7).
+
+    `exclude`: the questions that were already in the bank before this run wrote any. They never count as written for
+    an existence goal, however the goal's points reached them — `_join_points` gives a goal's points to every question
+    the coverage judgment lists as its evidence, and evidence includes a question that merely **provides** the link.
+    Without this the goal was read as already asked and no question was ever written for it: 261116_06 left
+    「Cryptococcus의 주요 임상상은?」 unasked while 11 of its questions presupposed it (2026-11-16)."""
     pids = {r['point_id'] for r in presuppositions or [] if r['point_id']}
-    asked = {p for q in bank['questions'] for p in q.get('point_ids', []) if p in pids}
+    skip = set(exclude)
+    asked = {p for q in bank['questions'] if q['question_id'] not in skip
+             for p in q.get('point_ids', []) if p in pids}
     tids = {t for p in brief['points'] if p['point_id'] in asked for t in p['target_ids']}
     return {d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']}
 

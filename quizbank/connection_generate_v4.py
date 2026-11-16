@@ -274,6 +274,10 @@ def run(packet, out, model, invoke, resume=None):
     def judge(name, ctx, stages=None):
         return (stages or st).judged(name, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
 
+    # 문항을 쓰기 전의 은행. 그 문항들은 어느 새 목표를 위해 쓰인 것이 아니므로, 범위 점검이 근거로 적어
+    # 포인트가 붙어도 「이미 쓴 목표」로 세지 않는다(2026-11-16 261116_06).
+    intake_ids = {q['question_id'] for q in bank['questions']}
+
     # 2: coverage (union rule, duplicates), 2m: map check without importance -------------------------
     # Independent judgments: side by side in a new run (docs/changes/2026-11-11-root-batch-parallel).
     rows = {}
@@ -447,11 +451,11 @@ def run(packet, out, model, invoke, resume=None):
         gaps = {did: v4.missing_components(rows[did], goals[did]) for did in goals if rows[did]['status'] != 'covered'}
         if presuppositions:
             gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # an existence goal is asked whole, in one question
-            for did in pre.written_for(bank, brief, presuppositions):        # ... by one question
+            for did in pre.written_for(bank, brief, presuppositions, exclude=intake_ids):   # ... by one question
                 gaps.pop(did, None)
         if discriminations:
             # Not from the coverage rows: the element name is what the forward question answers (spec R4).
-            gaps.update(dis.gaps(brief, discriminations, bank))
+            gaps.update(dis.gaps(brief, discriminations, bank, exclude=intake_ids))
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
