@@ -158,6 +158,30 @@ def test_a_new_question_the_review_doubts_is_fixed_and_reviewed_again(tmp_path):
     assert q['explanation'] == 'Synthetic clearer explanation'
 
 
+def test_a_round_whose_every_fix_is_worse_is_undone_as_a_whole(tmp_path):
+    """2026-11-17 job 670 / 261112_03: both fixes of the round were judged worse, and merging the empty rest again
+    stopped the lecture with 「v3 fix output.questions: too few entries」. The first run undoes such a round whole."""
+    previous, old, packet = published(tmp_path)
+
+    class Worse(Presupposing):
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage in ('v4-review-presuppose-1', 'v4-review-presuppose-2'):
+                value = copy.deepcopy(value)
+                for r in value['reviews']:
+                    r.update(verdict='wrong', note='Synthetic worse')
+            return value, info
+    model = Worse(design_doubt=('Q004',))
+    result = g.run(packet, tmp_path / 'new', invoke=model, presuppose_of=previous)
+    assert consume(result, packet) == result['document']
+    fixes = result['manifest']['fixes'][len(old['manifest']['fixes']):]
+    assert fixes and all(f['question_id'] == 'Q004' and f['reverted'] for f in fixes)
+    # the question ends as it was added, with the doubt of its first review
+    added = next(q for q in model.inputs['v4-fix-presuppose-0']['questions'] if q['question_id'] == 'Q004')
+    q = next(q for q in result['document']['bank_snapshot']['questions'] if q['question_id'] == 'Q004')
+    assert q['explanation'] == added['explanation'] != 'Synthetic clearer explanation'
+
+
 def test_without_carry_sources_it_is_refused(tmp_path):
     previous, _, packet = published(tmp_path)
     del packet['carrySources']

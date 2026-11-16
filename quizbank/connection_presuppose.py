@@ -250,6 +250,7 @@ def run(packet, out, model, invoke, previous, resume=None):
             value = st.run(name, ctx, accept, state)
             plain = v4.without_basis(value)
             before = (copy.deepcopy(bank), copy.deepcopy(stimuli), copy.deepcopy(basis))
+            conflicts_before = copy.deepcopy(conflicts)
             before_reviews = {q: reviews[q] for q in targets}
             merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, plain, targets)
             fixed_basis = v4.collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
@@ -258,8 +259,14 @@ def run(packet, out, model, invoke, previous, resume=None):
             bank = visual.render(merged, stimuli, packet, out / 'material')
             again = review(f'{X}review{TAG}-{k + 1}', changed) if changed else {}
             reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
-            if reverted:
-                # A fix that made its question worse is undone (the whole round when every fix of it was worse).
+            if reverted and not [q for q in changed if q not in reverted]:
+                # Every fix of the round was worse: the round is undone as a whole, as the first run does
+                # (connection_generate_v4). Merging the empty rest again is not a fix output — 2026-11-17 job 670 /
+                # 261112_03 stopped there with 「v3 fix output.questions: too few entries」.
+                bank, stimuli, basis = before
+                conflicts = conflicts_before
+            elif reverted:
+                # A fix that made its question worse is undone.
                 kept = [q for q in changed if q not in reverted]
                 part = v3.fixes_of(plain, kept)
                 merged, conflicts, _ = v3.merge_fixes(visual.authored(before[0]), conflicts, part, targets)
