@@ -597,6 +597,16 @@ def main() -> None:
     }])
     client.put("/api/admin/lectures/병리학/260813_02/preview", headers=RUNNER,
                json={"shareUrl": "https://chatgpt.com/share/auto-2"})
+    # 상한(MAX_RUNNING)보다 한 편 더 세워 둔다. 상한에 닿은 뒤에는 남은 편이 있어도 안 준다.
+    from app.jobs.queue import MAX_RUNNING
+    for n in range(3, MAX_RUNNING + 2):
+        client.post("/api/admin/lectures", headers=RUNNER, json=[{
+            "subject": "병리학", "runId": f"260813_{n:02d}", "uid": f"260813_{n:02d}#줄{n}#김혜령",
+            "date": "2026-08-13", "slot": n, "slotEnd": n, "startTime": f"{8 + n:02d}:00",
+            "title": f"{n}번째 예습", "professors": ["김혜령"], "author": "", "version": None,
+        }])
+        client.put(f"/api/admin/lectures/병리학/260813_{n:02d}/preview", headers=RUNNER,
+                   json={"shareUrl": f"https://chatgpt.com/share/auto-{n}"})
 
     # **일꾼이 둘이다.** 앞의 편이 막혀도 뒤의 편이 간다 — 이것이 없던 동안
     # 한 편이 45분을 잠들어 있으면 큐가 통째로 섰다.
@@ -608,8 +618,11 @@ def main() -> None:
     check("집어 간 일꾼 이름이 남는다",
           first["worker"] == "w1" and second["worker"] == "w2", (first, second))
 
-    third = client.post("/api/admin/prequiz-jobs/claim?worker=w3", headers=RUNNER).json()["job"]
-    check("상한을 넘겨서는 안 준다", third is None, third)
+    others = [client.post(f"/api/admin/prequiz-jobs/claim?worker=w{n}", headers=RUNNER).json()["job"]
+              for n in range(3, MAX_RUNNING + 1)]
+    check("상한까지는 일꾼마다 한 편씩 준다", all(job is not None for job in others), others)
+    over = client.post(f"/api/admin/prequiz-jobs/claim?worker=w{MAX_RUNNING + 1}", headers=RUNNER).json()["job"]
+    check("상한을 넘겨서는 안 준다", over is None, over)
 
     mine = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
     check("끊겼다 붙은 일꾼은 자기 편을 다시 잡는다", mine["id"] == first["id"], mine)
@@ -623,10 +636,13 @@ def main() -> None:
           (row["stageIndex"], row["stageTotal"], row["etaSeconds"]) == (3, 7, 900), row)
     check("몇 분째인지도 서버가 셈해 준다", row["elapsedSeconds"] >= 0 and "stageSeconds" in row, row)
     check("도는 것과 기다리는 것을 갈라서 준다",
-          len(shown["running"]) == 2 and shown["maxRunning"] == 2, shown)
+          len(shown["running"]) == MAX_RUNNING and shown["maxRunning"] == MAX_RUNNING, shown)
 
-    for job in (first, second):
+    for job in (first, second, *others):
         client.put(f"/api/admin/prequiz-jobs/{job['id']}", headers=RUNNER, json={"state": "done"})
+    for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
+        if row["state"] == "queued":   # the one past the cap
+            client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER, json={"state": "done"})
 
     # 하루 상한. 넘은 편은 만들지 않지만 **화면에는 남는다** — 안 세우면 자동이
     # 안 걸린 편과 상한에 걸린 편이 같은 모양이 된다.
