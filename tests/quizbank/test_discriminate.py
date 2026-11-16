@@ -362,3 +362,20 @@ def test_a_published_question_keeps_its_goal_when_a_new_goal_would_take_it():
     assert v4.keep_published(where, {}) == where
     # a published question the placement dropped (merged as a duplicate) stays dropped
     assert v4.keep_published({'Q004': 'DQ001'}, settled) == {'Q004': 'DQ001'}
+
+
+def test_a_forward_question_or_one_from_before_the_run_is_not_the_reverse_question_for_its_link():
+    """The existence path's 2026-11-16 failure, in this path's shape: a later coverage round can give a reverse goal's
+    point to the forward question, and the review would then read that question as the reverse one and have the fix
+    put the answer's own side back into the stem. docs/changes/2026-11-17-existence-review-label."""
+    brief = {'targets': [{'target_id': 'TR', 'directions': [{'direction_id': 'DTR', 'cue': 'c',
+                                                             'relation_ids': ['RQD001'],
+                                                             'components': [{'component_id': 'm', 'text': 'Toxa'}]}]}],
+             'points': [{'point_id': 'P9', 'target_ids': ['TR']}]}
+    bank = {'questions': [{'question_id': 'Q1', 'question': 'Toxa의 작용은?', 'point_ids': ['P9']},
+                          {'question_id': 'Q4', 'question': 'c', 'point_ids': ['P9']}]}
+    recs = [rec()]   # forward_by = ('Q1',)
+    ctx = dis.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank)
+    assert [r['question_id'] for r in ctx['discrimination']] == ['Q4']
+    assert 'discrimination' not in dis.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank,
+                                                   exclude=['Q1', 'Q4'])

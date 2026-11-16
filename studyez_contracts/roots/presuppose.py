@@ -288,13 +288,26 @@ def mark_existence(ctx, brief, presuppositions, bank):
     return ctx
 
 
-def mark_review(ctx, brief, presuppositions, bank):
+def mark_review(ctx, brief, presuppositions, bank, exclude=()):
     """Item review and fix input: `existence`, one row per question of the batch written for an existence goal (a
     presupposition point in its point_ids) with the goal's cue, members and relation, and the stems that presuppose
     the link. Without it the review judged existence questions like detail ones (「too easy, ask by a condition」)
     and the fix put the next layer into the stem; the review also named only older relations, so a question went to
     an older goal and its existence goal stayed without a task (2026-11-16 job 635: Q231·Q241·Q243,
-    docs/changes/2026-11-16-existence-question-shape). Changes `ctx` in place and returns it; no key when none."""
+    docs/changes/2026-11-16-existence-question-shape). Changes `ctx` in place and returns it; no key when none.
+
+    Only a question this run wrote may carry the label, by two rules
+    (docs/changes/2026-11-17-existence-review-label):
+
+    `exclude`: the questions already in the bank before this run wrote any, as `written_for` takes them. Point ids are
+    not evidence of authorship — `_join_points` gives a goal's points to every question the coverage judgment lists as
+    its evidence, and evidence includes a question that merely **provides** the link.
+
+    A question whose own stem presupposed a goal's link is never that goal's existence question: a stem that hands
+    A→B over and answers C cannot be the question that answers B. Without these the review read such a question as an
+    existence item and told the fix to ask the members instead, so the detail it asked was overwritten and nothing
+    asked it again — 41 of 43 labelled questions on 2026-11-16 (261116_02 Q057: 「Vero cell의 항바이러스 반응」 →
+    「일본뇌염 백신의 제조 기질은?」, and no question left answering the IFN deficiency)."""
     pids = {r['point_id'] for r in presuppositions or [] if r['point_id']}
     if not pids:
         return ctx
@@ -305,9 +318,13 @@ def mark_review(ctx, brief, presuppositions, bank):
             by_point.setdefault(r['point_id'], set()).add(r['question_id'])
     points = {p['point_id']: p for p in brief['points']}
     targets = {t['target_id']: t for t in brief['targets']}
+    skip = set(exclude)
     rows = []
     for q in ctx['questions']:
-        mine = [p for p in q.get('point_ids', []) if p in pids and p in points]
+        if q['question_id'] in skip:
+            continue
+        mine = [p for p in q.get('point_ids', []) if p in pids and p in points
+                and q['question_id'] not in by_point.get(p, ())]
         if not mine:
             continue
         goals = [d for p in mine for tid in points[p]['target_ids'] if tid in targets for d in targets[tid]['directions']]

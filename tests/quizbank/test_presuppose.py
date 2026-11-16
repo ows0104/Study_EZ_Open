@@ -328,3 +328,28 @@ def test_a_goal_the_bank_only_provides_is_still_written_for(tmp_path):
     written = [q for q in bank.values() if 'P002' in (q.get('point_ids') or []) and q['question_id'] != 'Q2']
     assert written, '존재 목표에 문항이 쓰이지 않았다'
     assert {t['question_id'] for t in result['document']['tasks']} >= {w['question_id'] for w in written}
+
+
+def test_a_question_from_before_the_run_or_one_that_presupposed_the_link_is_not_its_existence_question():
+    """2026-11-16: 43 questions got the existence label and 41 were rewritten into existence shape, so the detail
+    they asked was lost (261116_02 Q057 「Vero cell의 항바이러스 반응」 → 「일본뇌염 백신의 제조 기질은?」, nothing
+    left answering the IFN deficiency). `_join_points` gives a goal's points to every question the coverage judgment
+    lists as evidence — a question that merely provides the link included — and mark_review read that as authorship.
+    docs/changes/2026-11-17-existence-review-label."""
+    brief = {'targets': [{'target_id': 'TQ1', 'directions': [{'direction_id': 'DQ1', 'cue': 'A의 효소는?',
+                                                              'relation_ids': ['RQP001'],
+                                                              'components': [{'component_id': 'C1', 'text': 'B1'}]}]}],
+             'points': [{'point_id': 'P9', 'target_ids': ['TQ1']}]}
+    # Q1's stem presupposes A→B1 and asks the next layer; coverage gave it the goal's point anyway. Q5 is this run's.
+    bank = {'questions': [{'question_id': 'Q1', 'question': 'A의 B1이 분해하는 것은?', 'point_ids': ['P9']},
+                          {'question_id': 'Q5', 'question': 'A의 효소는?', 'point_ids': ['P9']}]}
+    recs = [{'question_id': 'Q1', 'a': 'A', 'b': 'B1', 'link': 'x', 'recalled_by': [], 'point_id': 'P9'}]
+    # Its own stem presupposed the link, so the label never reaches it — with no exclude passed at all.
+    ctx = pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank)
+    assert [r['question_id'] for r in ctx['existence']] == ['Q5']
+    # `exclude`: the questions already in the bank before this run wrote any never carry it, however the point arrived.
+    assert 'existence' not in pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank,
+                                              exclude=['Q1', 'Q5'])
+    # The question this run wrote still carries it.
+    ctx = pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank, exclude=['Q1'])
+    assert [r['question_id'] for r in ctx['existence']] == ['Q5']
