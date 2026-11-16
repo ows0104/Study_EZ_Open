@@ -332,7 +332,8 @@ def run(packet, out, model, invoke, previous, resume=None):
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "
           f"선행 연결 {counts['prerequisites']}개 · 남은 전제 {len(counts['open'])}개", flush=True)
     print(f"── {LABEL} 역방향: 거꾸로 물 목표 {rcounts['reversible']}개 중 이미 그렇게 묻던 것 {rcounts['alreadyAsked']} · "
-          f"역방향 목표 {rcounts['reverseGoal']} · 남음 {len(rcounts['open'])} · 발문이 답을 흘린 문항 {len(rcounts['answerInStem'])}개", flush=True)
+          f"역방향 목표 {rcounts['goalsMade']}개 중 문항 생김 {rcounts['goalsWithTask']} · 남은 연결 {len(rcounts['open'])} · "
+          f"발문이 답을 흘린 문항 {len(rcounts['answerInStem'])}개", flush=True)
 
     manifest = copy.deepcopy(meta)
     manifest.pop('coverageFallback', None)
