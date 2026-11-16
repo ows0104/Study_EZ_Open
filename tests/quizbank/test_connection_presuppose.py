@@ -19,9 +19,10 @@ BACKFILL = ['v4-presuppose-0', 'v4-supplement-normalize-presuppose', 'v4-coverag
 
 
 class Legacy(Stages):
-    """A ledger made before presuppose/1."""
+    """A ledger made before presuppose/1 (and so before discriminate/1, which came after it)."""
     def __init__(self, *a, fresh=None, **kw):
-        super().__init__(*a, fresh={k: v for k, v in (fresh or {}).items() if k != 'presuppositions'}, **kw)
+        super().__init__(*a, fresh={k: v for k, v in (fresh or {}).items() if k not in ('presuppositions', 'discriminations')},
+                         **kw)
 
 
 def published(tmp_path):

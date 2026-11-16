@@ -21,6 +21,7 @@ from . import generation_v2 as v2
 from . import generation_v3 as v3
 from . import recall_units as recall
 from . import presuppose as pre
+from . import discriminate as dis
 
 POLICY = 'root-generation/4'
 _STRING = {'type': 'string'}
@@ -878,11 +879,13 @@ def place(brief, review, raw, parents=None, placement='evidence', prefer=frozens
 
 
 def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_date, snapshot=None, importance=None,
-                  placement='evidence', presuppositions=None, settled=()):
+                  placement='evidence', presuppositions=None, discriminations=None, settled=()):
     """roots/1 document of a /4 run and its placement record {mergedDuplicates, unplacedQuestions}.
 
     `snapshot`/`importance` as in /2 (container concepts, question-basis importance). `presuppositions` (presuppose/1
-    records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals)."""
+    records) add the study-order prerequisites of existence goals (docs/changes/2026-11-15-tree-edge-goals), and
+    `discriminations` (discriminate/1 records) those of reverse goals, each after the forward question's goal
+    (docs/changes/2026-11-16-reverse-discriminating)."""
     validate_audit(brief, bank, audit)
     # `settled`: questions whose placement stays as published (presuppose-only/1 keeps each published task on its goal,
     # so its learning history carries over); only the others may be drawn to an existence goal they ask whole.
@@ -924,6 +927,13 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
     edges = [e for e in brief['prerequisites'] if e['relation_id'] in reviewed_relations and e['before_target'] in prepared_targets]
     if presuppositions:
         extra_relations, extra_edges = pre.order_edges(brief, candidates, presuppositions, review['relations'], edges)
+        if extra_edges:
+            review = {**review, 'relations': [*review['relations'], *extra_relations]}
+            edges = [*edges, *extra_edges]
+    if discriminations:
+        # After the existence edges: a reverse goal waits for the forward question's goal, which may itself wait for
+        # an existence goal. The cycle guard reads the edges already made, so the order of these two blocks is fixed.
+        extra_relations, extra_edges = dis.order_edges(brief, candidates, discriminations, review['relations'], edges)
         if extra_edges:
             review = {**review, 'relations': [*review['relations'], *extra_relations]}
             edges = [*edges, *extra_edges]
@@ -973,20 +983,24 @@ def notebook_profile(packet, meta):
         extended = meta['supplementPoints']
         require(extended['points'][:len(points['points'])] == points['points'] and extended['notebook_profile'] == points['notebook_profile'],
                 'result4: supplement changed the exam points')
-        require(all(p.get('origin') in ('question', pre.ORIGIN) and 'importance_basis' not in p for p in extended['points'][len(points['points']):]),
+        require(all(p.get('origin') in ('question', pre.ORIGIN, dis.ORIGIN) and 'importance_basis' not in p for p in extended['points'][len(points['points']):]),
                 'result4: unmarked supplement point or a point with importance')
         made = [p['point_id'] for p in extended['points'] if p.get('origin') == pre.ORIGIN]
         require(made == sorted({r['point_id'] for r in meta.get('presuppositions') or [] if r['point_id']}),
                 'result4: presupposition points differ from the presupposition records')
+        made = [p['point_id'] for p in extended['points'] if p.get('origin') == dis.ORIGIN]
+        require(made == sorted({r['point_id'] for r in meta.get('discriminations') or [] if r['point_id']}),
+                'result4: discrimination points differ from the discrimination records')
     else:
-        require(not meta['supplement'] and not any(r['point_id'] for r in meta.get('presuppositions') or []),
+        require(not meta['supplement'] and not any(r['point_id'] for r in meta.get('presuppositions') or [])
+                and not any(r['point_id'] for r in meta.get('discriminations') or []),
                 'result4: supplement decisions without points')
     require(all('importance_basis' not in p for p in points['points']), 'result4: /4 exam points carry no importance (R1)')
     return points['notebook_profile']
 
 
 def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
-             presuppositions=None, settled=()):
+             presuppositions=None, discriminations=None, settled=()):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing)."""
     table = question_table(basis, profile, reviewed)
@@ -994,7 +1008,8 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
                                 snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table),
-                                placement=placement, presuppositions=presuppositions, settled=settled)
+                                placement=placement, presuppositions=presuppositions,
+                                discriminations=discriminations, settled=settled)
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
 
 
@@ -1091,7 +1106,7 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
     again, placed, proofs = assemble(brief, reviewed, value['sourceAudit'], meta['coverage'], meta['questionImportance'], profile,
                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                                      placement=placement, presuppositions=meta.get('presuppositions'),
-                                     settled=_settled(meta))
+                                     discriminations=meta.get('discriminations'), settled=_settled(meta))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
     if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):

@@ -24,6 +24,7 @@ from studyez_contracts.roots import generation_v3 as v3
 from studyez_contracts.roots import generation_v4 as v4
 from studyez_contracts.roots import map_tree
 from studyez_contracts.roots import presuppose as pre
+from studyez_contracts.roots import discriminate as dis
 from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.bank.validate import validate_bank
 from . import connection_batches as batches
@@ -116,6 +117,8 @@ def check_stage(kind, value, ctx, state, scratch):
     """/4 version of connection_generate_v3.check_stage: the same merge and render, with the /4 output shapes."""
     if kind == 'presuppose-normalize':
         return pre.check_normalize(value, ctx, state)
+    if kind == 'discriminate-normalize':
+        return dis.check_normalize(value, ctx, state)
     if kind == 'supplement-normalize':
         return v3.check_supplement_normalize(value, ctx, state)
     if kind == 'supplement':
@@ -212,8 +215,11 @@ def run(packet, out, model, invoke, resume=None):
     # still unplaced to the supplement once more after the review (C) and reports what is left (D).
     # presuppose/1 (docs/changes/2026-11-15-tree-edge-goals): a new run judges what each question's stem gives as known,
     # makes an existence goal for a link no question recalls and orders it before the goals that presuppose it.
+    # discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): a new run also judges which named elements a
+    # cue alone has to pick out, makes a reverse goal for the ones no question asks that way and orders each after
+    # the forward question's goal.
     fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES},
-             'presuppositions': {'policy': pre.PRESUPPOSE}}
+             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
@@ -227,6 +233,7 @@ def run(packet, out, model, invoke, resume=None):
     # goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): a ledger made without it keeps its add and re-check inputs.
     goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
     presuppose_on = ledger.get('presuppositions') == {'policy': pre.PRESUPPOSE}
+    discriminate_on = ledger.get('discriminations') == {'policy': dis.DISCRIMINATE}
 
     def merge_row(old, new, goal, replaced=()):
         return _merge_row(old, new, goal, replaced, by_evidence=goal_dups)
@@ -278,12 +285,21 @@ def run(packet, out, model, invoke, resume=None):
         qids = [q['question_id'] for q in bank['questions']]
         calls += [(f'{X}presuppose-{k}', ctx, lambda raw, ctx=ctx: pre.check(raw, ctx))
                   for k, ctx in enumerate(pre.stage_input(bank, part, page_counts) for part in chunks(qids, pre.CHUNK))]
+    presuppose_calls = len(calls) - covered_calls
+    if discriminate_on:
+        cids = dis.categories(brief)
+        # A map with no category of named elements asks nothing (chunks([]) would still make one empty call).
+        calls += [(f'{X}discriminate-{k}', ctx, lambda raw, ctx=ctx: dis.check(raw, ctx))
+                  for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(cids, dis.CHUNK))
+                  if cids]
+    discriminate_calls = len(calls) - covered_calls - presuppose_calls
     ctx = v4.map_check_input(brief)
     calls.append((X + 'map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
     values = batches.judgments(st, calls)
     for value in values[:covered_calls]:
         rows.update({r['direction_id']: r for r in value['rows']})
-    presupposed = values[covered_calls:-1]
+    presupposed = values[covered_calls:covered_calls + presuppose_calls]
+    discriminated = values[covered_calls + presuppose_calls:covered_calls + presuppose_calls + discriminate_calls]
     map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points (no basis) ------------------
@@ -370,6 +386,24 @@ def run(packet, out, model, invoke, resume=None):
             rows.update({r['direction_id']: r for r in value['rows']})
             ctx = v4.map_check_input(brief, new_tids)
             map_checks.append(st.judged(X + 'map-check-presuppose', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+
+    # 2d: named elements a cue alone has to pick out, that no question asks that way → reverse goals (discriminate/1)
+    discriminations, made_reverse = None, []
+    if discriminate_on:
+        points_doc, discriminations, made_reverse = dis.records(discriminated, bank, points_doc, brief,
+                                                                [p['point_id'] for p in brief['points']])
+        print(f"── 역방향 판정: 판별되는 원소 {len(discriminations)}개 · 단서만으로 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
+        if made_reverse:
+            allowed = v3.supplement_ids(brief, len(made_reverse))
+            ctx = dis.normalize_input(brief, made_reverse, allowed)
+            state = {'brief': brief, 'blank': True}
+            addition = st.run(X + 'supplement-normalize-discriminate', ctx,
+                              lambda raw: check_stage('discriminate-normalize', raw, ctx, state, None), state)
+            brief, new_tids = dis.extend(brief, addition, [p['point_id'] for p in made_reverse])
+            new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
+            rows.update(dis.blank_rows(new_dids))   # judged after the add round, not before (spec R4)
+            ctx = v4.map_check_input(brief, new_tids)
+            map_checks.append(st.judged(X + 'map-check-discriminate', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
     bank = _join_points(bank, brief, rows)
 
     def review_ctx(bank_, conflicts_, basis_, qids):
@@ -381,6 +415,8 @@ def run(packet, out, model, invoke, resume=None):
             ctx['map_relations'] = v4.map_relations(brief, map_checks)
         if presuppositions:
             pre.mark_review(ctx, brief, presuppositions, bank_)   # existence questions are judged as such (2026-11-16)
+        if discriminations:
+            dis.mark_review(ctx, brief, discriminations, bank_)   # ... and so are reverse ones (discriminate/1)
         return ctx
 
     # The first review of a batch reads its questions, their conflicts and the map relations. Once a batch is
@@ -414,12 +450,17 @@ def run(packet, out, model, invoke, resume=None):
             gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # an existence goal is asked whole, in one question
             for did in pre.written_for(bank, brief, presuppositions):        # ... by one question
                 gaps.pop(did, None)
+        if discriminations:
+            # Not from the coverage rows: the element name is what the forward question answers (spec R4).
+            gaps.update(dis.gaps(brief, discriminations, bank))
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
         ctx = v4.add_input(brief, bank, gaps, allowed, rows if goal_dups else None)
         if presuppositions:
             pre.mark_existence(ctx, brief, presuppositions, bank)
+        if discriminations:
+            dis.mark_add(ctx, brief, discriminations, bank)
         if ledger['addRounds'] < n + 1:
             ledger['addRounds'] = n + 1
             st.save()
@@ -493,6 +534,8 @@ def run(packet, out, model, invoke, resume=None):
         ctx = v4.with_importance(v3.fix_input(S.bank, findings, targets, S.conflicts, covered_by(S)), S.basis)
         if presuppositions:
             pre.mark_review(ctx, brief, presuppositions, S.bank)
+        if discriminations:
+            dis.mark_review(ctx, brief, discriminations, S.bank)
         if S.scope:
             ctx['conflict_scope'] = S.scope
         state = _state(S.bank, S.conflicts, S.stimuli, packet)
@@ -663,11 +706,16 @@ def run(packet, out, model, invoke, resume=None):
     basis = {q['question_id']: basis[q['question_id']] for q in bank['questions']}
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile,
                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
-                                      placement=placement, presuppositions=presuppositions)
+                                      placement=placement, presuppositions=presuppositions,
+                                      discriminations=discriminations)
     if presuppositions is not None:
         counts = pre.report(presuppositions, doc)
         print(f"── 전제 정리: {counts['presupposed']}개 중 답으로 묻는 과제 있음 {counts['recalledByTask']} · 존재 목표 {counts['existenceGoal']} · "
               f"남음 {len(counts['open'])} · 선행 연결 {counts['prerequisites']}개", flush=True)
+    if discriminations is not None:
+        counts = dis.report(discriminations, doc, bank)
+        print(f"── 역방향 정리: 판별 원소 {counts['discriminable']}개 중 이미 단서로 묻던 것 {counts['alreadyAsked']} · "
+              f"역방향 목표 {counts['reverseGoal']} · 남음 {len(counts['open'])} · 발문이 주체를 준 문항 {len(counts['ownerInStem'])}개", flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "
@@ -705,8 +753,10 @@ def run(packet, out, model, invoke, resume=None):
                   **({'operatorExclusions': exclusions} if exclusions else {}),
                   'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedIgnored': restated,
                   **({'intakeClozeUnits': intake_cloze} if intake_cloze else {}),
-                  'supplement': supplement, 'supplementPoints': points_doc if supplement or made_points else None,
+                  'supplement': supplement,
+                  'supplementPoints': points_doc if supplement or made_points or made_reverse else None,
                   **({'presuppositions': presuppositions} if presuppositions is not None else {}),
+                  **({'discriminations': discriminations} if discriminations is not None else {}),
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'contextJudgments': context_judgments,
                   'medicalUnreviewed': medical_unreviewed, 'readiness': ready_rows, 'clinicalConflicts': conflicts,
