@@ -205,21 +205,27 @@ def reverse_directions(brief, records):
     return [d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']]
 
 
-def written_for(bank, brief, records):
+def written_for(bank, brief, records, exclude=()):
     """Reverse goals a question was already written for (a discrimination point in its point_ids). Each such goal
-    gets one question; a later add round does not ask it again (presuppose/1 R7's lesson)."""
+    gets one question; a later add round does not ask it again (presuppose/1 R7's lesson).
+
+    `exclude`: the questions already in the bank before this run wrote any. A reverse goal starts with a blank
+    coverage row (`blank_rows`), so `_join_points` cannot hand its point to one of them before the first add round —
+    but a later round's coverage can, and then the goal would look written for (presuppose/1 hit exactly that)."""
     pids = {r['point_id'] for r in records or [] if r['point_id']}
-    asked = {p for q in bank['questions'] for p in q.get('point_ids', []) if p in pids}
+    skip = set(exclude)
+    asked = {p for q in bank['questions'] if q['question_id'] not in skip
+             for p in q.get('point_ids', []) if p in pids}
     tids = {t for p in brief['points'] if p['point_id'] in asked for t in p['target_ids']}
     return {d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']}
 
 
-def gaps(brief, records, bank):
+def gaps(brief, records, bank, exclude=()):
     """Reverse goals still open, with all their members. Not a coverage verdict: the forward question answers the
     same content, so coverage calls such a goal covered as soon as it looks (that is the whole point of the goal —
     the same connection from the other end). A reverse goal is open until a question carries its point."""
     every = {d['direction_id']: d for t in brief['targets'] for d in t['directions']}
-    done = written_for(bank, brief, records)
+    done = written_for(bank, brief, records, exclude=exclude)
     return {did: [c['component_id'] for c in every[did]['components']]
             for did in reverse_directions(brief, records) if did not in done and did in every}
 

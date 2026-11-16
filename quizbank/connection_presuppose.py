@@ -165,9 +165,9 @@ def run(packet, out, model, invoke, previous, resume=None):
         goals = _goals(brief)
         gaps = {did: v4.missing_components(rows[did], goals[did]) for did in new_dids if rows[did]['status'] != 'covered'}
         gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # asked whole, in one question
-        for did in pre.written_for(bank, brief, presuppositions):        # one question per existence goal
+        for did in pre.written_for(bank, brief, presuppositions, exclude=published):   # one question per goal
             gaps.pop(did, None)
-        gaps.update(dis.gaps(brief, discriminations, bank))              # reverse goals: not a coverage verdict
+        gaps.update(dis.gaps(brief, discriminations, bank, exclude=published))              # reverse goals: not a coverage verdict
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))

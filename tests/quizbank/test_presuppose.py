@@ -296,3 +296,35 @@ def test_an_existence_goal_a_question_was_written_for_is_not_asked_again():
     bank = {'questions': [{'question_id': 'Q1', 'point_ids': ['P1']}, {'question_id': 'Q5', 'point_ids': ['P8']}]}
     assert pre.written_for(bank, brief, recs) == {'DQ1'}
     assert pre.written_for(bank, brief, None) == set()
+
+
+class PresupposingProvidedOnly(Presupposing):
+    """범위 점검이 **기존 문항**을 그 존재 목표의 근거로 적는다 — 원소를 답하지는 않고 발문이 줄 뿐이다.
+
+    261116_06에서 실제로 난 모양이다: 그 문항에 포인트가 붙어 목표가 「이미 쓴 것」으로 읽히고,
+    「Cryptococcus의 주요 임상상은?」은 문항 없이 남았다(그 연결을 전제로 주는 과제 11개).
+    """
+
+    def __call__(self, stage, ctx, material, model):
+        value, rest = super().__call__(stage, ctx, material, model)
+        if stage.startswith('v4-coverage'):
+            for row in value.get('rows', []):
+                if row['direction_id'] != 'DQ001' or row['evidence']:
+                    continue
+                row['evidence'] = [{'question_id': 'Q2', 'tested_relation_ids': ['RQP001'],
+                                    'components': [{'component_id': 'member', 'location': 'provided',
+                                                    'answer_unit_indices': [], 'reason': 'x'}],
+                                    'visual_verdict': 'not_applicable', 'reason': 'Synthetic'}]
+        return value, rest
+
+
+def test_a_goal_the_bank_only_provides_is_still_written_for(tmp_path):
+    packet, model, result = t4.run(tmp_path, PresupposingProvidedOnly())
+    consume(result, packet)
+    # 그 목표가 출제 단계에 들어가고 문항이 쓰인다
+    goals = {gl['direction_id'] for gl in model.inputs['v4-add-0']['goals']}
+    assert 'DQ001' in goals
+    bank = {q['question_id']: q for q in result['document']['bank_snapshot']['questions']}
+    written = [q for q in bank.values() if 'P002' in (q.get('point_ids') or []) and q['question_id'] != 'Q2']
+    assert written, '존재 목표에 문항이 쓰이지 않았다'
+    assert {t['question_id'] for t in result['document']['tasks']} >= {w['question_id'] for w in written}
