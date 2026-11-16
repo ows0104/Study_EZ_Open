@@ -143,6 +143,7 @@ def run(packet, out, model, invoke, previous, resume=None):
         st.save()
 
     # 2d: reverse goals (discriminate/1) --------------------------------------
+    rev_dids = []
     # After the existence goals: both take their IDs from the brief as it stands, so this order fixes which goal gets
     # which TQ/DQ number.
     if made_reverse:
@@ -153,7 +154,6 @@ def run(packet, out, model, invoke, previous, resume=None):
                           lambda raw: check_stage('discriminate-normalize', raw, ctx, state, None), state)
         brief, new_tids = dis.extend(brief, addition, [p['point_id'] for p in made_reverse])
         rev_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
-        new_dids = [*new_dids, *rev_dids]
         rows.update(dis.blank_rows(rev_dids))   # judged after the add round, not before (spec R4)
         chk = v4.map_check_input(brief, new_tids)
         map_checks.append(st.judged(X + 'map-check' + RTAG, chk, lambda raw, ctx=chk: v3.check_map_input(raw, ctx)))
@@ -327,7 +327,7 @@ def run(packet, out, model, invoke, previous, resume=None):
 
     record = {**ledger['presupposeOnly'], 'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']),
               'addedQuestions': added, 'previousMedical': old['medical'], 'addedMedical': added_medical,
-              'existenceGoals': new_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()},
+              'existenceGoals': new_dids, 'reverseGoals': rev_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()},
               'reverseCounts': {k: (len(v) if k in ('open', 'ownerInStem') else v) for k, v in rcounts.items()}}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "
           f"선행 연결 {counts['prerequisites']}개 · 남은 전제 {len(counts['open'])}개", flush=True)
