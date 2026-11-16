@@ -1,21 +1,27 @@
-"""discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): the links a stem never makes the learner pick.
+"""discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): the goals no question asks from the other end.
 
-A named element of one category (an organism's factor, say) is **discriminable** when other owners in the lecture
-have a category of the same kind: told only the cue (its action, target or finding), the learner has to pick which
-owner's element it is. 「A의 B는?」 hands over A, so it never asks that. The `v4-discriminate` stage judges, per
-category, which of its named elements are discriminable, which questions already ask one without naming its owner
-(`asked_by`) and which ask it with the owner in the stem (`forward_by`). An element nobody asks the first way
-becomes an exam point of origin `discrimination`, normalized into a reverse goal exactly as a presupposition
-becomes an existence goal.
+A goal asks A → B: given the pathogen, the drug group, the disease, name what it has, does or needs. A learner who
+only ever answers that direction cannot start from B. The `v4-discriminate` stage reads **the lecture's own goals**,
+not a shape of the map, and judges per goal whether its other end deserves a question: a stem that gives only B (an
+action, a target, a finding, a use) and asks for A.
 
-What the goal requires is the element name; whether the answer also names the owner is the author's call
-(사용자 2026-11-16 「답에 소속은 꼭 강제 안해도 될듯? 그냥 예시였어」). The one hard rule is that the stem does not
-name the owner, and that lives in the add prompt and the item review, not here: a forward question already answers
-the element name, so coverage would call such a goal covered at once. `gaps` therefore keeps a reverse goal open
-until a question carries its point, and `report` counts the stems that named the owner anyway.
+It is judged per goal because a reverse is not one shape. 「이 기전을 가진 약은?」, 「이 소견을 보이는 질환은?」 and
+「이 인자를 가진 균은?」 are the same move in three subjects; an earlier draft hard-coded one map shape (organism →
+category → named element) and could only ever find the third (사용자 2026-11-16 「지금 이 강의에 너무 특이적으로
+제한되어서 하는거 아니야? 역방향을 사실 정말 다양한 게 있을 수 있잖아」).
 
-At assembly a forward question's goal is ordered before the reverse goal (R7): recall 「A의 B」 once, then pick B
-from the cue alone. Pure functions only: no model, DB or server.
+What keeps the count down is not the shape but the judgment: a reverse is asked only when the lecture holds other
+candidates the stem has to rule out (`competitors`), so the learner really has to pick (사용자 「일단은 판별되는
+연결만」). A goal nobody asks in reverse becomes an exam point of origin `discrimination`, normalized into a reverse
+goal exactly as a presupposition becomes an existence goal.
+
+The answer is what the reverse recalls; whether its wording also names the owner is the author's call (사용자 「답에
+소속은 꼭 강제 안해도 될듯? 그냥 예시였어」). The one hard rule is that the stem does not give away the side it asks
+for, and that lives in the add prompt and the item review, not here: the forward question already answers it, so
+coverage would call such a goal covered at once. `gaps` therefore keeps a reverse goal open until a question carries
+its point, and `report` counts the stems that gave it away anyway.
+
+At assembly the forward goal is ordered before its reverse (R7). Pure functions only: no model, DB or server.
 """
 import copy
 import re
@@ -27,109 +33,44 @@ from . import generation_v3 as v3
 from . import presuppose as pre
 
 DISCRIMINATE = 'discriminate/1'
-CHUNK = 40            # categories judged per stage call; every category of the map is the reference
+CHUNK = 30            # goals judged per stage call; every goal and question of the lecture is the reference
 ORIGIN = 'discrimination'
 RELATION_PREFIX = 'RQD'
 
 _POINT = copy.deepcopy(v3.POINT)
 _POINT['properties'].pop('importance_basis')
 _POINT['required'].remove('importance_basis')
-ELEMENT = obj(element=TEXT, cue=TEXT, siblings=arr(TEXT), asked_by=arr(TEXT), forward_by=arr(TEXT),
-              point={'anyOf': [_POINT, {'type': 'null'}]}, reason=TEXT)
-OUTPUT = obj(rows=arr(obj(concept_id=TEXT, peer_concept_ids=arr(TEXT), elements=arr(ELEMENT), reason=TEXT)))
+# `cue`/`answer` are empty on a goal judged not worth reversing, so they are plain strings here and `check` is what
+# requires them when `reversible` is true.
+_MAYBE = {'type': 'string'}
+ROW = obj(direction_id=TEXT, reversible={'type': 'boolean'}, cue=_MAYBE, answer=_MAYBE, competitors=arr(TEXT),
+          asked_by=arr(TEXT), forward_by=arr(TEXT), point={'anyOf': [_POINT, {'type': 'null'}]}, reason=TEXT)
+OUTPUT = obj(rows=arr(ROW))
 # The model-facing schema has anyOf (point or null); this pure module checks `point` by hand, as presuppose does.
-_CHECKED = obj(rows=arr(obj(concept_id=TEXT, peer_concept_ids=arr(TEXT), reason=TEXT,
-                            elements=arr(obj(element=TEXT, cue=TEXT, siblings=arr(TEXT), asked_by=arr(TEXT),
-                                             forward_by=arr(TEXT), reason=TEXT)))))
+_CHECKED = obj(rows=arr(obj(direction_id=TEXT, reversible={'type': 'boolean'}, cue=_MAYBE, answer=_MAYBE,
+                            competitors=arr(TEXT), asked_by=arr(TEXT), forward_by=arr(TEXT), reason=TEXT)))
 
 NORMALIZE_OUTPUT = copy.deepcopy(pre.NORMALIZE_OUTPUT)
 
-# A name of its own: letters, digits and ASCII hyphens (piperacillin-tazobactam). An en dash or em dash
-# separates a name from its gloss in these labels (「LasB–zinc metalloprotease」), so it is not part of one.
-_NAME = re.compile(r'[A-Za-z][A-Za-z0-9\-]{2,}')
+
+# ---------------------------------------------------------------- the goals to judge
+def goals(brief):
+    """Every goal of the lecture, in map order. The judgment decides which have a reverse worth asking; code does
+    not pre-filter by map shape (that is what made the first draft microbiology-only)."""
+    return [d['direction_id'] for t in brief['targets'] for d in t['directions']]
 
 
-# ---------------------------------------------------------------- the map side
-def _children(brief):
-    kids = {}
-    for c in brief['concepts']:
-        for p in c.get('parent_ids') or []:
-            kids.setdefault(p, []).append(c['concept_id'])
-    return kids
-
-
-def owners(brief):
-    """concept_id → the top-level concept it hangs under (its owner: the organism, drug group or other subject the
-    lecture puts the category beneath). A root is its own owner; a concept reached from several roots takes the
-    first in map order, as the map's own ordering decides."""
-    kids = _children(brief)
-    roots = [c['concept_id'] for c in brief['concepts'] if not (c.get('parent_ids') or [])]
-    found = {}
-    for root in roots:
-        for top in kids.get(root, ()):
-            seen, todo = set(), [top]
-            while todo:
-                node = todo.pop()
-                if node in seen:
-                    continue
-                seen.add(node)
-                found.setdefault(node, top)
-                todo.extend(kids.get(node, ()))
-    for root in roots:
-        found.setdefault(root, root)
-    return found
-
-
-def named(label):
-    """The named elements of a concept label: 「이름 있는 인자만」 (사용자 2026-11-16). A label with no name of its
-    own (a Korean description of a mechanism step, say) has none, so code never sends it as an element."""
-    return [m.group(0) for m in _NAME.finditer(label or '')]
-
-
-def categories(brief):
-    """The category concepts worth judging, in map order: a concept whose children carry named elements. The kind of
-    a category is not read from its label — labels differ per owner (2026-11-16 실측: 64 categories, no label shared
-    across owners) — so the stage names the peers and this only limits the volume."""
-    kids, who = _children(brief), owners(brief)
-    labels = {c['concept_id']: c['label'] for c in brief['concepts']}
-    out = []
-    for c in brief['concepts']:
-        cid = c['concept_id']
-        if not kids.get(cid) or who.get(cid) == cid:
-            continue
-        elements = sorted({n for k in kids[cid] for n in named(labels.get(k, ''))})
-        if elements:
-            out.append(cid)
-    return out
-
-
-def _row(brief, cid, kids, labels, who):
-    return {'concept_id': cid, 'category': labels.get(cid, ''), 'owner': labels.get(who.get(cid), ''),
-            'owner_id': who.get(cid, ''),
-            'elements': sorted({n for k in kids.get(cid, ()) for n in named(labels.get(k, ''))}),
-            'members': [labels.get(k, '') for k in kids.get(cid, ())]}
-
-
-def stage_input(brief, bank, concept_ids, page_counts):
-    """The categories to judge, every category of the map as the reference for peers, the bank's fronts for
-    `asked_by`/`forward_by`, and the pages the questions of each judged category cite (where a point may point)."""
-    kids = _children(brief)
-    labels, owner_of = {c['concept_id']: c['label'] for c in brief['concepts']}, owners(brief)
-    wanted = list(concept_ids)
-    known = {c['concept_id'] for c in brief['concepts']}
-    require(set(wanted) <= known, 'discriminate: unknown concept')
-    subtree = set()
-    for cid in wanted:
-        todo = [cid]
-        while todo:
-            node = todo.pop()
-            if node in subtree:
-                continue
-            subtree.add(node)
-            todo.extend(kids.get(node, ()))
-    refs = [r for q in bank['questions'] if q.get('concept_id') in subtree for r in q.get('source_refs', [])]
-    return {'categories': [_row(brief, cid, kids, labels, owner_of) for cid in wanted],
-            'all_categories': [_row(brief, cid, kids, labels, owner_of) for cid in categories(brief)],
+def stage_input(brief, bank, direction_ids, page_counts):
+    """The goals to judge with their forward cue and answer, every goal of the lecture as the reference for
+    competitors, the bank's fronts for `asked_by`/`forward_by`, and the pages those goals cite."""
+    known = goals(brief)
+    wanted = list(direction_ids)
+    require(set(wanted) <= set(known), 'discriminate: unknown goal')
+    mine = [v3._goal(brief, did) for did in wanted]
+    every = [{k: g[k] for k in ('direction_id', 'cue', 'answer_scope')} for g in (v3._goal(brief, d) for d in known)]
+    refs = [r for t in brief['targets'] for d in t['directions'] if d['direction_id'] in set(wanted)
+            for r in (t.get('evidence') or [])]
+    return {'goals': mine, 'all_goals': every,
             'all_questions': [pre._reference(q) for q in bank['questions']],
             'page_counts': dict(page_counts),
             'pages': v3.cited_pages(refs)}
@@ -137,55 +78,44 @@ def stage_input(brief, bank, concept_ids, page_counts):
 
 # ---------------------------------------------------------------- judgment
 def check(value, ctx):
-    """One discriminate output: every judged category exactly once; an element either names the questions that ask it
-    without its owner or, when none does, the exam point a reverse goal is made from."""
+    """One discriminate output: every judged goal exactly once; a goal worth reversing either names the questions
+    that already ask it that way or, when none does, the exam point its reverse goal is made from."""
     require(type(value) is dict and type(value.get('rows')) is list, 'discriminate output: rows required')
     for row in value['rows']:
-        require(type(row) is dict and type(row.get('elements')) is list, 'discriminate output: elements required')
-        for el in row['elements']:
-            require(type(el) is dict and 'point' in el and (el['point'] is None or type(el['point']) is dict),
-                    'discriminate output: point is an object or null')
-    validate_shape({'rows': [{**r, 'elements': [{k: v for k, v in e.items() if k != 'point'} for e in r['elements']]}
-                             for r in value['rows']]}, _CHECKED, 'discriminate output')
-    judged = [c['concept_id'] for c in ctx['categories']]
-    rows = [r['concept_id'] for r in value['rows']]
+        require(type(row) is dict and 'point' in row and (row['point'] is None or type(row['point']) is dict),
+                'discriminate output: point is an object or null')
+    validate_shape({'rows': [{k: v for k, v in r.items() if k != 'point'} for r in value['rows']]},
+                   _CHECKED, 'discriminate output')
+    judged = [g['direction_id'] for g in ctx['goals']]
+    rows = [r['direction_id'] for r in value['rows']]
     require(sorted(rows) == sorted(judged) and len(rows) == len(set(rows)),
-            'discriminate: rows must name every judged category once')
-    allowed = {c['concept_id']: c for c in ctx['all_categories']}
+            'discriminate: rows must name every judged goal once')
     known_q = {q['question_id'] for q in ctx['all_questions']}
     for row in value['rows']:
-        mine = allowed.get(row['concept_id']) or next(c for c in ctx['categories'] if c['concept_id'] == row['concept_id'])
-        peers = row['peer_concept_ids']
-        require(len(peers) == len(set(peers)) and set(peers) <= set(allowed) and row['concept_id'] not in peers,
-                f"discriminate {row['concept_id']}: peers are other categories of this map")
-        require(all(allowed[p]['owner_id'] != mine['owner_id'] for p in peers),
-                f"discriminate {row['concept_id']}: a peer belongs to another owner")
-        if not peers:
-            require(not row['elements'],
-                    f"discriminate {row['concept_id']}: without a peer category nothing is discriminable")
-        names = [e['element'] for e in row['elements']]
-        require(len(names) == len(set(names)), f"discriminate {row['concept_id']}: one row per element")
-        for el in row['elements']:
-            require(el['element'] in mine['elements'],
-                    f"discriminate {row['concept_id']}: {el['element']} is not a named element of this category")
-            for key in ('asked_by', 'forward_by'):
-                ids = el[key]
-                require(len(ids) == len(set(ids)) and set(ids) <= known_q,
-                        f"discriminate {row['concept_id']}/{el['element']}: {key} names unknown questions")
-            if el['asked_by']:
-                require(el['point'] is None,
-                        f"discriminate {row['concept_id']}/{el['element']}: an element already asked carries no point")
-            else:
-                require(el['point'] is not None,
-                        f"discriminate {row['concept_id']}/{el['element']}: an element nobody asks needs its point")
-                v3._check_point({**el['point'], 'importance_basis': []})
-                for ref in el['point']['source_refs']:
-                    # A source without pages (text) has page count None: it is cited by locator only.
-                    require(ref['source_id'] in ctx['page_counts'],
-                            f"discriminate {row['concept_id']}/{el['element']}: point pages outside the sources")
-                    count = ctx['page_counts'][ref['source_id']]
-                    require(all(count is not None and 1 <= p <= count for p in ref['pages']),
-                            f"discriminate {row['concept_id']}/{el['element']}: point pages outside the sources")
+        did = row['direction_id']
+        for key in ('asked_by', 'forward_by'):
+            ids = row[key]
+            require(len(ids) == len(set(ids)) and set(ids) <= known_q,
+                    f"discriminate {did}: {key} names unknown questions")
+        if not row['reversible']:
+            require(not row['asked_by'] and row['point'] is None,
+                    f"discriminate {did}: a goal not worth reversing carries no point")
+            continue
+        require(len(row['competitors']) >= 1,
+                f"discriminate {did}: a reverse needs the candidates its stem rules out")
+        require(row['cue'].strip() and row['answer'].strip(),
+                f"discriminate {did}: the reverse needs a cue and an answer")
+        if row['asked_by']:
+            require(row['point'] is None, f"discriminate {did}: a reverse already asked carries no point")
+        else:
+            require(row['point'] is not None, f"discriminate {did}: a reverse nobody asks needs its point")
+            v3._check_point({**row['point'], 'importance_basis': []})
+            for ref in row['point']['source_refs']:
+                # A source without pages (text) has page count None: it is cited by locator only.
+                require(ref['source_id'] in ctx['page_counts'], f"discriminate {did}: point pages outside the sources")
+                count = ctx['page_counts'][ref['source_id']]
+                require(all(count is not None and 1 <= p <= count for p in ref['pages']),
+                        f"discriminate {did}: point pages outside the sources")
     return value
 
 
@@ -194,44 +124,37 @@ def _norm(text):
 
 
 def records(outputs, bank, points_doc, brief, reserved=()):
-    """Every judged element in map order, and the new exam points of the elements nobody asks by the cue alone. One
-    point per (owner, element) and one per point text, as presuppose does for its links. Questions that left the bank
-    since the judgment are dropped from `asked_by`/`forward_by`. The owner is read from the map, never from the
-    judgment: it decides what a stem may not say, so it is not the model's to restate.
+    """Every goal judged reversible, in map order, and the new exam points of the reverses nobody asks. One point
+    per (answer, cue) and one per point text. Questions that left the bank since the judgment are dropped from
+    `asked_by`/`forward_by`.
 
     Returns (points_doc, records, new_points)."""
     present = {q['question_id'] for q in bank['questions']}
-    labels = {c['concept_id']: c['label'] for c in brief['concepts']}
-    owner_of = owners(brief)
-
-    def owner(cid):
-        return labels.get(owner_of.get(cid), '')
+    order = {did: n for n, did in enumerate(goals(brief))}
     numbers = [int(m.group(1)) for pid in [*(p['point_id'] for p in points_doc['points']), *reserved]
                for m in [re.fullmatch(r'P(\d+)', pid)] if m]
     nxt = max(numbers, default=0) + 1
     value = copy.deepcopy(points_doc)
     made, by_text, out, new = {}, {}, [], []
-    for got in outputs:
-        for row in got['rows']:
-            for el in row['elements']:
-                asked = [q for q in el['asked_by'] if q in present]
-                forward = [q for q in el['forward_by'] if q in present]
-                pid = None
-                if not el['asked_by']:
-                    key, text = (_norm(owner(row['concept_id'])), _norm(el['element'])), _norm(el['point']['point'])
-                    pid = made.get(key) or by_text.get(text)
-                    if pid is None:
-                        pid = f'P{nxt:03d}'
-                        nxt += 1
-                        point = {'point_id': pid, **copy.deepcopy(el['point']), 'origin': ORIGIN,
-                                 'origin_concept_id': row['concept_id']}
-                        value['points'].append(point)
-                        new.append(point)
-                    made.setdefault(key, pid)
-                    by_text.setdefault(text, pid)
-                out.append({'concept_id': row['concept_id'], 'owner': owner(row['concept_id']), 'element': el['element'],
-                            'cue': el['cue'], 'siblings': list(el['siblings']), 'asked_by': asked,
-                            'forward_by': forward, 'point_id': pid})
+    rows = [r for got in outputs for r in got['rows'] if r['reversible']]
+    for row in sorted(rows, key=lambda r: order.get(r['direction_id'], len(order))):
+        pid = None
+        if not row['asked_by']:
+            key, text = (_norm(row['answer']), _norm(row['cue'])), _norm(row['point']['point'])
+            pid = made.get(key) or by_text.get(text)
+            if pid is None:
+                pid = f'P{nxt:03d}'
+                nxt += 1
+                point = {'point_id': pid, **copy.deepcopy(row['point']), 'origin': ORIGIN,
+                         'origin_direction_id': row['direction_id']}
+                value['points'].append(point)
+                new.append(point)
+            made.setdefault(key, pid)
+            by_text.setdefault(text, pid)
+        out.append({'direction_id': row['direction_id'], 'cue': row['cue'], 'answer': row['answer'],
+                    'competitors': list(row['competitors']),
+                    'asked_by': [q for q in row['asked_by'] if q in present],
+                    'forward_by': [q for q in row['forward_by'] if q in present], 'point_id': pid})
     return value, out, new
 
 
@@ -266,8 +189,8 @@ def check_normalize(value, ctx, state=None):
 
 
 def blank_rows(direction_ids):
-    """The coverage rows of brand-new reverse goals. No judgment is asked for them: a published forward question
-    answers the element name, so a judgment would call the goal covered and `_join_points` would hand that question
+    """The coverage rows of brand-new reverse goals. No judgment is asked for them: the forward question already
+    answers the same content, so a judgment would call the goal covered and `_join_points` would hand that question
     the goal's point — after which `written_for` reads the goal as already written and no reverse question is ever
     written (caught by the pipeline test, 2026-11-16). The add round's own coverage call judges them once the
     question exists."""
@@ -292,13 +215,13 @@ def written_for(bank, brief, records):
 
 
 def gaps(brief, records, bank):
-    """Reverse goals still open, with all their members. Not a coverage verdict: the element name is what a forward
-    question already answers, so coverage calls such a goal covered as soon as it looks (that is the whole point of
-    the goal — the same content from the other end). A reverse goal is open until a question carries its point."""
-    goals = {d['direction_id']: d for t in brief['targets'] for d in t['directions']}
+    """Reverse goals still open, with all their members. Not a coverage verdict: the forward question answers the
+    same content, so coverage calls such a goal covered as soon as it looks (that is the whole point of the goal —
+    the same connection from the other end). A reverse goal is open until a question carries its point."""
+    every = {d['direction_id']: d for t in brief['targets'] for d in t['directions']}
     done = written_for(bank, brief, records)
-    return {did: [c['component_id'] for c in goals[did]['components']]
-            for did in reverse_directions(brief, records) if did not in done and did in goals}
+    return {did: [c['component_id'] for c in every[did]['components']]
+            for did in reverse_directions(brief, records) if did not in done and did in every}
 
 
 # ---------------------------------------------------------------- what the author and the reviewer are told
@@ -318,29 +241,32 @@ def _goal_points(brief):
     return owner
 
 
+def _told(records, stems):
+    return [{'cue': r['cue'], 'answer': r['answer'], 'competitors': list(r['competitors']),
+             'forward_by': [{'question_id': q, 'question': stems.get(q, '')} for q in r['forward_by']]}
+            for r in records]
+
+
 def mark_add(ctx, brief, records, bank):
-    """Add input: a goal made from a discrimination point carries `discrimination` — the cue, the element, the
-    siblings the cue has to beat and the forward questions' stems (not to copy). Changes `ctx` in place."""
+    """Add input: a goal made from a discrimination point carries `discrimination` — the reverse cue, what it must
+    recall, the candidates the stem has to rule out, and the forward questions' stems (not to copy). Changes `ctx`
+    in place and returns it."""
     stems = {q['question_id']: v3._front(q).get('question', '') for q in bank['questions']}
     by_point, by_target = _by_point(records), _goal_points(brief)
     owners_of = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
     for goal in ctx['goals']:
         mine = [r for pid in by_target.get(owners_of.get(goal['direction_id']), []) for r in by_point.get(pid, [])]
-        if not mine:
-            continue
-        goal['discrimination'] = [
-            {'owner': r['owner'], 'element': r['element'], 'cue': r['cue'], 'siblings': list(r['siblings']),
-             'forward_by': [{'question_id': q, 'question': stems.get(q, '')} for q in r['forward_by']]}
-            for r in mine]
+        if mine:
+            goal['discrimination'] = _told(mine, stems)
     return ctx
 
 
 def mark_review(ctx, brief, records, bank):
-    """Item review and fix input: `discrimination`, one row per question of the batch written for a reverse goal, with
-    the cue it asks by and the stems of the forward questions. Without it the review reads a cue-only stem as an
-    incomplete question and the fix names the owner in it — which is the one thing this goal forbids (presuppose/1
-    hit exactly this: 「too easy, ask by a condition」, docs/changes/2026-11-16-existence-question-shape).
-    Changes `ctx` in place and returns it; no key when none."""
+    """Item review and fix input: `discrimination`, one row per question of the batch written for a reverse goal,
+    with the cue it asks by and the stems of the forward questions. Without it the review reads a cue-only stem as an
+    incomplete question and the fix puts the answer's own side back into it — which is the one thing this goal
+    forbids (presuppose/1 hit exactly this: 「too easy, ask by a condition」,
+    docs/changes/2026-11-16-existence-question-shape). Changes `ctx` in place; no key when none."""
     pids = {r['point_id'] for r in records or [] if r['point_id']}
     if not pids:
         return ctx
@@ -356,22 +282,19 @@ def mark_review(ctx, brief, records, bank):
         got, seen = [], []
         for p in mine:
             for r in by_point.get(p, []):
-                if (r['owner'], r['element']) not in seen:
-                    seen.append((r['owner'], r['element']))
+                if (r['cue'], r['answer']) not in seen:
+                    seen.append((r['cue'], r['answer']))
                     got.append(r)
-        goals = [d for p in mine for tid in points[p]['target_ids'] if tid in targets
+        every = [d for p in mine for tid in points[p]['target_ids'] if tid in targets
                  for d in targets[tid]['directions']]
         cues = []
-        for d in goals:
+        for d in every:
             if d not in cues:
                 cues.append(d)
         rows.append({'question_id': q['question_id'],
                      'goals': [{'cue': d['cue'], 'components': [c['text'] for c in d['components']],
                                 'relation_ids': list(d['relation_ids'])} for d in cues],
-                     'elements': [{'owner': r['owner'], 'element': r['element'], 'cue': r['cue'],
-                                   'siblings': list(r['siblings']),
-                                   'forward_by': [{'question_id': x, 'question': stems.get(x, '')}
-                                                  for x in r['forward_by']]} for r in got]})
+                     'reverses': _told(got, stems)})
     if rows:
         ctx['discrimination'] = rows
     return ctx
@@ -383,19 +306,20 @@ def reverse_relation_id(before, after):
 
 
 def is_reverse_edge(edge):
-    """A target prerequisite order_edges made here: a forward goal before the reverse goal of the same element. Unlike
-    an existence edge this is not brought forward outside today's tiers — the reverse question is the second pass over
-    content the forward question already covers, so it waits for its turn."""
+    """A target prerequisite order_edges made here: a forward goal before its reverse. Unlike an existence edge this
+    is not brought forward outside today's tiers — the reverse is the second pass over content the forward question
+    already covers, so it waits for its turn."""
     return re.fullmatch(r'REV-[0-9a-f]{12}', edge.get('relation_id') or '') is not None
 
 
 def order_edges(brief, tasks, records, relations, edges):
-    """Target prerequisites from the discrimination records: the goal of a forward question before the reverse goal.
-    Only goals with tasks take part; an edge that would close a cycle, or whose relation would join a concept to
-    itself, is left out. Returns (relations, edges) to add."""
+    """Target prerequisites from the discrimination records: the forward goal (the judged goal itself, and the goals
+    of the questions that ask it forward) before the reverse goal. Only goals with tasks take part; an edge that
+    would close a cycle, or whose relation would join a concept to itself, is left out."""
     targets = {t['target_id']: t for t in brief['targets']}
     owners_of = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
     placed = {t['question_id']: owners_of[t['direction_id']] for t in tasks}
+    task_targets = set(placed.values())
     from_points = {p['point_id']: list(p['target_ids']) for p in brief['points']}
     target_graph, concept_graph = {}, {}
     for e in edges:
@@ -408,8 +332,11 @@ def order_edges(brief, tasks, records, relations, edges):
     for rec in records:
         if not rec['point_id']:
             continue
-        afters = [t for t in from_points.get(rec['point_id'], []) if t in set(placed.values())]
+        afters = [t for t in from_points.get(rec['point_id'], []) if t in task_targets]
         befores = {placed[q] for q in rec['forward_by'] if q in placed}
+        own = owners_of.get(rec['direction_id'])
+        if own in task_targets:
+            befores.add(own)
         for after in sorted(afters):
             for before in sorted(befores - {after}):
                 if (before, after) in pairs or pre._reaches(target_graph, after, before):
@@ -422,8 +349,8 @@ def order_edges(brief, tasks, records, relations, edges):
                     continue
                 rid = reverse_relation_id(before, after)
                 new_relations.append({'relation_id': rid, 'from_id': source, 'to_id': sink, 'kind': 'prerequisite',
-                                      'condition': f"{rec['owner']}의 {rec['element']}: 먼저 정방향으로 회상한다",
-                                      'evidence': evidence, 'review_status': 'reviewed',
+                                      'condition': f"{rec['answer']}: 먼저 정방향으로 회상한다", 'evidence': evidence,
+                                      'review_status': 'reviewed',
                                       'reason': f"{DISCRIMINATE}: 단서만으로 고르기 전에 이 연결을 정방향으로 묻는다"})
                 new_edges.append({'before_target': before, 'after_target': after, 'relation_id': rid})
                 pairs.add((before, after))
@@ -433,42 +360,38 @@ def order_edges(brief, tasks, records, relations, edges):
 
 
 # ---------------------------------------------------------------- report (R9)
-def named_owner_in_stem(doc, records, bank):
-    """The reverse questions whose stem names the owner anyway — the one rule this policy asks for, measured rather
-    than enforced (a hard failure would hold a whole lecture over one stem). The owner's own words are matched: its
-    label and each name inside it."""
-    pids = {r['point_id']: r for r in records or [] if r['point_id']}
+def _names(text):
+    """The words of an answer long enough to look for in a stem: Latin names, and Korean words of two or more
+    characters. A one-letter token would match almost any stem."""
+    return re.findall(r'[A-Za-z][A-Za-z0-9\-]{2,}|[가-힣]{2,}', text or '')
+
+
+def answer_in_stem(doc, records, bank):
+    """The reverse questions whose stem gives away the side it asks for — the one rule this policy asks for,
+    measured rather than enforced (a hard failure would hold a whole lecture over one stem)."""
     by_point = _by_point(records)
     found = []
     for q in bank['questions']:
-        mine = [p for p in q.get('point_ids', []) if p in pids]
+        mine = [p for p in q.get('point_ids', []) if p in by_point]
         if not mine:
             continue
         stem = _norm(v3._front(q).get('question', ''))
         for p in mine:
-            for rec in by_point.get(p, []):
-                words = [rec['owner'], *named(rec['owner'])]
-                hit = next((w for w in words if len(_norm(w)) >= 3 and _norm(w) in stem), None)
-                if hit:
-                    found.append({'question_id': q['question_id'], 'owner': rec['owner'], 'named': hit})
-                    break
-            else:
-                continue
-            break
+            hit = next((w for rec in by_point[p] for w in _names(rec['answer']) if _norm(w) in stem), None)
+            if hit:
+                found.append({'question_id': q['question_id'], 'gave_away': hit})
+                break
     return found
 
 
 def report(records, doc, bank):
-    """R9 counts of one result: elements judged discriminable, already asked by the cue alone, given a reverse goal
-    with a task, still open, and the reverse stems that named their owner."""
-    placed = {t['question_id'] for t in doc['tasks']}
+    """R9 counts of one result: goals judged worth reversing, already asked that way, given a reverse goal with a
+    task, still open, and the reverse stems that gave the answer away."""
     owners_of = {d['direction_id']: t['target_id'] for t in doc['review']['targets'] for d in t['directions']}
     task_targets = {owners_of[t['direction_id']] for t in doc['tasks']}
     points = {p['point_id']: p['target_ids'] for p in doc['review']['points']}
     asked = [r for r in records if r['asked_by']]
     goal = [r for r in records if r['point_id'] and set(points.get(r['point_id'], [])) & task_targets]
     open_ = [r for r in records if r['point_id'] and r not in goal]
-    return {'discriminable': len(records), 'alreadyAsked': len(asked), 'reverseGoal': len(goal),
-            'open': [f"{r['owner']}의 {r['element']}" for r in open_],
-            'ownerInStem': named_owner_in_stem(doc, records, bank),
-            'placedReverse': len([r for r in goal if any(q in placed for q in r['forward_by'])])}
+    return {'reversible': len(records), 'alreadyAsked': len(asked), 'reverseGoal': len(goal),
+            'open': [r['answer'] for r in open_], 'answerInStem': answer_in_stem(doc, records, bank)}

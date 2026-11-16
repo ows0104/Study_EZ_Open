@@ -14,7 +14,9 @@ from tests.quizbank import test_root_generation_v4 as t4
 from tests.quizbank.test_presuppose import Presupposing
 from tests.quizbank.test_connection_replace import carry_sources
 
-BACKFILL = ['v4-presuppose-0', 'v4-supplement-normalize-presuppose', 'v4-coverage-presuppose', 'v4-map-check-presuppose',
+# discriminate/1 judges beside the stem judgment: one backfill request makes existence goals and reverse goals.
+BACKFILL = ['v4-presuppose-0', 'v4-discriminate-0', 'v4-supplement-normalize-presuppose', 'v4-coverage-presuppose',
+            'v4-map-check-presuppose',
             'v4-add-presuppose-0', 'v4-coverage-presuppose-1-DQ001', 'v4-review-presuppose-0', 'medical-presuppose']
 
 
@@ -81,7 +83,7 @@ def test_nothing_presupposed_adds_nothing_and_keeps_the_medical_review(tmp_path)
     model = t4.Model()
     result = g.run(packet, tmp_path / 'new', invoke=model, presuppose_of=previous)
     assert consume(result, packet) == result['document']
-    assert model.calls == ['v4-presuppose-0']
+    assert model.calls == ['v4-presuppose-0', 'v4-discriminate-0']
     assert result['medical'] == old['medical'] and result['document']['bank_snapshot'] == old['document']['bank_snapshot']
     assert result['manifest']['presupposeOnly']['addedMedical'] is None
 

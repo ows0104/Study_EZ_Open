@@ -111,17 +111,17 @@ def run(packet, out, model, invoke, previous, resume=None):
     calls = [(f'{X}presuppose-{k}', ctx, lambda raw, ctx=ctx: pre.check(raw, ctx))
              for k, ctx in enumerate(pre.stage_input(bank, part, page_counts) for part in chunks(published, pre.CHUNK))]
     pre_calls = len(calls)
-    cids = dis.categories(brief)
+    rdids = dis.goals(brief)
     calls += [(f'{X}discriminate-{k}', ctx, lambda raw, ctx=ctx: dis.check(raw, ctx))
-              for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(cids, dis.CHUNK))
-              if cids]   # no category of named elements: no call (chunks([]) is one empty part)
+              for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(rdids, dis.CHUNK))
+              if rdids]   # a map with no goals asks nothing (chunks([]) is one empty part)
     judged = batches.judgments(st, calls)
     points_doc, presuppositions, made = pre.records(judged[:pre_calls], bank, points_doc,
                                                     [p['point_id'] for p in brief['points']])
     print(f"── {LABEL}: 발문이 전제로 준 연결 {len(presuppositions)}개 · 답으로 묻는 문항 없음 {len(made)}개 → 존재 목표", flush=True)
     points_doc, discriminations, made_reverse = dis.records(judged[pre_calls:], bank, points_doc, brief,
                                                             [p['point_id'] for p in brief['points']])
-    print(f"── {LABEL}: 판별되는 원소 {len(discriminations)}개 · 단서만으로 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
+    print(f"── {LABEL}: 거꾸로 물을 목표 {len(discriminations)}개 · 그렇게 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
 
     # 2: existence goals ------------------------------------------------------
     new_dids = []
@@ -328,11 +328,11 @@ def run(packet, out, model, invoke, previous, resume=None):
     record = {**ledger['presupposeOnly'], 'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']),
               'addedQuestions': added, 'previousMedical': old['medical'], 'addedMedical': added_medical,
               'existenceGoals': new_dids, 'reverseGoals': rev_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()},
-              'reverseCounts': {k: (len(v) if k in ('open', 'ownerInStem') else v) for k, v in rcounts.items()}}
+              'reverseCounts': {k: (len(v) if k in ('open', 'answerInStem') else v) for k, v in rcounts.items()}}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "
           f"선행 연결 {counts['prerequisites']}개 · 남은 전제 {len(counts['open'])}개", flush=True)
-    print(f"── {LABEL} 역방향: 판별 원소 {rcounts['discriminable']}개 중 이미 단서로 묻던 것 {rcounts['alreadyAsked']} · "
-          f"역방향 목표 {rcounts['reverseGoal']} · 남음 {len(rcounts['open'])} · 발문이 주체를 준 문항 {len(rcounts['ownerInStem'])}개", flush=True)
+    print(f"── {LABEL} 역방향: 거꾸로 물 목표 {rcounts['reversible']}개 중 이미 그렇게 묻던 것 {rcounts['alreadyAsked']} · "
+          f"역방향 목표 {rcounts['reverseGoal']} · 남음 {len(rcounts['open'])} · 발문이 답을 흘린 문항 {len(rcounts['answerInStem'])}개", flush=True)
 
     manifest = copy.deepcopy(meta)
     manifest.pop('coverageFallback', None)

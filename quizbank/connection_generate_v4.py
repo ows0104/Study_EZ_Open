@@ -287,11 +287,10 @@ def run(packet, out, model, invoke, resume=None):
                   for k, ctx in enumerate(pre.stage_input(bank, part, page_counts) for part in chunks(qids, pre.CHUNK))]
     presuppose_calls = len(calls) - covered_calls
     if discriminate_on:
-        cids = dis.categories(brief)
-        # A map with no category of named elements asks nothing (chunks([]) would still make one empty call).
+        rdids = dis.goals(brief)
         calls += [(f'{X}discriminate-{k}', ctx, lambda raw, ctx=ctx: dis.check(raw, ctx))
-                  for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(cids, dis.CHUNK))
-                  if cids]
+                  for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(rdids, dis.CHUNK))
+                  if rdids]
     discriminate_calls = len(calls) - covered_calls - presuppose_calls
     ctx = v4.map_check_input(brief)
     calls.append((X + 'map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
@@ -392,7 +391,7 @@ def run(packet, out, model, invoke, resume=None):
     if discriminate_on:
         points_doc, discriminations, made_reverse = dis.records(discriminated, bank, points_doc, brief,
                                                                 [p['point_id'] for p in brief['points']])
-        print(f"── 역방향 판정: 판별되는 원소 {len(discriminations)}개 · 단서만으로 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
+        print(f"── 역방향 판정: 거꾸로 물을 목표 {len(discriminations)}개 · 그렇게 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
         if made_reverse:
             allowed = v3.supplement_ids(brief, len(made_reverse))
             ctx = dis.normalize_input(brief, made_reverse, allowed)
@@ -714,8 +713,8 @@ def run(packet, out, model, invoke, resume=None):
               f"남음 {len(counts['open'])} · 선행 연결 {counts['prerequisites']}개", flush=True)
     if discriminations is not None:
         counts = dis.report(discriminations, doc, bank)
-        print(f"── 역방향 정리: 판별 원소 {counts['discriminable']}개 중 이미 단서로 묻던 것 {counts['alreadyAsked']} · "
-              f"역방향 목표 {counts['reverseGoal']} · 남음 {len(counts['open'])} · 발문이 주체를 준 문항 {len(counts['ownerInStem'])}개", flush=True)
+        print(f"── 역방향 정리: 거꾸로 물 목표 {counts['reversible']}개 중 이미 그렇게 묻던 것 {counts['alreadyAsked']} · "
+              f"역방향 목표 {counts['reverseGoal']} · 남음 {len(counts['open'])} · 발문이 답을 흘린 문항 {len(counts['answerInStem'])}개", flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "

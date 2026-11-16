@@ -75,10 +75,11 @@ class Model:
                              'duplicates': dup, 'reason': 'Synthetic'})
             return {'rows': rows}, {}
         if stage.startswith('v4-discriminate'):
-            # discriminate/1: nothing discriminable by default — a category whose peers are elsewhere is this
-            # suite's exception, driven by test_discriminate.Discriminating.
-            return {'rows': [{'concept_id': c['concept_id'], 'peer_concept_ids': [], 'elements': [],
-                              'reason': 'Synthetic: no peer category'} for c in ctx['categories']]}, {}
+            # discriminate/1: no goal is worth reversing by default — test_discriminate.Discriminating is the
+            # suite's exception.
+            return {'rows': [{'direction_id': g['direction_id'], 'reversible': False, 'cue': '', 'answer': '',
+                              'competitors': [], 'asked_by': [], 'forward_by': [], 'point': None,
+                              'reason': 'Synthetic: no competing candidate'} for g in ctx['goals']]}, {}
         if stage.startswith('v4-presuppose'):
             return {'rows': [{'question_id': q['question_id'], 'presupposes': copy.deepcopy(self.presupposes.get(q['question_id'], []))}
                              for q in ctx['questions']]}, {}

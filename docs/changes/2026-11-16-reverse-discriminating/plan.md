@@ -8,15 +8,15 @@
 
 | 함수 | 하는 일 |
 |---|---|
-| `stage_input(brief, bank, concept_ids, page_counts)` | 판정할 범주·원소와, 참조용 은행 전체 발문·정답 |
-| `OUTPUT` / `check(value, ctx)` | R2의 출력 형식과 검사. 원소마다 한 줄, `asked_by`가 비면 `point` 필수 |
-| `records(outputs, bank, points_doc, reserved)` | 판별 연결 기록과 새 포인트(`origin: 'discrimination'`). (균, 원소) 하나에 포인트 하나 |
-| `mark_add(ctx, brief, records, bank)` | add 입력의 목표에 `discrimination` 표시(단서·소속·형제) |
+| `goals(brief)` / `stage_input(brief, bank, direction_ids, page_counts)` | 판정할 목표와, 참조용으로 그 강의의 모든 목표·은행 전체 발문·정답 |
+| `OUTPUT` / `check(value, ctx)` | R2의 출력 형식과 검사. 목표마다 한 줄, `reversible`이면 `competitors` 필수, `asked_by`가 비면 `point` 필수 |
+| `records(outputs, bank, points_doc, brief, reserved)` | 역방향 기록과 새 포인트(`origin: 'discrimination'`). (답, 단서) 하나에 포인트 하나 |
+| `mark_add(ctx, brief, records, bank)` | add 입력의 목표에 `discrimination` 표시(단서·답·경쟁자·정방향 문항) |
 | `mark_review(ctx, ...)` | 검토·수정 입력에 같은 표시. 없으면 검토가 「조건을 붙여 변별하라」로 되돌린다 |
 | `written_for(bank, brief, records)` | 목표 하나에 문항 하나 가드 |
 | `gaps(brief, records, bank)` | 역방향 목표의 빈자리 = 그 목표로 쓴 문항이 아직 없는 것(범위 점검에 맡기지 않는다) |
-| `order_edges(...)` | R7. 정방향 목표 → 역방향 목표 |
-| `counts(...)` | R9의 숫자 |
+| `report(records, doc, bank)` | R9의 숫자와 `answerInStem`(발문이 답을 흘린 문항) |
+| `order_edges(...)` | R7. 판정된 목표·정방향 문항의 목표 → 역방향 목표 |
 
 `mark_review`를 처음부터 넣는 이유: 존재 문항에서 이것을 빼먹어 검토가 「쉬워 보인다」며
 조건을 덧붙였고 #202에서 고쳐야 했다.
@@ -70,3 +70,12 @@
 
 - 25편 보강을 한 번에(R8).
 - 콜레라 편 재보강 여부는 사용자 결정.
+
+## 두 번째 판 (2026-11-16, 사용자 지적 뒤)
+
+- 판정 단위를 범주 → **목표**로 바꿨다(spec R1). `categories`·`owners`·`named`는 지웠다.
+- 치료제·검사 소견을 범위에 넣었다(사용자 「치료·검사도 넣기」).
+- 문항 수를 지키는 것은 구조 조건이 아니라 `competitors`(헷갈릴 후보가 있나)다.
+- 「주체(owner)」라는 칸을 없앴다. 대신 `answer`(회상할 것)와 `cue`(단서)만 둔다. 과목마다 주체의
+  뜻이 달라 칸으로 두면 또 한 과목에 맞춰진다.
+- 측정도 `ownerInStem` → `answerInStem`으로 바꿨다. 발문이 답 쪽을 흘렸는지를 한국어 단어까지 본다.
