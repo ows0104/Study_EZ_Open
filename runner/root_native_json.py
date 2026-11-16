@@ -86,7 +86,9 @@ V3_PROMPTS={'coverage':'coverage.md','map':'map-check.md','supplement':'point-su
     'supplement-normalize':'supplement-normalize.md','add':'add.md','review':'item-review.md','fix':'fix.md','brief':'brief-fix.md',
     'context':'context.md',
     # presuppose/1 (docs/changes/2026-11-15-tree-edge-goals): /4 only, prompts in v4/.
-    'presuppose':'presuppose.md','presuppose-normalize':'supplement-normalize-presuppose.md'}
+    'presuppose':'presuppose.md','presuppose-normalize':'supplement-normalize-presuppose.md',
+    # discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): /4 only, prompts in v4/.
+    'discriminate':'discriminate.md','discriminate-normalize':'supplement-normalize-discriminate.md'}
 
 # root-generation/4 (docs/changes/2026-11-10-importance-at-authoring): the same stages named `v4-<kind>…`, with the /4
 # schemas and checks; a prompt in content/prompts/learning-links/v4 replaces the v3 one of the same name.
@@ -97,6 +99,7 @@ def is_v4(stage):return stage.startswith('v4-')
 def v3_kind(stage):
     require(stage.startswith(STAGED),'Not a v3/v4 stage')
     if stage[3:].startswith('supplement-normalize-presuppose'):return 'presuppose-normalize'
+    if stage[3:].startswith('supplement-normalize-discriminate'):return 'discriminate-normalize'
     if stage[3:].startswith('supplement-normalize'):return 'supplement-normalize'
     kind=stage.split('-')[1]
     require(kind in V3_PROMPTS,'Unsupported v3 stage')
@@ -117,6 +120,9 @@ def v3_schema(stage,ctx=None):
     if kind in('presuppose','presuppose-normalize'):
         from studyez_contracts.roots import presuppose as pre
         return pre.OUTPUT if kind=='presuppose'else pre.NORMALIZE_OUTPUT
+    if kind in('discriminate','discriminate-normalize'):
+        from studyez_contracts.roots import discriminate as dis
+        return dis.OUTPUT if kind=='discriminate'else dis.NORMALIZE_OUTPUT
     if kind=='brief':return v3.BRIEF_FIX_OUTPUT
     if is_v4(stage)and kind=='review':return v4.review_schema(ctx or {})
     if is_v4(stage)and kind=='add':return v4.add_schema(ctx or {})
@@ -130,7 +136,10 @@ def v3_check(stage,ctx,value,state=None,work=None):
     if kind in('presuppose','presuppose-normalize')and not(state is not None and kind=='presuppose-normalize'):
         from studyez_contracts.roots import presuppose as pre
         return pre.check(value,ctx)if kind=='presuppose'else pre.check_normalize(value,ctx)
-    if state is not None and kind in('add','fix','supplement','supplement-normalize','presuppose-normalize'):
+    if kind in('discriminate','discriminate-normalize')and not(state is not None and kind=='discriminate-normalize'):
+        from studyez_contracts.roots import discriminate as dis
+        return dis.check(value,ctx)if kind=='discriminate'else dis.check_normalize(value,ctx)
+    if state is not None and kind in('add','fix','supplement','supplement-normalize','presuppose-normalize','discriminate-normalize'):
         if is_v4(stage):from quizbank.connection_generate_v4 import check_stage
         else:from quizbank.connection_generate_v3 import check_stage
         return check_stage(kind,value,ctx,state,Path(work)/'.check-render')

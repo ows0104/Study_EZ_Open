@@ -28,6 +28,7 @@ from studyez_contracts.roots import generation_v3 as v3
 from studyez_contracts.roots import generation_v4 as v4
 from studyez_contracts.roots import map_tree
 from studyez_contracts.roots import presuppose as pre
+from studyez_contracts.roots import discriminate as dis
 from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.bank.validate import validate_bank
 from . import connection_batches as batches
@@ -44,6 +45,7 @@ ADD_ROUNDS = 1
 POLICY = 'presuppose-only/1'
 X = 'v4-'
 TAG = '-presuppose'
+RTAG = '-discriminate'
 LABEL = '존재 목표 보강'
 MEDICAL = 'medical' + TAG
 
@@ -70,10 +72,12 @@ def run(packet, out, model, invoke, previous, resume=None):
                f"{LABEL}: 이전 실행의 모델({old['manifest']['model']})과 지금 모델({codex.model_name(model)})이 다릅니다.")
     meta, brief = old['manifest'], old['brief']
     v3.require('presuppositions' not in meta, f'{LABEL}: 이미 presuppose/1로 만든 판입니다.')
+    v3.require('discriminations' not in meta, f'{LABEL}: 이미 discriminate/1로 만든 판입니다.')
     v3.require(meta.get('placement') in ({'policy': v4.REVIEW_PLACEMENT}, {'policy': v4.REVIEW_PLACEMENT2}),
                f'{LABEL}: 문항 검토 배치(review-relations) 실행만 받습니다.')
     dedupe.seed(previous, out, packet, model, old, key='presupposeOnly', policy=POLICY, label=LABEL,
-                extra={'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'presuppositions': {'policy': pre.PRESUPPOSE}})
+                extra={'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'presuppositions': {'policy': pre.PRESUPPOSE},
+                       'discriminations': {'policy': dis.DISCRIMINATE}})
     st = Stages(packet, out, model, invoke, resume or packet.get('restartReason') or LABEL, policy=v4.POLICY, prompts=('v3', 'v4'))
     ledger = st.ledger
     v3.require(ledger.get('presupposeOnly', {}).get('previousRevision') == old['document']['revision'],
@@ -101,12 +105,23 @@ def run(packet, out, model, invoke, previous, resume=None):
     def judge(name, ctx):
         return st.judged(name, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
 
-    # 1: what each published stem gives as known -------------------------------
+    # 1: what each published stem gives as known, and which elements a cue alone has to pick out ----------------
+    # Both judgments read the published bank only, so they run side by side (discriminate/1 adds its stage here;
+    # one backfill request now makes existence goals and reverse goals, 사용자 2026-11-16 「역방향 넣고 한 번에」).
     calls = [(f'{X}presuppose-{k}', ctx, lambda raw, ctx=ctx: pre.check(raw, ctx))
              for k, ctx in enumerate(pre.stage_input(bank, part, page_counts) for part in chunks(published, pre.CHUNK))]
+    pre_calls = len(calls)
+    rdids = dis.goals(brief)
+    calls += [(f'{X}discriminate-{k}', ctx, lambda raw, ctx=ctx: dis.check(raw, ctx))
+              for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(rdids, dis.CHUNK))
+              if rdids]   # a map with no goals asks nothing (chunks([]) is one empty part)
     judged = batches.judgments(st, calls)
-    points_doc, presuppositions, made = pre.records(judged, bank, points_doc, [p['point_id'] for p in brief['points']])
+    points_doc, presuppositions, made = pre.records(judged[:pre_calls], bank, points_doc,
+                                                    [p['point_id'] for p in brief['points']])
     print(f"── {LABEL}: 발문이 전제로 준 연결 {len(presuppositions)}개 · 답으로 묻는 문항 없음 {len(made)}개 → 존재 목표", flush=True)
+    points_doc, discriminations, made_reverse = dis.records(judged[pre_calls:], bank, points_doc, brief,
+                                                            [p['point_id'] for p in brief['points']])
+    print(f"── {LABEL}: 거꾸로 물을 목표 {len(discriminations)}개 · 그렇게 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
 
     # 2: existence goals ------------------------------------------------------
     new_dids = []
@@ -127,6 +142,23 @@ def run(packet, out, model, invoke, previous, resume=None):
         map_checks.append(checked)
         st.save()
 
+    # 2d: reverse goals (discriminate/1) --------------------------------------
+    rev_dids = []
+    # After the existence goals: both take their IDs from the brief as it stands, so this order fixes which goal gets
+    # which TQ/DQ number.
+    if made_reverse:
+        allowed = v3.supplement_ids(brief, len(made_reverse))
+        ctx = dis.normalize_input(brief, made_reverse, allowed)
+        state = {'brief': brief, 'blank': True}
+        addition = st.run(X + 'supplement-normalize' + RTAG, ctx,
+                          lambda raw: check_stage('discriminate-normalize', raw, ctx, state, None), state)
+        brief, new_tids = dis.extend(brief, addition, [p['point_id'] for p in made_reverse])
+        rev_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
+        rows.update(dis.blank_rows(rev_dids))   # judged after the add round, not before (spec R4)
+        chk = v4.map_check_input(brief, new_tids)
+        map_checks.append(st.judged(X + 'map-check' + RTAG, chk, lambda raw, ctx=chk: v3.check_map_input(raw, ctx)))
+        st.save()
+
     # 3: their questions (add rounds on the new goals only) ---------------------
     added = []
     for n in range(ADD_ROUNDS):
@@ -135,10 +167,12 @@ def run(packet, out, model, invoke, previous, resume=None):
         gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # asked whole, in one question
         for did in pre.written_for(bank, brief, presuppositions):        # one question per existence goal
             gaps.pop(did, None)
+        gaps.update(dis.gaps(brief, discriminations, bank))              # reverse goals: not a coverage verdict
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
         ctx = pre.mark_existence(v4.add_input(brief, bank, gaps, allowed, rows), brief, presuppositions, bank)
+        dis.mark_add(ctx, brief, discriminations, bank)
         state = _state(bank, conflicts, stimuli, packet)
         name = f'{X}add{TAG}-{n}'
 
@@ -174,6 +208,7 @@ def run(packet, out, model, invoke, previous, resume=None):
             ctx['evidence_source'] = evidence_notes
         ctx['map_relations'] = v4.map_relations(brief, map_checks)
         pre.mark_review(ctx, brief, presuppositions, bank)   # existence questions are judged as such (2026-11-16)
+        dis.mark_review(ctx, brief, discriminations, bank)   # ... and so are reverse ones (discriminate/1)
         value = st.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
         by_id = {q['question_id']: q for q in bank['questions']}
         for r in value['reviews']:
@@ -202,6 +237,7 @@ def run(packet, out, model, invoke, previous, resume=None):
             findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
             ctx = pre.mark_review(v4.with_importance(v3.fix_input(bank, findings, targets, conflicts, covered), basis),
                                   brief, presuppositions, bank)
+            dis.mark_review(ctx, brief, discriminations, bank)
             state = _state(bank, conflicts, stimuli, packet)
             name = f'{X}fix{TAG}-{k}'
 
@@ -260,7 +296,8 @@ def run(packet, out, model, invoke, previous, resume=None):
     basis = {q['question_id']: basis[q['question_id']] for q in bank['questions']}
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile, revision=packet['revision'],
                                       title=packet['title'], exam_date=packet['examDate'], placement=placement,
-                                      presuppositions=presuppositions, settled=published)
+                                      presuppositions=presuppositions, discriminations=discriminations,
+                                      settled=published)
     kept_tasks = {t['question_id'] for t in old['document']['tasks']}
     # Strict: a published task never becomes a duplicate of an added question (its history would stop).
     v3.require(kept_tasks <= {t['question_id'] for t in doc['tasks']}, f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
@@ -270,6 +307,7 @@ def run(packet, out, model, invoke, previous, resume=None):
     v3.require(previous_carry and previous_carry['tasks'] == sum(t['question_id'] in staying for t in old['document']['tasks']),
                f'{LABEL}: 이전 판의 과제 중 같은 문항으로 이을 수 없는 것이 있습니다 — 학습 기록이 끊깁니다.')
     counts = pre.report(presuppositions, doc)
+    rcounts = dis.report(discriminations, doc, bank)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     g.write(out / 'readiness.json', {'rows': ready_rows, **placed, 'importanceWarnings': proofs['importanceWarnings']})
 
@@ -289,9 +327,12 @@ def run(packet, out, model, invoke, previous, resume=None):
 
     record = {**ledger['presupposeOnly'], 'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']),
               'addedQuestions': added, 'previousMedical': old['medical'], 'addedMedical': added_medical,
-              'existenceGoals': new_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()}}
+              'existenceGoals': new_dids, 'reverseGoals': rev_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()},
+              'reverseCounts': {k: (len(v) if k in ('open', 'answerInStem') else v) for k, v in rcounts.items()}}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "
           f"선행 연결 {counts['prerequisites']}개 · 남은 전제 {len(counts['open'])}개", flush=True)
+    print(f"── {LABEL} 역방향: 거꾸로 물 목표 {rcounts['reversible']}개 중 이미 그렇게 묻던 것 {rcounts['alreadyAsked']} · "
+          f"역방향 목표 {rcounts['reverseGoal']} · 남음 {len(rcounts['open'])} · 발문이 답을 흘린 문항 {len(rcounts['answerInStem'])}개", flush=True)
 
     manifest = copy.deepcopy(meta)
     manifest.pop('coverageFallback', None)
@@ -305,8 +346,9 @@ def run(packet, out, model, invoke, previous, resume=None):
                     questionImportance=basis, importanceNotes=v4.importance_notes(review_rows), visualStimuli=stimuli,
                     medicalUnreviewed=unreviewed, importanceWarnings=proofs['importanceWarnings'],
                     importanceProjection=proofs['importanceProjection'],
-                    supplementPoints=points_doc if supplement or made else None, placement={'policy': v4.REVIEW_PLACEMENT2},
-                    presuppositions=presuppositions, presupposeOnly=record, **placed)
+                    supplementPoints=points_doc if supplement or made or made_reverse else None,
+                    placement={'policy': v4.REVIEW_PLACEMENT2},
+                    presuppositions=presuppositions, discriminations=discriminations, presupposeOnly=record, **placed)
     if evidence:
         manifest['citationAlignments'] = alignments
     if ledger.get('stageResumes'):

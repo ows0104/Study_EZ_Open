@@ -74,6 +74,12 @@ class Model:
                 rows.append({'direction_id': goal['direction_id'], 'status': 'covered' if ev else 'missing', 'evidence': ev,
                              'duplicates': dup, 'reason': 'Synthetic'})
             return {'rows': rows}, {}
+        if stage.startswith('v4-discriminate'):
+            # discriminate/1: no goal is worth reversing by default — test_discriminate.Discriminating is the
+            # suite's exception.
+            return {'rows': [{'direction_id': g['direction_id'], 'reversible': False, 'cue': '', 'answer': '',
+                              'competitors': [], 'asked_by': [], 'forward_by': [], 'point': None,
+                              'reason': 'Synthetic: no competing candidate'} for g in ctx['goals']]}, {}
         if stage.startswith('v4-presuppose'):
             return {'rows': [{'question_id': q['question_id'], 'presupposes': copy.deepcopy(self.presupposes.get(q['question_id'], []))}
                              for q in ctx['questions']]}, {}

@@ -39,6 +39,14 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
   - 기존 문항·과제·검토·의학 판정은 그대로다. 새 문항은 임상 충돌 기록을 더하지 않는다.
   - 결과 계약은 presupposeOnly 기록이 있을 때만 의학 검토를 「이전 검토 + 새 문항 검토」로 증명한다.
   - 검사: `tests/quizbank/test_connection_presuppose.py`.
+/4의 새 실행(ledger `discriminations`, discriminate/1, `docs/changes/2026-11-16-reverse-discriminating/`, 사용자 「역방향도 넣자」)은 거꾸로 물어야 하는 목표에 역방향 목표를 만든다.
+- `v4-discriminate-<k>`(목표 30개씩)가 전제 판정과 나란히 돈다. 판정 단위는 **그 강의의 학습 목표**다 — 지도 구조로 거르지 않는다(첫 판은 「균→범주→원소」로 박아 둬서 미생물 모양만 찾았다. 사용자 「역방향을 사실 정말 다양한 게 있을 수 있잖아」).
+- 목표마다 `reversible`·역방향 단서(`cue`)·회상할 답(`answer`)·헷갈릴 다른 후보(`competitors`)·이미 거꾸로 묻는 문항(`asked_by`)·정방향 문항(`forward_by`)을 적는다. **`competitors`가 비면 거꾸로 묻지 않는다** — 문항 수를 지키는 자리가 구조가 아니라 이 판정이다(사용자 「문제가 너무 많아질까봐」).
+- 치료제·검사 소견도 범위 안이다(사용자 「치료·검사도 넣기」).
+- 아무도 거꾸로 묻지 않는 목표는 출처 `discrimination` 포인트 → `v4-supplement-normalize-discriminate` → 역방향 목표(관계 `RQD…`). component는 답 하나이고 소속은 강제하지 않는다.
+- **역방향 목표의 빈자리는 범위 점검이 아니라 `discriminate.gaps`(그 목표로 쓴 문항이 있는가)로 정한다.** 정방향 문항이 같은 내용을 이미 답해서 범위 점검은 covered로 본다. 새 목표에 add 전 범위 점검을 부르지 않고 `blank_rows`를 쓴다.
+- 발문이 답 쪽을 흘리지 않는 규칙은 add·검토·고치기 프롬프트가 지키고, 어긴 문항은 막지 않고 `report`의 `answerInStem`으로 센다. 학습 순서는 정방향 목표 → 역방향 목표(`REV-` 간선).
+- 보강(presuppose-only/1)도 같은 실행에서 존재 목표와 역방향 목표를 함께 만든다. 검사: `tests/quizbank/test_discriminate.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
 새 실행 정책(2026-11-09 사용자 설계 결정, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)은 새 ledger가 `runPolicies`로 적는다.

@@ -4,6 +4,7 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 - 출력 questions에는 지적받은 문항의 교체본만 넣는다. question_id·concept_id·point_ids는 그대로 둔다.
 - covered_goals는 그 문항이 지금 component를 답으로 묻고 있는 목표다. 고친 뒤에도 그 목표에서 지금 답으로 묻는 component를 계속 묻는다.
 - 지적과 무관한 칸은 바꾸지 않는다.
+- input.discrimination에 있는 문항은 역방향 문항이다(discriminate/1). 단서(cue)만으로 답(answer)을 고르게 하는 것이 목표이므로 **발문에 답 쪽을 알려 주는 말을 넣지 않는다.** 「무엇에 대한 질문인지 불분명하다」「대상을 명시해라」는 지적을 받아도 발문에 답 쪽을 쓰지 않고, 이유를 exam_rationale에 남긴다. 지적이 「단서가 다른 후보와 갈라지지 않는다」이면 competitors를 보고 원본에 있는 더 좁은 단서로 발문을 고친다. 답은 answer이고 소속·상위 범주는 넣어도 되고 빼도 된다. forward_by 문항의 발문을 옮겨 오지 않는다.
 - input.existence에 있는 문항은 존재 문항이다(presuppose/1). 그 문항은 A(와 범주)를 주고 원소 이름 전부를 답하게 하는 것이 목표다. existence의 cue·components가 그 범위이고, presupposed_by는 이 연결을 전제로 주고 세부를 묻는 문항이다. 지적이 원소의 겹침·모호함·다음 층 섞임이면 답의 원소를 원본이 쓰는 한 층으로 고친다. 「너무 쉽다」「원본 항목 찾기다」「조건을 붙여라」는 지적을 받아도 발문에 조건·상황·세부를 더하지 않고, 세부를 주고 이름을 묻게 뒤집지 않는다. 발문을 cue 모양으로 두고 이유를 exam_rationale에 남긴다. presupposed_by 문항이 답으로 묻는 세부는 발문에도 답에도 싣지 않는다.
 - 출력의 최상위 question_importance에 출력한 문항마다 정확히 한 줄을 쓴다(아래 「문항 중요도 근거」). 근거는 고친 내용이 그것을 요구할 때만 바꾼다. 답 내용이 그대로면 기존 근거(input에 있으면 그것)를 그대로 옮기고, 답 내용이 바뀌었으면 바뀐 답 내용에 대해 원본에서 다시 판정한다. 근거만 바꾸려고 문항을 고치지 않는다.
 

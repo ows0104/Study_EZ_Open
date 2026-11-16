@@ -132,10 +132,13 @@ def records(outputs, bank, points_doc, reserved=()):
 
 
 # ---------------------------------------------------------------- existence goals
-def relation_ids(brief, count):
-    used = [int(m.group(1)) for r in brief['relations'] for m in [re.fullmatch(r'RQP(\d+)', r['relation_id'])] if m]
+def relation_ids(brief, count, prefix='RQP'):
+    """The IDs new content relations may take. `prefix` keeps each policy's relations apart (discriminate/1 uses
+    RQD), so one does not reuse a number the other already gave."""
+    used = [int(m.group(1)) for r in brief['relations']
+            for m in [re.fullmatch(re.escape(prefix) + r'(\d+)', r['relation_id'])] if m]
     start = max(used, default=0) + 1
-    return [f'RQP{n:03d}' for n in range(start, start + count)]
+    return [f'{prefix}{n:03d}' for n in range(start, start + count)]
 
 
 def normalize_input(brief, new_points, allowed):
