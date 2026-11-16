@@ -119,3 +119,39 @@ def test_desktop_rows_get_lecture_titles_and_published_runs_say_so(tmp_path, mon
     finally:
         for child in root.winfo_children():
             child.destroy()
+
+
+def test_the_window_scrolls_when_the_content_is_taller_than_the_window(monkeypatch, tmp_path):
+    """사용자 2026-11-16 「러너에서 아래도 볼 수 있게 스크롤좀」.
+
+    창 크기는 pytest에서 창 관리자 없이 들쭉날쭉하므로, 보이는 높이를 직접 정하고 핸들러를 몰아 본다.
+    """
+    import tkinter as tk
+    monkeypatch.setattr(StatusWindow, 'request', lambda self: None)
+    root = tk.Tk()
+    try:
+        view = StatusWindow(root, tmp_path, 5)
+        assert view.clock.master is root                    # 시계는 캔버스 밖이라 늘 보인다
+        view.canvas.configure(width=700, height=300)
+        root.update_idletasks()
+        view.page_resized()
+        assert not view.scroll_shown                        # 짧은 내용에는 막대가 없다
+        tall = tk.Frame(view.page, height=1200, width=400)
+        tall.pack(fill='x')
+        root.update_idletasks()
+        view.page_resized()
+        root.update_idletasks()
+        assert view.scroll_shown
+        bottom = int(view.canvas.cget('scrollregion').split()[3])
+        assert bottom >= view.page.winfo_reqheight() > 300  # 굴릴 범위가 보이는 높이보다 크다
+        view.canvas.yview_moveto(1.0)
+        root.update_idletasks()
+        assert view.canvas.yview()[0] > 0.0                 # 아래로 굴러간다
+        tall.destroy()
+        root.update_idletasks()
+        view.page_resized()
+        root.update_idletasks()
+        assert not view.scroll_shown                        # 다시 짧아지면 숨고
+        assert view.canvas.yview()[0] == 0.0                # 맨 위로 돌아온다
+    finally:
+        root.destroy()

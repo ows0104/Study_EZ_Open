@@ -69,7 +69,24 @@ class StatusWindow:
         root.minsize(560, 420)
         root.configure(bg=BG)
 
-        header = tk.Frame(root, bg=BG)
+        # 창보다 내용이 길면 아래가 잘렸다(사용자 2026-11-16 「러너에서 아래도 볼 수 있게 스크롤좀」).
+        # 시계는 창에 두고(항상 보인다) 나머지를 캔버스에 얹어 스크롤한다.
+        self.clock = tk.Label(root, bg=BG, fg=DIM, font=(FONT, 9), anchor='w')
+        self.clock.pack(fill='x', side='bottom', padx=26, pady=(8, 14))
+        viewport = tk.Frame(root, bg=BG)
+        viewport.pack(fill='both', expand=True)
+        self.canvas = tk.Canvas(viewport, bg=BG, highlightthickness=0, borderwidth=0)
+        self.page_scroll = ttk.Scrollbar(viewport, orient='vertical', command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self.page_scroll.set)
+        self.scroll_shown = False
+        self.canvas.pack(side='left', fill='both', expand=True)
+        page = self.page = tk.Frame(self.canvas, bg=BG)
+        self.page_id = self.canvas.create_window((0, 0), window=page, anchor='nw')
+        page.bind('<Configure>', self.page_resized)
+        self.canvas.bind('<Configure>', self.viewport_resized)
+        root.bind_all('<MouseWheel>', self.wheel)
+
+        header = tk.Frame(page, bg=BG)
         header.pack(fill='x', padx=24, pady=(20, 4))
         tk.Label(header, text='Study EZ 러너', fg=TEXT, bg=BG, font=(FONT, 18, 'bold')).pack(side='left')
         self.refresh = self._link(header, '새로고침', self.refresh_now)
@@ -78,7 +95,7 @@ class StatusWindow:
         self.heartbeat = tk.Label(header, bg=BG, fg=MUTED, font=(FONT, 9))
         self.heartbeat.pack(side='right', padx=(0, 10))
 
-        summary = tk.Frame(root, bg=BG)
+        summary = tk.Frame(page, bg=BG)
         summary.pack(fill='x', padx=24, pady=(2, 14))
         self.state = tk.Label(summary, text='작업 확인 중…', bg=BG, fg=MUTED, font=(FONT, 10), anchor='w')
         self.state.pack(side='left')
@@ -87,14 +104,14 @@ class StatusWindow:
         self.eta_label = tk.Label(summary, text='', bg=BG, fg=MUTED, font=(FONT, 10), anchor='e')
         self.eta_label.pack(side='right')
 
-        self.build_before_jobs(root)
-        self.jobs_frame = tk.Frame(root, bg=BG)
+        self.build_before_jobs(page)
+        self.jobs_frame = tk.Frame(page, bg=BG)
         self.jobs_frame.pack(fill='x', padx=24)
         self.jobs_frame.bind('<Configure>', self.resize_cards)
 
-        self.build_controls(root)
+        self.build_controls(page)
 
-        self.body = tk.Frame(root, bg=BG)
+        self.body = tk.Frame(page, bg=BG)
         self.body.pack(fill='both', expand=True, padx=24)
         self.lists_frame = tk.Frame(self.body, bg=BG)
         self.waiting_label = tk.Label(self.lists_frame, text='전체 작업', bg=BG, fg=MUTED, anchor='w', font=(FONT, 10, 'bold'))
@@ -118,8 +135,6 @@ class StatusWindow:
                            wrap='word', height=10, state='disabled', padx=10, pady=10)
         self.log.pack(fill='both', expand=True)
 
-        self.clock = tk.Label(root, bg=BG, fg=DIM, font=(FONT, 9), anchor='w')
-        self.clock.pack(fill='x', side='bottom', padx=26, pady=(8, 14))
         style = ttk.Style(root)
         style.theme_use('clam')
         style.configure('Runner.Horizontal.TProgressbar', troughcolor=LINE, background=GREEN,
@@ -134,6 +149,41 @@ class StatusWindow:
         return tk.Button(parent, text=text, command=command, bg=parent.cget('bg'), fg=MUTED,
                          activebackground=parent.cget('bg'), activeforeground=TEXT, relief='flat',
                          borderwidth=0, padx=8, pady=2, font=(FONT, 9), cursor='hand2')
+
+    def page_resized(self, _event=None):
+        """내용 높이가 바뀌면 스크롤 범위를 맞추고, 창보다 짧으면 막대를 숨긴다.
+
+        높이는 내용이 요청한 값으로 잰다. `bbox('all')`은 칸이 사라진 뒤에도 한 번 더 큰 값을 돌려줘서
+        막대가 숨지 않았다(2026-11-16 확인)."""
+        height = max(self.page.winfo_reqheight(), 1)
+        self.canvas.configure(scrollregion=(0, 0, max(self.canvas.winfo_width(), 1), height))
+        # 창이 아직 안 떠 있으면 `winfo_height()`가 1이다. 그때는 요청한 높이로 잰다.
+        shown_height = self.canvas.winfo_height()
+        if shown_height <= 1:
+            shown_height = self.canvas.winfo_reqheight()
+        needed = height > shown_height
+        # 보임 여부는 코드가 들고 있는다. `winfo_ismapped()`는 창이 아직 안 떠 있으면 0이라
+        # (창 관리자 없는 검사 환경) 막대를 한 번 더 붙이거나 영영 안 붙인다.
+        if needed and not self.scroll_shown:
+            self.page_scroll.pack(side='right', fill='y')
+            self.scroll_shown = True
+        elif not needed and self.scroll_shown:
+            self.page_scroll.pack_forget()
+            self.scroll_shown = False
+            self.canvas.yview_moveto(0)
+
+    def viewport_resized(self, event):
+        self.canvas.itemconfigure(self.page_id, width=event.width)
+        self.page_resized()
+
+    def wheel(self, event):
+        """바퀴는 창을 굴린다. 자기 스크롤이 있는 칸(목록·기록) 위에서는 그 칸이 먼저 받는다."""
+        if isinstance(event.widget, (tk.Text, tk.Listbox, ttk.Treeview)):
+            return None
+        if not self.scroll_shown:
+            return None
+        self.canvas.yview_scroll(-1 if event.delta > 0 else 1, 'units')
+        return 'break'
 
     def build_before_jobs(self, root):
         """Optional desktop sections above the running cards; the monitor has none."""
@@ -388,6 +438,8 @@ class StatusWindow:
             self.render(result, phase_info)
         if not self.fetching and time.monotonic() >= self.next_check:
             self.request()
+        # 내용이 줄어든 회차에 <Configure>가 늦게 와 막대가 남는 일이 있었다. 0.5초마다 한 번 더 맞춘다.
+        self.page_resized()
         self.root.after(500, self.tick)
 
 
