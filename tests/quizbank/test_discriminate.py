@@ -137,7 +137,9 @@ def test_a_goal_nobody_asks_in_reverse_becomes_a_reverse_goal_studied_after_it(t
     order = [t['question_id'] for t in doc['tasks']]
     assert order.index('Q1') < order.index('Q004')
     counts = dis.report(meta['discriminations'], doc, doc['bank_snapshot'])
-    assert (counts['reversible'], counts['reverseGoal'], counts['open'], counts['answerInStem']) == (1, 1, [], [])
+    # three different numbers, each named for what it counts (2026-11-16)
+    assert (counts['reversible'], counts['goalsMade'], counts['goalsWithTask'], counts['connectionsPlaced']) == (1, 1, 1, 1)
+    assert (counts['open'], counts['answerInStem']) == ([], [])
 
 
 def test_a_goal_already_asked_in_reverse_makes_no_goal(tmp_path):
@@ -163,7 +165,7 @@ def test_a_stem_that_gives_the_answer_away_is_counted_not_blocked(tmp_path):
     consume(result, packet)
     counts = dis.report(result['manifest']['discriminations'], result['document'], result['document']['bank_snapshot'])
     assert [r['question_id'] for r in counts['answerInStem']] == ['Q004']
-    assert counts['reverseGoal'] == 1       # published all the same
+    assert counts['goalsWithTask'] == 1       # published all the same
 
 
 def test_an_older_ledger_runs_without_the_reverse_judgment(tmp_path):
@@ -213,7 +215,7 @@ def test_the_backfill_adds_reverse_goals_beside_existence_goals_and_keeps_every_
     meta, doc = result['manifest'], result['document']
     assert [r['point_id'] for r in meta['discriminations']] == ['P002']
     assert meta['presupposeOnly']['addedQuestions'] == ['Q004']
-    assert meta['presupposeOnly']['reverseCounts']['reverseGoal'] == 1
+    assert meta['presupposeOnly']['reverseCounts']['goalsWithTask'] == 1
     assert {t['question_id'] for t in old['document']['tasks']} <= {t['question_id'] for t in doc['tasks']}
     assert any(dis.is_reverse_edge(e) for e in doc['prerequisites'])
 

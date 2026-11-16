@@ -714,7 +714,8 @@ def run(packet, out, model, invoke, resume=None):
     if discriminations is not None:
         counts = dis.report(discriminations, doc, bank)
         print(f"── 역방향 정리: 거꾸로 물 목표 {counts['reversible']}개 중 이미 그렇게 묻던 것 {counts['alreadyAsked']} · "
-              f"역방향 목표 {counts['reverseGoal']} · 남음 {len(counts['open'])} · 발문이 답을 흘린 문항 {len(counts['answerInStem'])}개", flush=True)
+              f"역방향 목표 {counts['goalsMade']}개 중 문항 생김 {counts['goalsWithTask']} · 남은 연결 {len(counts['open'])} · "
+              f"발문이 답을 흘린 문항 {len(counts['answerInStem'])}개", flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "

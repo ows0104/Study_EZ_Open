@@ -413,16 +413,25 @@ def answer_in_stem(doc, records, bank):
 
 
 def report(records, doc, bank):
-    """R9 counts of one result: goals judged worth reversing, already asked that way, given a reverse goal with a
-    task, still open, and the reverse stems that gave the answer away."""
+    """R9 counts of one result. Three numbers that are easy to mistake for each other, so each says what it counts:
+
+    - `reversible`: connections judged worth asking from the other end (one per judged goal).
+    - `goalsMade` / `goalsWithTask`: the reverse **goals** those connections became, and how many got a question.
+      Fewer than the connections, because normalize merges the ones that ask the same thing (261116_06: 19 points →
+      14 goals). An earlier draft reported the connection count under the name 역방향 목표 and read 17 there, which
+      is neither the goals made nor the goals asked (2026-11-16, 다른 세션이 짚었다).
+    - `connectionsPlaced`: connections whose goal got a question — the connection-side view of the same fact.
+    """
     owners_of = {d['direction_id']: t['target_id'] for t in doc['review']['targets'] for d in t['directions']}
     task_targets = {owners_of[t['direction_id']] for t in doc['tasks']}
     points = {p['point_id']: p['target_ids'] for p in doc['review']['points']}
+    made = {t for r in records if r['point_id'] for t in points.get(r['point_id'], ())}
     asked = [r for r in records if r['asked_by']]
     goal = [r for r in records if r['point_id'] and set(points.get(r['point_id'], [])) & task_targets]
     open_ = [r for r in records if r['point_id'] and r not in goal]
     cues = sorted(len(r['cue']) for r in records if r['point_id'])
-    return {'reversible': len(records), 'alreadyAsked': len(asked), 'reverseGoal': len(goal),
+    return {'reversible': len(records), 'alreadyAsked': len(asked), 'goalsMade': len(made),
+            'goalsWithTask': len(made & task_targets), 'connectionsPlaced': len(goal),
             'open': [r['answer'] for r in open_], 'answerInStem': answer_in_stem(doc, records, bank),
             # A distribution, not a limit: a cue that copies the whole forward answer turns the stem into 「list it
             # all and ask one thing」 (사용자 2026-11-16). The prompt asks for the narrowest clue; this shows whether
