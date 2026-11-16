@@ -330,3 +330,16 @@ def test_answer_in_stem_takes_the_whole_korean_answer_not_its_category_word():
     assert dis.answer_in_stem(None, recs, bank('이 병합을 치료 예로 쓰는 중증 감염의 원인균은?')) == []
     # a Latin name in the stem is still a give-away
     assert [r['question_id'] for r in dis.answer_in_stem(None, recs, bank('V. vulnificus에서 쓰는 병합은?'))] == ['Q0']
+
+
+def test_a_published_question_keeps_its_goal_when_a_new_goal_would_take_it():
+    """2026-11-16 job 646 / 261102_02: Q070 moved D061 → DQ011 (content unchanged) and the backfill was refused.
+    The replay of that run with this pin finished, so the pin is what carries the history."""
+    from studyez_contracts.roots import generation_v4 as v4
+    where = {'Q070': 'DQ011', 'Q004': 'DQ001', 'Q1': 'D1'}
+    settled = {'Q070': 'D061', 'Q1': 'D1'}                 # what the published revision placed
+    assert v4.keep_published(where, settled) == {'Q070': 'D061', 'Q004': 'DQ001', 'Q1': 'D1'}
+    assert v4.keep_published(where, None) == where          # a first run pins nothing
+    assert v4.keep_published(where, {}) == where
+    # a published question the placement dropped (merged as a duplicate) stays dropped
+    assert v4.keep_published({'Q004': 'DQ001'}, settled) == {'Q004': 'DQ001'}
