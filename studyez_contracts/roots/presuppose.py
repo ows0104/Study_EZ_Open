@@ -203,7 +203,8 @@ def order_edges(brief, tasks, presuppositions, relations, edges):
     the link, or the goal made from its point) before the goal of the question that presupposes it.
 
     Only goals with tasks take part; an edge that would close a cycle (targets, or the concepts of prerequisite
-    relations) is left out, so is one whose two goals share every concept. Returns (relations, edges) to add."""
+    relations) is left out, so is one whose later goal has no concept of its own (its relation would have no end).
+    Returns (relations, edges) to add."""
     targets = {t['target_id']: t for t in brief['targets']}
     owners = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
     placed = {t['question_id']: owners[t['direction_id']] for t in tasks}
@@ -227,7 +228,9 @@ def order_edges(brief, tasks, presuppositions, relations, edges):
             if (before, after) in pairs or _reaches(target_graph, after, before):
                 continue
             a_ids, b_ids = targets[before]['concept_ids'], targets[after]['concept_ids']
-            source = next((c for c in a_ids if c not in b_ids), None)
+            # An existence goal often names only concepts its detail goal also has (A and B; the detail goal adds C):
+            # the edge still stands, from A (2026-11-16 job 635: 콜레라독소 소단위 → its A1·B pentamer details had none).
+            source = next((c for c in a_ids if c not in b_ids), a_ids[0] if a_ids else None)
             sink = next((c for c in b_ids if c not in a_ids), None)
             evidence = copy.deepcopy(targets[before].get('evidence') or [])
             if source is None or sink is None or not evidence or _reaches(concept_graph, sink, source):
@@ -277,6 +280,43 @@ def mark_existence(ctx, brief, presuppositions, bank):
         qids = sorted(set(targets.get(owners.get(goal['direction_id']), [])))
         if qids:
             goal['existence'] = {'presupposed_by': [{'question_id': q, 'question': stems.get(q, '')} for q in qids]}
+    return ctx
+
+
+def mark_review(ctx, brief, presuppositions, bank):
+    """Item review and fix input: `existence`, one row per question of the batch written for an existence goal (a
+    presupposition point in its point_ids) with the goal's cue, members and relation, and the stems that presuppose
+    the link. Without it the review judged existence questions like detail ones (「too easy, ask by a condition」)
+    and the fix put the next layer into the stem; the review also named only older relations, so a question went to
+    an older goal and its existence goal stayed without a task (2026-11-16 job 635: Q231·Q241·Q243,
+    docs/changes/2026-11-16-existence-question-shape). Changes `ctx` in place and returns it; no key when none."""
+    pids = {r['point_id'] for r in presuppositions or [] if r['point_id']}
+    if not pids:
+        return ctx
+    stems = {q['question_id']: v3._front(q).get('question', '') for q in bank['questions']}
+    by_point = {}
+    for r in presuppositions:
+        if r['point_id']:
+            by_point.setdefault(r['point_id'], set()).add(r['question_id'])
+    points = {p['point_id']: p for p in brief['points']}
+    targets = {t['target_id']: t for t in brief['targets']}
+    rows = []
+    for q in ctx['questions']:
+        mine = [p for p in q.get('point_ids', []) if p in pids and p in points]
+        if not mine:
+            continue
+        goals = [d for p in mine for tid in points[p]['target_ids'] if tid in targets for d in targets[tid]['directions']]
+        seen = []
+        for d in goals:
+            if d not in seen:
+                seen.append(d)
+        by = sorted({x for p in mine for x in by_point.get(p, ())} - {q['question_id']})
+        rows.append({'question_id': q['question_id'],
+                     'goals': [{'cue': d['cue'], 'components': [c['text'] for c in d['components']],
+                                'relation_ids': list(d['relation_ids'])} for d in seen],
+                     'presupposed_by': [{'question_id': x, 'question': stems.get(x, '')} for x in by]})
+    if rows:
+        ctx['existence'] = rows
     return ctx
 
 

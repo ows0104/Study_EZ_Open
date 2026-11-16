@@ -242,3 +242,42 @@ def test_existence_gaps_ask_the_whole_category_until_one_question_does():
     whole = {**split, 'DQ': {'direction_id': 'DQ', 'evidence': [ev('Q5', 'a'), ev('Q7', 'a', 'b')]}}
     assert pre.existence_gaps(whole, brief, recs) == {}
     assert pre.whole_answers(list(whole.values()), brief, recs) == {('Q7', 'DQ')}
+
+
+def test_order_edges_stand_when_the_existence_goal_names_only_concepts_of_the_detail_goal():
+    """2026-11-16 job 635: 「콜레라독소의 소단위」 named {콜레라독소, AB5} and its detail goal had both plus A1·Gsα;
+    the edge was dropped as 「shares every concept」 and Q233·Q234 preceded nothing
+    (docs/changes/2026-11-16-existence-question-shape R6)."""
+    brief = _brief(('TE', ['A', 'B']), ('T1', ['A', 'B', 'C']))
+    tasks = [{'question_id': 'QE', 'direction_id': 'DTE'}, {'question_id': 'Q1', 'direction_id': 'DT1'}]
+    rec = {'question_id': 'Q1', 'a': 'A', 'b': 'B', 'link': 'x', 'recalled_by': [], 'point_id': 'P9'}
+    relations, edges = pre.order_edges(brief, tasks, [rec], [], [])
+    assert [(e['before_target'], e['after_target']) for e in edges] == [('TE', 'T1')]
+    assert (relations[0]['from_id'], relations[0]['to_id']) == ('A', 'C')
+    # The other way round (the detail goal has no concept of its own) still makes none.
+    brief = _brief(('TE', ['A', 'B', 'C']), ('T1', ['A', 'B']))
+    assert pre.order_edges(brief, tasks, [rec], [], [])[1] == []
+
+
+def test_review_and_fix_inputs_mark_existence_questions_with_their_goal_and_the_stems_that_presuppose_it():
+    """2026-11-16 job 635: the review asked an existence question to 「ask by a condition」 (Q231), the fix put the
+    next layer into the stem, and the review named only older relations (Q243 went to an older goal). Their inputs now
+    say which questions are existence questions (docs/changes/2026-11-16-existence-question-shape R4)."""
+    brief = {'targets': [{'target_id': 'TQ1', 'directions': [{'direction_id': 'DQ1', 'cue': 'A의 효소는?', 'relation_ids': ['RQP001'],
+                                                              'components': [{'component_id': 'DQ1C1', 'text': 'B1'},
+                                                                             {'component_id': 'DQ1C2', 'text': 'B2'}]}]}],
+             'points': [{'point_id': 'P9', 'target_ids': ['TQ1']}, {'point_id': 'P1', 'target_ids': ['T1']}]}
+    bank = {'questions': [{'question_id': 'Q1', 'question': 'A의 B1이 분해하는 것은?', 'point_ids': ['P1']},
+                          {'question_id': 'Q2', 'question': 'A의 B2가 일으키는 손상은?', 'point_ids': ['P1']},
+                          {'question_id': 'Q5', 'question': 'A의 효소는?', 'point_ids': ['P9']}]}
+    recs = [{'question_id': 'Q1', 'a': 'A', 'b': 'B1', 'link': 'x', 'recalled_by': [], 'point_id': 'P9'},
+            {'question_id': 'Q2', 'a': 'A', 'b': 'B2', 'link': 'x', 'recalled_by': [], 'point_id': 'P9'},
+            {'question_id': 'Q2', 'a': 'A', 'b': 'D', 'link': 'x', 'recalled_by': ['Q1'], 'point_id': None}]
+    ctx = pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, recs, bank)
+    assert ctx['existence'] == [{'question_id': 'Q5',
+                                 'goals': [{'cue': 'A의 효소는?', 'components': ['B1', 'B2'], 'relation_ids': ['RQP001']}],
+                                 'presupposed_by': [{'question_id': 'Q1', 'question': 'A의 B1이 분해하는 것은?'},
+                                                    {'question_id': 'Q2', 'question': 'A의 B2가 일으키는 손상은?'}]}]
+    # A batch without existence questions, or a run without presuppositions, gets no key.
+    assert 'existence' not in pre.mark_review({'questions': copy.deepcopy(bank['questions'][:2])}, brief, recs, bank)
+    assert 'existence' not in pre.mark_review({'questions': copy.deepcopy(bank['questions'])}, brief, None, bank)
