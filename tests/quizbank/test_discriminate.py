@@ -302,6 +302,10 @@ def test_order_edges_put_the_forward_goal_first_and_skip_cycles():
     assert dis.order_edges(brief, tasks, [rec()], [], existing)[1] == []
     cycle = [{'before_target': 'TR', 'after_target': 'T1', 'relation_id': 'R9'}]
     assert dis.order_edges(brief, tasks, [rec()], [], cycle)[1] == []
+    # the forward question waits for the reverse one (a question prerequisite): no edge the other way (2026-11-17)
+    assert dis.order_edges(brief, tasks, [rec()], [], [], {'Q1': ['Q4']})[1] == []
+    assert [(e['before_target'], e['after_target'])
+            for e in dis.order_edges(brief, tasks, [rec()], [], [], {'Q4': ['Q1']})[1]] == [('T1', 'TR')]
 
 
 def test_records_keep_map_order_make_one_point_per_reverse_and_drop_questions_that_left():

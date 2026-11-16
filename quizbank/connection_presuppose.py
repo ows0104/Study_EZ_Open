@@ -88,6 +88,19 @@ def run(packet, out, model, invoke, previous, resume=None):
     bank = v2.restore_container_concepts(v2.restore_importance(old['document']['bank_snapshot'], meta.get('importanceProjection')),
                                          meta.get('bankProjection'))
     published = [q['question_id'] for q in bank['questions']]
+    # notes-update/1 (docs/changes/2026-11-16-replace-updated-notes): the published revision may have taken corrected
+    # notes of the same pages. Its brief, judgments and figures stay those of the earlier file, and its document names
+    # the corrected one. This run continues both: published figures are kept as published (rendering them again would
+    # crop the corrected file, change the question and end its learning history), and the document gets the same
+    # update, which the consumer applies from the record this manifest inherits.
+    update = (meta.get('unplacedOnly') or {}).get('sourceUpdate')
+    replaced = {r['source_id'] for r in update['sources']} if update else set()
+    as_published = {q['question_id']: q for q in bank['questions']}
+
+    def render(value, specs):
+        if not replaced:
+            return visual.render(value, specs, packet, out / 'material')
+        return _render_keeping(value, specs, packet, out / 'material', as_published, replaced)
     rows = {r['direction_id']: copy.deepcopy(r) for r in meta['coverage']}
     map_checks = [meta['mapCheck']]
     reviews = {r['question_id']: r for r in meta['itemReviews']}
@@ -189,7 +202,7 @@ def run(packet, out, model, invoke, previous, resume=None):
         bank, conflicts = v3.merge_added(visual.authored(bank), conflicts, plain, allowed)
         basis.update(v4.collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']]))
         stimuli = [*stimuli, *value['visual_stimuli']]
-        bank = visual.render(bank, stimuli, packet, out / 'material')
+        bank = render(bank, stimuli)
         new = [q['question_id'] for q in value['questions']]
         added += new
         for part in chunks(list(gaps), COVERAGE_CHUNK):
@@ -256,7 +269,7 @@ def run(packet, out, model, invoke, previous, resume=None):
             fixed_basis = v4.collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
             basis.update({q: fixed_basis[q] for q in changed})
             stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
-            bank = visual.render(merged, stimuli, packet, out / 'material')
+            bank = render(merged, stimuli)
             again = review(f'{X}review{TAG}-{k + 1}', changed) if changed else {}
             reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
             if reverted and not [q for q in changed if q not in reverted]:
@@ -271,7 +284,7 @@ def run(packet, out, model, invoke, previous, resume=None):
                 part = v3.fixes_of(plain, kept)
                 merged, conflicts, _ = v3.merge_fixes(visual.authored(before[0]), conflicts, part, targets)
                 stimuli = [s for s in before[1] if s['question_id'] not in set(kept)] + part['visual_stimuli']
-                bank = visual.render(merged, stimuli, packet, out / 'material')
+                bank = render(merged, stimuli)
                 basis = {**before[2], **{q: fixed_basis[q] for q in kept}}
             for q in changed:
                 reviews[q] = before_reviews[q] if q in reverted else again.get(q, reviews[q])
@@ -319,6 +332,8 @@ def run(packet, out, model, invoke, previous, resume=None):
     staying = {t['question_id'] for t in doc['tasks']}
     v3.require(previous_carry and previous_carry['tasks'] == sum(t['question_id'] in staying for t in old['document']['tasks']),
                f'{LABEL}: 이전 판의 과제 중 같은 문항으로 이을 수 없는 것이 있습니다 — 학습 기록이 끊깁니다.')
+    if update:
+        doc = v4.apply_source_update(doc, brief, packet, update)   # after the carry links, as the consumer does
     counts = pre.report(presuppositions, doc)
     rcounts = dis.report(discriminations, doc, bank)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
@@ -379,6 +394,23 @@ def run(packet, out, model, invoke, previous, resume=None):
     v4.validate_result(result, packet)
     g.write(out / 'result.json', result)
     return result
+
+
+def _render_keeping(bank, specs, packet, material, as_published, replaced):
+    """`visual.render` for a published revision whose notes were replaced (notes-update/1). A published question with
+    a figure on a replaced source keeps the figures it was published with: they were cropped from the earlier file,
+    which the brief still names. A new question cannot have such a figure yet — the earlier file is not in the packet.
+    2026-11-17 job 670 / 261112_03: every merge rendered the five published figures again from the corrected notes,
+    and the assembly stopped with 「stimuli: source/page mismatch」."""
+    held = {s['question_id'] for s in specs if s['source_id'] in replaced}
+    new = sorted(held - set(as_published))
+    v3.require(not new, f"{LABEL}: 필기를 교체한 판입니다 — 새 문항({', '.join(new)})의 그림은 교체 전 필기에서 자를 수 없어 "
+               '아직 받지 않습니다.')
+    value = visual.render(bank, [s for s in specs if s['question_id'] not in held], packet, material)
+    for q in value['questions']:
+        if q['question_id'] in held:
+            q['stimuli'] = copy.deepcopy(as_published[q['question_id']]['stimuli'])
+    return value
 
 
 def _merge_medical(prev, more, bank):

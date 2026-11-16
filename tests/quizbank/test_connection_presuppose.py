@@ -230,3 +230,58 @@ def test_a_published_task_is_not_merged_away_as_a_duplicate():
     assert merged([row('Q025', 'Q075', 'Q300')], {'Q025', 'Q075'}) == [('Q300', 'Q025')]
     # a published question the published revision had already merged away is not held, and goes as before
     assert merged([row('Q025', 'Q075')], {'Q025'}) == [('Q075', 'Q025')]
+
+
+def test_a_revision_with_replaced_notes_is_continued(tmp_path, monkeypatch):
+    """notes-update/1 then presuppose-only/1 (2026-11-17 job 670 / 261112_03): the published revision named corrected
+    notes; the backfill names them too, as the consumer derives from the record the manifest inherits."""
+    from tests.quizbank import test_connection_replace as rep
+    with monkeypatch.context() as legacy:          # published before presuppose/1, as published() above
+        legacy.setattr('quizbank.connection_generate_v3.Stages', Legacy)   # run_v1 subclasses this one
+        previous, old, packet = rep.published_pdf(tmp_path, monkeypatch)
+    packet = rep.corrected(tmp_path, packet, ['Synthetic notes page 1', 'Synthetic notes page 2 (corrected)', 'Synthetic notes page 3'])
+    updated = g.run(packet, tmp_path / 'new', invoke=rep.PdfLateModel(), unplaced_of=previous)
+    assert updated['document']['replaced_sources']
+    (tmp_path / 'new' / 'packet.json').write_text(json.dumps(packet, ensure_ascii=False), encoding='utf-8')
+    again = copy.deepcopy(packet)
+    del again['unplacedOnly']
+    again.update(revision='auto-newer', generationId='newer', restartOf='new', replacePublished=True, presupposeOnly=True,
+                 restartReason='존재 목표 보강', carrySources=carry_sources(updated))
+    again['inputHash'] = packet_hash(again)
+    result = g.run(again, tmp_path / 'newer', invoke=rep.PdfLateModel(), presuppose_of=tmp_path / 'new')
+    assert consume(result, again) == result['document']
+    doc = result['document']
+    assert doc['replaced_sources'] == updated['document']['replaced_sources']
+    assert doc['review']['sources'] == updated['document']['review']['sources']
+    assert result['brief']['sources'] == old['brief']['sources']
+    assert doc['bank_snapshot']['questions'] == updated['document']['bank_snapshot']['questions']
+
+
+def test_published_figures_of_replaced_notes_are_kept_and_new_ones_refused(tmp_path):
+    """The five published figures of 261112_03 were cropped from the earlier notes; rendering them again from the
+    corrected file changed the questions and failed the source check of the assembly."""
+    from quizbank import connection_presuppose as backfill
+    figure = {'source_id': 'S1', 'source_sha256': 'a' * 64, 'page': 2, 'crop': [0, 0, 1, 1], 'sha256': 'b' * 64,
+              'width': 1, 'height': 1, 'png_base64': ''}
+    as_published = {'Q1': {'question_id': 'Q1', 'stimuli': [figure]}, 'Q2': {'question_id': 'Q2'}}
+    bank = {'questions': [{'question_id': 'Q1', 'stimuli': [{**figure, 'source_sha256': 'c' * 64}]}, {'question_id': 'Q2'},
+                          {'question_id': 'Q9'}]}
+    spec = {'question_id': 'Q1', 'source_id': 'S1', 'page': 2, 'crop': [0, 0, 1, 1]}
+    seen = {}
+
+    def render(value, specs, packet, material):
+        seen['specs'] = specs
+        value = copy.deepcopy(value)
+        for q in value['questions']:
+            q.pop('stimuli', None)
+        return value
+    real = backfill.visual.render
+    backfill.visual.render = render
+    try:
+        value = backfill._render_keeping(bank, [spec], {'sources': []}, tmp_path, as_published, {'S1'})
+        assert seen['specs'] == [] and value['questions'][0]['stimuli'] == [figure]
+        assert 'stimuli' not in value['questions'][1] and 'stimuli' not in value['questions'][2]
+        with pytest.raises(ValueError, match='새 문항'):
+            backfill._render_keeping(bank, [spec, {**spec, 'question_id': 'Q9'}], {'sources': []}, tmp_path, as_published, {'S1'})
+    finally:
+        backfill.visual.render = real

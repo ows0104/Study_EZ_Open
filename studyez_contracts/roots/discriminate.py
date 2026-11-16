@@ -331,10 +331,11 @@ def is_reverse_edge(edge):
     return re.fullmatch(r'REV-[0-9a-f]{12}', edge.get('relation_id') or '') is not None
 
 
-def order_edges(brief, tasks, records, relations, edges):
+def order_edges(brief, tasks, records, relations, edges, question_deps=None):
     """Target prerequisites from the discrimination records: the forward goal (the judged goal itself, and the goals
     of the questions that ask it forward) before the reverse goal. Only goals with tasks take part; an edge that
-    would close a cycle, or whose relation would join a concept to itself, is left out."""
+    would close a cycle (also through question prerequisites, `question_deps`: presuppose.closes_task_cycle), or whose
+    relation would join a concept to itself, is left out."""
     targets = {t['target_id']: t for t in brief['targets']}
     owners_of = {d['direction_id']: t['target_id'] for t in brief['targets'] for d in t['directions']}
     placed = {t['question_id']: owners_of[t['direction_id']] for t in tasks}
@@ -359,6 +360,8 @@ def order_edges(brief, tasks, records, relations, edges):
         for after in sorted(afters):
             for before in sorted(befores - {after}):
                 if (before, after) in pairs or pre._reaches(target_graph, after, before):
+                    continue
+                if pre.closes_task_cycle(placed, question_deps, target_graph, before, after):
                     continue
                 a_ids, b_ids = targets[before]['concept_ids'], targets[after]['concept_ids']
                 source = next((c for c in a_ids if c not in b_ids), a_ids[0] if a_ids else None)

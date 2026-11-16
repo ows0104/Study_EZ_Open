@@ -951,15 +951,19 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
         candidates = kept
     prepared_targets = {owners[t['direction_id']] for t in candidates}
     edges = [e for e in brief['prerequisites'] if e['relation_id'] in reviewed_relations and e['before_target'] in prepared_targets]
+    # The new target edges may not cross a question prerequisite the other way (presuppose.closes_task_cycle).
+    question_deps = {t['question_id']: list(qs[t['question_id']].get('prerequisites', [])) for t in candidates}
     if presuppositions:
-        extra_relations, extra_edges = pre.order_edges(brief, candidates, presuppositions, review['relations'], edges)
+        extra_relations, extra_edges = pre.order_edges(brief, candidates, presuppositions, review['relations'], edges,
+                                                       question_deps)
         if extra_edges:
             review = {**review, 'relations': [*review['relations'], *extra_relations]}
             edges = [*edges, *extra_edges]
     if discriminations:
         # After the existence edges: a reverse goal waits for the forward question's goal, which may itself wait for
         # an existence goal. The cycle guard reads the edges already made, so the order of these two blocks is fixed.
-        extra_relations, extra_edges = dis.order_edges(brief, candidates, discriminations, review['relations'], edges)
+        extra_relations, extra_edges = dis.order_edges(brief, candidates, discriminations, review['relations'], edges,
+                                                       question_deps)
         if extra_edges:
             review = {**review, 'relations': [*review['relations'], *extra_relations]}
             edges = [*edges, *extra_edges]
