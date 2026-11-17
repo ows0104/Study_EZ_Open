@@ -66,6 +66,8 @@ def _authored(doc, question):
 
 def _resolve(db, doc, question):
     """(판 형식, 칸, 선지를 만들 문항) 또는 None."""
+    if question.get('personalFormat'):
+        return None   # 형식을 바꾼 내 수정본: 판 선지는 원래 형식의 칸이다(2026-11-17 personal-edit-format)
     original = _authored(doc, question)
     if original is None or original.get('format') not in contract.FORMATS:
         return None

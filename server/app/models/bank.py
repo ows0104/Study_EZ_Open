@@ -128,6 +128,9 @@ class BankPersonalEdit(Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     comment: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Main-Quiz 형식 바꾸기(2026-11-17, docs/changes/2026-11-17-personal-edit-format): 원래와 다른 형식일 때만
+    # {format, mcq_mode, answer_units, options, correct_option_ids, explanation}. NULL이면 원래 형식 그대로.
+    structure: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     __table_args__ = (

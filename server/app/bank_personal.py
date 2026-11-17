@@ -73,6 +73,9 @@ def apply_edit(question: dict, edit: BankPersonalEdit | None) -> dict:
     """Apply an already loaded edit; catalogs load private edits in one query."""
     if not edit or not same_source(edit.original, question):
         return question
+    structure = getattr(edit, "structure", None)
+    if structure:
+        return with_structure(question, edit.question, edit.answer, structure)
     answer_changed = edit.answer != question["answer"]
     out = {**question, "question": edit.question, "answer": edit.answer,
            "personalEdited": edit.question != question["question"] or answer_changed,
@@ -81,4 +84,22 @@ def apply_edit(question: dict, edit: BankPersonalEdit | None) -> dict:
     if answer_changed:
         # A prose correction replaces the old answer and its structured scoring data.
         out.update(answer_units=[], correct_option_ids=[], answer_pairs=[], correct_order=[], explanation="")
+    return out
+
+
+STRUCTURE_FIELDS = ("format", "mcq_mode", "answer_units", "options", "correct_option_ids", "explanation")
+
+
+def with_structure(question: dict, text: str, answer: str, structure: dict) -> dict:
+    """Main-Quiz 형식 바꾸기(2026-11-17): 사용자가 형식·구조·해설을 함께 정한 수정본은 판 문항처럼 보인다.
+    그래서 personalAnswer(원래 해설이 고친 답과 안 맞는다)는 켜지 않는다. 덧붙인 선지는 원래 형식의 칸이라
+    붙이지 않는다(personalFormat, root_learning.mcq)."""
+    from studyez_contracts.bank.cloze import normalize_cloze
+    out = {**question, "question": text, "answer": answer,
+           **{k: structure[k] for k in STRUCTURE_FIELDS if k in structure},
+           "answer_pairs": [], "correct_order": [], "matching_left": [], "matching_right": [], "sequence_items": [],
+           "option_explanations": [], "option_pools": [],
+           "personalEdited": True, "personalAnswer": False, "personalFormat": True}
+    if out["format"] == "cloze":
+        out["answer_units"] = normalize_cloze(out).get("answer_units", [])
     return out

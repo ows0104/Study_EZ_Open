@@ -18,7 +18,7 @@ from app.database import get_db
 from app import bank_personal
 from app.models import BankFeedback, BankPersonalEdit, Lecture
 from app.models.root_learning import RootContent, RootControl, RootSession, RootEvent
-from app.root_learning import content, light, mine, policy, state, planning
+from app.root_learning import content, edit_format, light, mine, policy, state, planning
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -571,10 +571,12 @@ class RootPersonalEdit(Strict):
     action: Literal['save', 'reset'] = 'save'
     revision: str = Field(min_length=64, max_length=64)
     question: str = Field(min_length=1, max_length=12000)
-    answer: str = Field(min_length=1, max_length=12000)
+    # 형식을 바꾸면(structure) 빈칸·객관식처럼 서버가 정답 글을 채우므로 빈 값을 받는다. 글만 고칠 때는 아래에서 막는다.
+    answer: str = Field(default='', max_length=12000)
     report: bool = False
     category: str = Field(default='content', max_length=16)
     comment: str = Field(default='', max_length=2000)
+    structure: edit_format.Structure | None = None
 
 
 @router.get(BASE + '/questions/{question_id}/personal')
@@ -585,10 +587,11 @@ def read_personal(subject: str, run_id: str, question_id: str, user: CurrentUser
     edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id)) if personal_editable(doc) else None
     valid = edit is not None and bank_personal.same_source(edit.original, original)
     current = bank_personal.apply_edit(original, edit) if valid else original
-    return {'original': {'question': original['question'], 'answer': original['answer'], 'explanation': original.get('explanation', '')},
-            'draft': {'question': current['question'], 'answer': current['answer'], 'explanation': current.get('explanation', '')},
+    # 형식 바꾸기(2026-11-17): 수정 가능한 판만 여섯 형식을 고른다. 원래 형식이 그 밖이면 글만 고친다.
+    formats = list(edit_format.FORMATS) if personal_editable(doc) and original.get('format', 'basic') in edit_format.FORMATS else []
+    return {'original': edit_format.shape(original), 'draft': edit_format.shape(current),
             'edited': valid, 'comment': edit.comment if valid else '', 'revision': bank_personal.revision(original),
-            'personalAdded': False, 'editable': personal_editable(doc)}
+            'personalAdded': False, 'editable': personal_editable(doc), 'formats': formats}
 
 
 @router.put(BASE + '/questions/{question_id}/personal')
@@ -602,9 +605,15 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
     if payload.revision != bank_personal.revision(original):
         raise HTTPException(409, '문항이 바뀌었습니다. 수정창을 다시 열어 주세요.')
     question, answer = payload.question.strip(), payload.answer.strip()
+    structure = None
+    original_format = original.get('format', 'basic')
+    if payload.action == 'save' and payload.structure and payload.structure.format != original_format:
+        if original_format not in edit_format.FORMATS:
+            raise HTTPException(422, '이 문항은 형식을 바꿀 수 없습니다.')
+        structure, answer = edit_format.build(payload.structure, question, answer)
     if not question or not answer:
         raise HTTPException(422, '발문과 정답을 비워 둘 수 없습니다.')
-    changed = question != original['question'] or answer != original['answer']
+    changed = question != original['question'] or answer != original['answer'] or structure is not None
     editable = personal_editable(doc)
     if changed and not editable:
         raise HTTPException(409, '이 Main-Quiz는 문제은행과 연결된 판이라 개인 수정은 할 수 없습니다. 제보만 보낼 수 있습니다.')
@@ -620,14 +629,17 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                 edit = BankPersonalEdit(user_id=user.id, subject=subject, run_id=run_id, question_id=question_id)
                 db.add(edit)
             edit.original, edit.question, edit.answer, edit.comment = original, question, answer, comment
+            edit.structure = structure
     reported = payload.action == 'save'
     if reported:
         correction = None
         note = comment
         if changed:
-            note += f"\n\n[개인 수정 제안]\n발문: {question}\n정답: {answer}"
-            correction = {'original': original, 'proposed': {'question': question, 'answer': answer},
-                          'changedFields': [k for k, v in (('question', question), ('answer', answer)) if v != original[k]]}
+            kind = f"\n형식: {edit_format.LABELS[original_format]} → {edit_format.LABELS[structure['format']]}" if structure else ''
+            note += f"\n\n[개인 수정 제안]{kind}\n발문: {question}\n정답: {answer}"
+            correction = {'original': original, 'proposed': {'question': question, 'answer': answer, **(structure or {})},
+                          'changedFields': [k for k, v in (('question', question), ('answer', answer)) if v != original[k]]
+                                           + (['format'] if structure else [])}
         db.add(BankFeedback(user_id=user.id, subject=subject, run_id=run_id, build_id=feedback_build(doc),
                             question_id=question_id, category=payload.category, comment=note.strip(),
                             highlighted=payload.report, correction=correction))

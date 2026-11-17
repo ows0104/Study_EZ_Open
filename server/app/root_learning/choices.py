@@ -41,7 +41,7 @@ def stored(db, doc):
 
 def entry(db, doc, question):
     """이 판·이 문항 글에 맞는 선지 칸 또는 None."""
-    if question.get('format') not in contract.FORMATS:
+    if question.get('format') not in contract.FORMATS or question.get('personalFormat'):
         return None
     return contract.attachable(stored(db, doc), doc.revision, question)
 
