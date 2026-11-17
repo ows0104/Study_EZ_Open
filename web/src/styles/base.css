@@ -3141,6 +3141,10 @@ button.notice-title:hover:not(:disabled) {
 .bank-personal-original p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
 .bank-feedback-dialog small { display: block; margin-top: 6px; color: var(--ink-3); }
 .bank-feedback-dialog .bank-personal-report { display: flex; gap: 8px; align-items: center; }
+/* 형식 바꾸기(2026-11-17): O/X·정답 보기 고르기 */
+.bank-personal-choices { margin: 16px 0 0; padding: 0; border: 0; font-size: 14px; }
+.bank-personal-choices legend { padding: 0; }
+.bank-feedback-dialog .bank-personal-choices label { display: flex; gap: 8px; align-items: center; margin-top: 8px; overflow-wrap: anywhere; }
 .bank-feedback-dialog footer { flex-wrap: wrap; }
 .bank-feedback-dialog button[type="submit"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 @media (max-width: 600px) { .bank-feedback-dialog { padding: 18px; } }

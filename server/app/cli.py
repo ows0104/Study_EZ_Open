@@ -66,6 +66,8 @@ ADDED_COLUMNS = (
     ("profile", "review_prompt", "TEXT NOT NULL DEFAULT ''"),
     ("bank_feedback", "highlighted", "BOOLEAN NOT NULL DEFAULT TRUE"),
     ("bank_feedback", "correction", "JSON"),
+    # 2026-11-17 Main-Quiz 개인 수정에서 문항 형식 바꾸기. NULL이면 원래 형식.
+    ("bank_personal_edit", "structure", "JSON"),
     # 2026-10-04 예습 카드가 「왜 냈나」와 도전 문제 표시를 갖는다. 복습 표도 모양을 같이 쓴다.
     ("pre_item", "why_asked", "TEXT NOT NULL DEFAULT ''"),
     ("main_item", "why_asked", "TEXT NOT NULL DEFAULT ''"),
