@@ -52,7 +52,8 @@ assert action(client, sid, 'g1', 'rate', selfRating='Good').status_code == 200
 with SessionLocal() as db:
     rated = db.get(RootEvent, ('a', 'g1')).payload
     stored = db.scalars(select(RootContent)).first().document
-assert rated['ratingPolicy'] == 'roots-four-rating/2' and rated['targetParameters']['tierTargets'] == DEFAULT['mastery']['tierTargets']
+assert rated['ratingPolicy'] == 'roots-four-rating/3' and rated['targetParameters']['tierTargets'] == DEFAULT['mastery']['tierTargets']
+assert all(rated['targetParameters'][k] == v for k, v in policy.ROOT_MASTERY.items())
 # Choices saved at one fixed instant with IDs sorting against save order (z2 > y3 > x4 > w5): only seq decides.
 assert put('z2', 'Optional').json()['rescheduled'] is True
 with SessionLocal() as db:
@@ -66,7 +67,7 @@ assert state.personal_tiers(stored, events) == {}  # w5 (null) holds although it
 assert len([e for e in events if e['kind'] == 'tier']) == 5  # every choice stays as an event
 
 # ── Same target as Quiz Bank target_for, for every tier / private / plan case ─
-params = policy.target_parameters()
+params = {k: v for k, v in policy.target_parameters().items() if k not in policy.ROOT_MASTERY}  # /2 events below
 bank = {'retrieval_plan': [{'concept_id': 'C1', 'target_mastery': 0.7}]}
 for tier in policy.TIERS:
     for importance in (2, 3, 4, 5):

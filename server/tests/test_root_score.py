@@ -5,10 +5,11 @@ from datetime import timedelta
 from pathlib import Path
 
 from tests.root_support import POLICY, NOW
-from app.root_learning.policy import target_parameters
+from app.root_learning.policy import ROOT_MASTERY, target_parameters
 from app.root_learning.score import DISPLAY_TARGET_SCALE, _unit_score, coverage, current_mastery, lecture_score
 
-PARAMS = target_parameters()
+# Events here are labelled roots-four-rating/2: freeze /2's parameters (no ROOT_MASTERY, 2026-11-18 review-curve).
+PARAMS = {k: v for k, v in target_parameters().items() if k not in ROOT_MASTERY}
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures/root_generation_v2_import.json').read_text(encoding='utf-8'))
 
 

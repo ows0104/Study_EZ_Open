@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-18-review-curve",
+  "title": "Main-Quiz 복습 간격: 쉬운 문항이 곡선대로 빠지게",
+  "area": "site",
+  "created_at": "2026-11-17T23:42:59.277073+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-17T23:42:59.277117+00:00"
+}
