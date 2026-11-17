@@ -16,6 +16,13 @@ Every published question, ID, task, judgment and medical verdict stays. New ques
 records: the published context judgment covers the bank's conflicts and is not judged again.
 The map is not checked again; the result is an ordinary /4 result the server takes as the restart that replaces the
 published revision.
+
+Fill mode (`fill`, docs/changes/2026-11-17-fill-recovery, 사용자 「얹기로 하자」·「11-16 네 편 복구해줘」): a revision that
+was already judged (first made with presuppose/1 and discriminate/1) is not judged again — a second judgment would make a
+second goal for the same link. An operator's record names the goals to write questions for (`goals`, their unasked
+components) and, at most, published questions to write again from a finding (`rewrite`). Everything after the judgment is
+the same run: one add round, review and fixes of those questions, their medical review, the pinned assembly and the
+carry check. A rewritten question changes, so its own learning history starts over; it is the only one that does.
 """
 import copy
 import json
@@ -55,7 +62,42 @@ def _no_new_conflicts(before, conflicts):
                f'{LABEL}: 새 문항은 임상 충돌 기록을 더하지 않습니다(공개된 판의 맥락 판정을 다시 하지 않습니다).')
 
 
-def run(packet, out, model, invoke, previous, resume=None):
+def check_fill(fill, old):
+    """The operator's fill record against the published revision it was written for. Returns it normalized."""
+    v3.require(type(fill) is dict and type(fill.get('goals')) is list and type(fill.get('rewrite', [])) is list
+               and all(type(fill.get(k)) is str and fill[k].strip() for k in ('previousRevision', 'reason', 'approval', 'at')),
+               f'{LABEL}: 채우기 기록의 형식이 다릅니다(previousRevision·goals·reason·approval·at).')
+    v3.require(fill['previousRevision'] == old['document']['revision'],
+               f"{LABEL}: 채우기 기록은 다른 판({fill['previousRevision']})을 위한 것입니다.")
+    goals = {d['direction_id'] for t in old['brief']['targets'] for d in t['directions']}
+    v3.require(len(fill['goals']) == len(set(fill['goals'])) and set(fill['goals']) <= goals,
+               f"{LABEL}: 채우기 목표가 이 판의 지도에 없습니다: {sorted(set(fill['goals']) - goals)}")
+    questions = {q['question_id'] for q in old['document']['bank_snapshot']['questions']}
+    rewrite = fill.get('rewrite', [])
+    v3.require(all(type(r) is dict and set(r) == {'question_id', 'note', 'fix'} and r['question_id'] in questions
+                   and all(type(r[k]) is str and r[k].strip() for k in ('note', 'fix')) for r in rewrite)
+               and len({r['question_id'] for r in rewrite}) == len(rewrite),
+               f'{LABEL}: 다시 쓸 문항 기록의 형식이 다르거나 이 판에 없는 문항입니다(question_id·note·fix).')
+    v3.require(fill['goals'] or rewrite, f'{LABEL}: 채우기 기록에 목표도 다시 쓸 문항도 없습니다.')
+    return {'previousRevision': fill['previousRevision'], 'goals': list(fill['goals']), 'rewrite': copy.deepcopy(rewrite),
+            'reason': fill['reason'], 'approval': fill['approval'], 'at': fill['at']}
+
+
+def fill_gaps(goal_ids, rows, brief, presuppositions, discriminations, bank):
+    """The listed goals with what a new question has to answer: an existence or reverse goal whole (as their own gap
+    rules give it), any other goal its unasked components. A listed goal that lacks nothing is left out."""
+    goals = _goals(brief)
+    existence = pre.existence_gaps(rows, brief, presuppositions) if presuppositions else {}
+    reverse = dis.gaps(brief, discriminations, bank) if discriminations else {}
+    gaps = {}
+    for did in goal_ids:
+        missing = existence.get(did) or reverse.get(did) or v4.missing_components(rows[did], goals[did])
+        if missing:
+            gaps[did] = missing
+    return gaps
+
+
+def run(packet, out, model, invoke, previous, resume=None, fill=None):
     from . import connection_generate as g
     out, previous = Path(out), Path(previous)
     v3.require(packet.get('generationPolicy') == v4.POLICY, f'{LABEL}은 root-generation/4 packet만 받습니다.')
@@ -71,8 +113,15 @@ def run(packet, out, model, invoke, previous, resume=None):
     v3.require(codex.model_name(model) == old['manifest']['model'],
                f"{LABEL}: 이전 실행의 모델({old['manifest']['model']})과 지금 모델({codex.model_name(model)})이 다릅니다.")
     meta, brief = old['manifest'], old['brief']
-    v3.require('presuppositions' not in meta, f'{LABEL}: 이미 presuppose/1로 만든 판입니다.')
-    v3.require('discriminations' not in meta, f'{LABEL}: 이미 discriminate/1로 만든 판입니다.')
+    if fill is None:
+        v3.require('presuppositions' not in meta, f'{LABEL}: 이미 presuppose/1로 만든 판입니다.')
+        v3.require('discriminations' not in meta, f'{LABEL}: 이미 discriminate/1로 만든 판입니다.')
+    else:
+        fill = check_fill(fill, old)
+        v3.require('presuppositions' in meta or 'discriminations' in meta,
+                   f'{LABEL}: 채우기는 전제·역방향 판정을 이미 거친 판만 받습니다(아닌 판은 보강으로 요청하세요).')
+        # A second backfill of one lecture would run stages of the same names (v4-add-presuppose-0, medical-presuppose).
+        v3.require('presupposeOnly' not in meta, f'{LABEL}: 이미 보강한 판은 다시 채우지 않습니다.')
     v3.require(meta.get('placement') in ({'policy': v4.REVIEW_PLACEMENT}, {'policy': v4.REVIEW_PLACEMENT2}),
                f'{LABEL}: 문항 검토 배치(review-relations) 실행만 받습니다.')
     dedupe.seed(previous, out, packet, model, old, key='presupposeOnly', policy=POLICY, label=LABEL,
@@ -83,6 +132,9 @@ def run(packet, out, model, invoke, previous, resume=None):
     v3.require(ledger.get('presupposeOnly', {}).get('previousRevision') == old['document']['revision'],
                f'{LABEL}: 이 폴더는 다른 판에서 시작했습니다.')
     ledger.setdefault('fixAttempts', {})
+    if fill is not None:
+        v3.require(ledger['presupposeOnly'].setdefault('fill', fill) == fill, f'{LABEL}: 이 폴더는 다른 채우기 기록으로 시작했습니다.')
+        st.save()
 
     placement = 'review-coverage'
     bank = v2.restore_container_concepts(v2.restore_importance(old['document']['bank_snapshot'], meta.get('importanceProjection')),
@@ -121,20 +173,27 @@ def run(packet, out, model, invoke, previous, resume=None):
     # 1: what each published stem gives as known, and which elements a cue alone has to pick out ----------------
     # Both judgments read the published bank only, so they run side by side (discriminate/1 adds its stage here;
     # one backfill request now makes existence goals and reverse goals, 사용자 2026-11-16 「역방향 넣고 한 번에」).
-    calls = [(f'{X}presuppose-{k}', ctx, lambda raw, ctx=ctx: pre.check(raw, ctx))
+    # Fill mode keeps the published judgments and goals: nothing here runs.
+    calls = [] if fill is not None else [(f'{X}presuppose-{k}', ctx, lambda raw, ctx=ctx: pre.check(raw, ctx))
              for k, ctx in enumerate(pre.stage_input(bank, part, page_counts) for part in chunks(published, pre.CHUNK))]
     pre_calls = len(calls)
     rdids = dis.goals(brief)
     calls += [(f'{X}discriminate-{k}', ctx, lambda raw, ctx=ctx: dis.check(raw, ctx))
               for k, ctx in enumerate(dis.stage_input(brief, bank, part, page_counts) for part in chunks(rdids, dis.CHUNK))
-              if rdids]   # a map with no goals asks nothing (chunks([]) is one empty part)
-    judged = batches.judgments(st, calls)
-    points_doc, presuppositions, made = pre.records(judged[:pre_calls], bank, points_doc,
-                                                    [p['point_id'] for p in brief['points']])
-    print(f"── {LABEL}: 발문이 전제로 준 연결 {len(presuppositions)}개 · 답으로 묻는 문항 없음 {len(made)}개 → 존재 목표", flush=True)
-    points_doc, discriminations, made_reverse = dis.records(judged[pre_calls:], bank, points_doc, brief,
-                                                            [p['point_id'] for p in brief['points']])
-    print(f"── {LABEL}: 거꾸로 물을 목표 {len(discriminations)}개 · 그렇게 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
+              if rdids and fill is None]   # a map with no goals asks nothing (chunks([]) is one empty part)
+    if fill is not None:
+        calls = []
+        presuppositions, discriminations = meta.get('presuppositions'), meta.get('discriminations')
+        made, made_reverse = [], []
+        print(f"── {LABEL} 채우기: 목표 {len(fill['goals'])}개 · 다시 쓸 문항 {len(fill['rewrite'])}개 (판정은 공개판 그대로)", flush=True)
+    else:
+        judged = batches.judgments(st, calls)
+        points_doc, presuppositions, made = pre.records(judged[:pre_calls], bank, points_doc,
+                                                        [p['point_id'] for p in brief['points']])
+        print(f"── {LABEL}: 발문이 전제로 준 연결 {len(presuppositions)}개 · 답으로 묻는 문항 없음 {len(made)}개 → 존재 목표", flush=True)
+        points_doc, discriminations, made_reverse = dis.records(judged[pre_calls:], bank, points_doc, brief,
+                                                                [p['point_id'] for p in brief['points']])
+        print(f"── {LABEL}: 거꾸로 물을 목표 {len(discriminations)}개 · 그렇게 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
 
     # 2: existence goals ------------------------------------------------------
     new_dids = []
@@ -176,11 +235,16 @@ def run(packet, out, model, invoke, previous, resume=None):
     added = []
     for n in range(ADD_ROUNDS):
         goals = _goals(brief)
-        gaps = {did: v4.missing_components(rows[did], goals[did]) for did in new_dids if rows[did]['status'] != 'covered'}
-        gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # asked whole, in one question
-        for did in pre.written_for(bank, brief, presuppositions, exclude=published):   # one question per goal
-            gaps.pop(did, None)
-        gaps.update(dis.gaps(brief, discriminations, bank, exclude=published))              # reverse goals: not a coverage verdict
+        if fill is not None:
+            # Only the goals the operator listed. Not `exclude=published`: here the published questions are the ones
+            # written for the existence and reverse goals, and those goals are not written again.
+            gaps = fill_gaps(fill['goals'], rows, brief, presuppositions, discriminations, bank)
+        else:
+            gaps = {did: v4.missing_components(rows[did], goals[did]) for did in new_dids if rows[did]['status'] != 'covered'}
+            gaps.update(pre.existence_gaps(rows, brief, presuppositions))   # asked whole, in one question
+            for did in pre.written_for(bank, brief, presuppositions, exclude=published):   # one question per goal
+                gaps.pop(did, None)
+            gaps.update(dis.gaps(brief, discriminations, bank, exclude=published))              # reverse goals: not a coverage verdict
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
@@ -232,13 +296,23 @@ def run(packet, out, model, invoke, previous, resume=None):
         st.save()
         return {r['question_id']: r for r in value['reviews']}
 
-    if added:
-        reviews.update(review(f'{X}review{TAG}-0', added))
-        attempts = {}
+    # Fill mode: a published question the operator found wrong is given to the first fix round with that finding
+    # (the model writes it again, as it fixes a reviewed question). Its fix budget is the published run's.
+    operator = {r['question_id']: {**reviews[r['question_id']], 'design': 'wrong', 'note': r['note'], 'fix': r['fix']}
+                for r in (fill or {}).get('rewrite', [])}
+    for q in operator:
+        v3.require(ledger['fixAttempts'].get(q, 0) < v3.FIX_LIMIT, f'{LABEL}: {q}는 고치기 상한을 이미 다 썼습니다.')
+    rewritten = []
+    if added or operator:
+        if added:
+            reviews.update(review(f'{X}review{TAG}-0', added))
+        attempts = {q: ledger['fixAttempts'].get(q, 0) for q in operator}
         source_ids = [s['id'] for s in packet['sources']]
         for k in range(v3.FIX_LIMIT):
             code = _bank_findings(bank, source_ids, attempts)
-            targets = [q for q in added if (v3.needs_fix(reviews[q]) or q in code) and attempts.get(q, 0) < v3.FIX_LIMIT]
+            pending = list(operator) if k == 0 else []
+            targets = [q for q in [*added, *rewritten]
+                       if (v3.needs_fix(reviews[q]) or q in code) and attempts.get(q, 0) < v3.FIX_LIMIT] + pending
             if not targets:
                 break
             for q in targets:
@@ -248,7 +322,8 @@ def run(packet, out, model, invoke, previous, resume=None):
             for did, r in rows.items():
                 for q in v4.covering(r):
                     covered.setdefault(q, []).append(did)
-            findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
+            shown = {q: operator[q] if q in pending else reviews[q] for q in targets}   # what the fix is judged against
+            findings = [{**shown[q], 'code_findings': code.get(q, [])} for q in targets]
             ctx = pre.mark_review(v4.with_importance(v3.fix_input(bank, findings, targets, conflicts, covered), basis),
                                   brief, presuppositions, bank, exclude=published)
             dis.mark_review(ctx, brief, discriminations, bank, exclude=published)
@@ -271,7 +346,11 @@ def run(packet, out, model, invoke, previous, resume=None):
             stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
             bank = render(merged, stimuli)
             again = review(f'{X}review{TAG}-{k + 1}', changed) if changed else {}
-            reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
+            # An operator's rewrite is also undone when it made the answer itself worse than the published question's
+            # (the finding was about the design; a new factual doubt is not what was asked for).
+            reverted = [q for q in changed if q in again and (
+                v3.worse(shown[q], again[q])
+                or q in pending and v3.RANK[again[q]['verdict']] > v3.RANK[before_reviews[q]['verdict']])]
             if reverted and not [q for q in changed if q not in reverted]:
                 # Every fix of the round was worse: the round is undone as a whole, as the first run does
                 # (connection_generate_v4). Merging the empty rest again is not a fix output — 2026-11-17 job 670 /
@@ -290,6 +369,7 @@ def run(packet, out, model, invoke, previous, resume=None):
                 reviews[q] = before_reviews[q] if q in reverted else again.get(q, reviews[q])
                 fixes.append({'question_id': q, 'attempt': attempts[q], 'stage': name, 'reverted': q in reverted})
             kept = [q for q in changed if q not in reverted]
+            rewritten += [q for q in kept if q in operator and q not in rewritten]
             goal_ids = sorted({did for q in kept for did, r in rows.items() if any(e['question_id'] == q for e in r['evidence'])})
             if goal_ids:
                 got = judge(f'{X}coverage-fix{TAG}-{k}', v3.coverage_input(brief, bank, goal_ids, kept))
@@ -299,8 +379,9 @@ def run(packet, out, model, invoke, previous, resume=None):
 
     # notes citations of the new questions follow their review evidence (review-evidence/1) ------------------
     alignments = copy.deepcopy(meta.get('citationAlignments') or []) if evidence else None
-    if evidence and added:
-        new_reviews = {q: reviews[q] for q in added}
+    fresh = [*added, *rewritten]   # the questions this run wrote: reviewed, cited and medically reviewed as its own
+    if evidence and fresh:
+        new_reviews = {q: reviews[q] for q in fresh}
         bank, more = v4.align_citations(bank, new_reviews, evidence['sourceId'])
         alignments += more
 
@@ -330,7 +411,18 @@ def run(packet, out, model, invoke, previous, resume=None):
     doc['equivalences'], carry = v4.carry_links(doc, packet['carrySources'])
     previous_carry = next((r for r in carry if r['revision'] == old['document']['revision']), None)
     staying = {t['question_id'] for t in doc['tasks']}
-    v3.require(previous_carry and previous_carry['tasks'] == sum(t['question_id'] in staying for t in old['document']['tasks']),
+    carried = sum(t['question_id'] in staying for t in old['document']['tasks'])
+    if rewritten:
+        # A question the operator had rewritten is another question now: its history starts over, and only its.
+        # Every other published task must still be the same question on the same goal.
+        from studyez_contracts.roots.validate import task_fingerprints
+        now, before = task_fingerprints(doc), task_fingerprints(old['document'])
+        mine = {(t['direction_id'], now[t['task_id']]) for t in doc['tasks']}
+        broken = [t['question_id'] for t in old['document']['tasks']
+                  if t['question_id'] not in set(rewritten) and (t['direction_id'], before[t['task_id']]) not in mine]
+        v3.require(not broken, f"{LABEL}: 다시 쓰지 않은 문항의 학습 기록이 끊깁니다: {', '.join(broken)}")
+        carried = sum((t['direction_id'], before[t['task_id']]) in mine for t in old['document']['tasks'])
+    v3.require(previous_carry and previous_carry['tasks'] == carried,
                f'{LABEL}: 이전 판의 과제 중 같은 문항으로 이을 수 없는 것이 있습니다 — 학습 기록이 끊깁니다.')
     if update:
         doc = v4.apply_source_update(doc, brief, packet, update)   # after the carry links, as the consumer does
@@ -341,21 +433,22 @@ def run(packet, out, model, invoke, previous, resume=None):
 
     # medical: the new questions only; the published review stands for the rest --------------------------
     sent_all = v3.context_sent(conflicts, meta['clinicalContext'])
-    sub = {**bank, 'questions': [q for q in bank['questions'] if q['question_id'] in set(added)]}
-    added_medical, unreviewed = None, list(meta['medicalUnreviewed'])
-    if added:
+    sub = {**bank, 'questions': [q for q in bank['questions'] if q['question_id'] in set(fresh)]}
+    added_medical, unreviewed = None, [r for r in meta['medicalUnreviewed'] if r['question_id'] not in set(rewritten)]
+    if fresh:
         clinical_input, _ = v3.medical_parts(sub, sent_all)
         st.invoke = _medical_batches(st.invoke, workers=batches.BATCH_WORKERS if st.parallel else 1)
         added_medical = st.run(MEDICAL, {'title': packet['title'], 'bank': sub, 'clinicalInput': clinical_input, 'medicalFinal': True},
                                lambda raw: validate_checks(raw, sub))
         unreviewed += [{'question_id': r['question_id'], 'reason': r['note'][len(v3.UNREVIEWED_NOTE):]}
                        for r in added_medical['reviews'] if r['note'].startswith(v3.UNREVIEWED_NOTE)]
-    medical = _merge_medical(old['medical'], added_medical, bank)
+    medical = _merge_medical(old['medical'], added_medical, bank, rewritten)
     st.save()
 
     record = {**ledger['presupposeOnly'], 'tasksBefore': len(old['document']['tasks']), 'tasksAfter': len(doc['tasks']),
               'addedQuestions': added, 'settledPlaces': settled_places, 'previousMedical': old['medical'], 'addedMedical': added_medical,
               'existenceGoals': new_dids, 'reverseGoals': rev_dids, 'carry': carry, 'counts': {k: (len(v) if k == 'open' else v) for k, v in counts.items()},
+              **({'rewrittenQuestions': rewritten} if rewritten else {}),
               'reverseCounts': {k: (len(v) if k in ('open', 'answerInStem') else v) for k, v in rcounts.items()}}
     print(f"── {LABEL} 조립: 과제 {record['tasksBefore']} → {record['tasksAfter']} · 새 문항 {len(added)}개 · 존재 목표 {len(new_dids)}개 · "
           f"선행 연결 {counts['prerequisites']}개 · 남은 전제 {len(counts['open'])}개", flush=True)
@@ -375,7 +468,8 @@ def run(packet, out, model, invoke, previous, resume=None):
                     questionImportance=basis, importanceNotes=v4.importance_notes(review_rows), visualStimuli=stimuli,
                     medicalUnreviewed=unreviewed, importanceWarnings=proofs['importanceWarnings'],
                     importanceProjection=proofs['importanceProjection'],
-                    supplementPoints=points_doc if supplement or made or made_reverse else None,
+                    supplementPoints=meta.get('supplementPoints') if fill is not None
+                    else points_doc if supplement or made or made_reverse else None,
                     placement={'policy': v4.REVIEW_PLACEMENT2},
                     presuppositions=presuppositions, discriminations=discriminations, presupposeOnly=record, **placed)
     if evidence:
@@ -413,13 +507,15 @@ def _render_keeping(bank, specs, packet, material, as_published, replaced):
     return value
 
 
-def _merge_medical(prev, more, bank):
-    """The published medical review with the review of the added questions, in bank order (counts recomputed)."""
+def _merge_medical(prev, more, bank, rewritten=()):
+    """The published medical review with the review of the added questions, in bank order (counts recomputed).
+    `rewritten`: published questions this run wrote again — their published verdict is replaced by the new one."""
     if more is None:
         return prev
     from .review import shape
     order = {q['question_id']: i for i, q in enumerate(bank['questions'])}
-    rows = sorted([*prev['reviews'], *more['reviews']], key=lambda r: order[r['question_id']])
+    rows = sorted([*(r for r in prev['reviews'] if r['question_id'] not in set(rewritten)), *more['reviews']],
+                  key=lambda r: order[r['question_id']])
     return shape({'summary': prev['summary'] + ' / ' + more['summary'], 'reviews': rows,
                   'pool_checks': [*prev.get('pool_checks', []), *more.get('pool_checks', [])]}, bank)
 

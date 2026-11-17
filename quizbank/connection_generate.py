@@ -206,7 +206,8 @@ def call_model(stage, context, material, model):
         return output, {k: result[k] for k in ('usage', 'cost_usd', 'duration_ms', 'models')}
 
 
-def run(packet, out, *, model=None, invoke=None, resume=None, rerun=(), duplicates_of=None, unplaced_of=None, presuppose_of=None):
+def run(packet, out, *, model=None, invoke=None, resume=None, rerun=(), duplicates_of=None, unplaced_of=None, presuppose_of=None,
+        fill=None):
     """`duplicates_of`: the generation folder of a published /4 run this request judges again for duplicates only
     (duplicates-only/1, quizbank.connection_dedupe). `unplaced_of`: the one whose unplaced questions it places again
     (unplaced-only/1, quizbank.connection_replace). `presuppose_of`: the one it adds existence goals to
@@ -230,7 +231,7 @@ def run(packet, out, *, model=None, invoke=None, resume=None, rerun=(), duplicat
             if packet.get('generationPolicy') != 'root-generation/4' or rerun or duplicates_of is not None or unplaced_of is not None:
                 raise ValueError('존재 목표 보강은 root-generation/4 packet만 받습니다(--rerun·중복 재판정·재배치 없음).')
             from .connection_presuppose import run as run_presuppose
-            return run_presuppose(packet, out, model, invoke, presuppose_of, resume=resume)
+            return run_presuppose(packet, out, model, invoke, presuppose_of, resume=resume, fill=fill)
         if unplaced_of is not None:
             if packet.get('generationPolicy') != 'root-generation/4' or rerun or duplicates_of is not None:
                 raise ValueError('못 붙은 문항 재배치는 root-generation/4 packet만 받습니다(--rerun·중복 재판정 없음).')
@@ -388,10 +389,12 @@ def main():
     parser.add_argument('--duplicates-of', type=Path, metavar='GENERATION_DIR', help='judge this published /4 run again for duplicates only (duplicates-only/1)')
     parser.add_argument('--unplaced-of', type=Path, metavar='GENERATION_DIR', help='place the unplaced questions of this published /4 run again (unplaced-only/1)')
     parser.add_argument('--presuppose-of', type=Path, metavar='GENERATION_DIR', help='add existence goals to this published /4 run (presuppose-only/1)')
+    parser.add_argument('--fill', type=Path, metavar='JSON', help="with --presuppose-of: the operator's fill record (goals to write for, questions to rewrite)")
     args = parser.parse_args()
     if args.rerun and not args.resume: parser.error('--rerun needs --resume <reason>')
     try: run(json.loads(args.packet.read_text(encoding='utf-8')), args.out, model=args.model, resume=args.resume, rerun=tuple(args.rerun),
-            duplicates_of=args.duplicates_of, unplaced_of=args.unplaced_of, presuppose_of=args.presuppose_of)
+            duplicates_of=args.duplicates_of, unplaced_of=args.unplaced_of, presuppose_of=args.presuppose_of,
+            fill=json.loads(args.fill.read_text(encoding='utf-8')) if args.fill else None)
     except Exception as error:
         print('연결 자동출제 보류: ' + str(error), flush=True)
         return 1
