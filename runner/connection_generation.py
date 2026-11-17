@@ -226,6 +226,12 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
         # A map-tree packet is a source-assessment/2 packet: the native transport runs it (runner.root_native_json).
         if module != 'runner.root_native_json': raise ValueError('중복 재판정·못 붙은 문항 재배치는 map-tree 생성 packet만 받습니다.')
         args += [flag, str(previous.resolve())]
+        if packet.get('presupposeOnly'):
+            # Fill mode (docs/changes/2026-11-17-fill-recovery): the operator's record for this lecture, if any, is
+            # frozen in the run folder the first time and passed to the generator. A malformed file holds the job.
+            from . import fill_goals
+            record = fill_goals.frozen(out, subject, run_id)
+            if record is not None: args += ['--fill', str(record.resolve())]
     if previous is None and (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)

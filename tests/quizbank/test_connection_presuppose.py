@@ -285,3 +285,114 @@ def test_published_figures_of_replaced_notes_are_kept_and_new_ones_refused(tmp_p
             backfill._render_keeping(bank, [spec, {**spec, 'question_id': 'Q9'}], {'sources': []}, tmp_path, as_published, {'S1'})
     finally:
         backfill.visual.render = real
+
+
+# ---------------------------------------------------------------- fill mode (docs/changes/2026-11-17-fill-recovery)
+class NoAdd(t4.Model):
+    """The first run writes nothing for the empty goal D2: it stays open in the published revision."""
+
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage.startswith('v4-add'):
+            value = {**value, 'questions': [], 'question_importance': []}
+        return value, info
+
+
+def judged(tmp_path):
+    """A revision first made with presuppose/1 and discriminate/1 whose goal D2 has no question."""
+    old_packet, _, old = t4.run(tmp_path / 'old', NoAdd())
+    assert 'presuppositions' in old['manifest'] and 'discriminations' in old['manifest']
+    assert t4.tasks(old) == [('Q1', 'D1'), ('Q2', 'D1')]
+    previous = tmp_path / 'old' / 'out'
+    (previous / 'packet.json').write_text(json.dumps(old_packet, ensure_ascii=False), encoding='utf-8')
+    packet = copy.deepcopy(old_packet)
+    packet.update(revision='auto-new', generationId='new', restartOf='old', replacePublished=True, presupposeOnly=True,
+                  restartReason='채우기', carrySources=carry_sources(old))
+    packet['inputHash'] = packet_hash(packet)
+    return previous, old, packet
+
+
+def fill_record(old, goals=(), rewrite=()):
+    return {'previousRevision': old['document']['revision'], 'goals': list(goals), 'rewrite': list(rewrite),
+            'reason': 'Synthetic recovery', 'approval': 'Synthetic approval', 'at': '2026-11-17T09:30:00+09:00'}
+
+
+def test_fill_writes_only_for_the_listed_goal_and_judges_nothing_again(tmp_path):
+    previous, old, packet = judged(tmp_path)
+    model = t4.Model()
+    result = g.run(packet, tmp_path / 'new', invoke=model, presuppose_of=previous, fill=fill_record(old, ['D2']))
+    assert consume(result, packet) == result['document']
+    # no judgment, no goal made: the add round, its coverage, the review of the new question and its medical review
+    assert model.calls == ['v4-add-presuppose-0', 'v4-coverage-presuppose-1-D2', 'v4-review-presuppose-0', 'medical-presuppose']
+    assert [gl['direction_id'] for gl in model.inputs['v4-add-presuppose-0']['goals']] == ['D2']
+    assert t4.tasks(result) == [('Q003', 'D2'), ('Q1', 'D1'), ('Q2', 'D1')]
+    old_q = {q['question_id']: q for q in old['document']['bank_snapshot']['questions']}
+    new_q = {q['question_id']: q for q in result['document']['bank_snapshot']['questions']}
+    assert {k: new_q[k] for k in old_q} == old_q and set(new_q) - set(old_q) == {'Q003'}
+    meta = result['manifest']
+    record = meta['presupposeOnly']
+    assert record['fill']['goals'] == ['D2'] and record['addedQuestions'] == ['Q003'] and 'rewrittenQuestions' not in record
+    assert (record['existenceGoals'], record['reverseGoals']) == ([], [])
+    carried = next(c for c in record['carry'] if c['revision'] == old['document']['revision'])
+    assert carried['tasks'] == carried['of'] == len(old['document']['tasks'])
+    # the published judgments and points are the published ones
+    assert meta['presuppositions'] == old['manifest']['presuppositions'] and meta['discriminations'] == old['manifest']['discriminations']
+    assert meta['supplementPoints'] == old['manifest']['supplementPoints']
+
+
+def test_fill_of_a_goal_that_lacks_nothing_calls_no_model(tmp_path):
+    previous, old, packet = judged(tmp_path)
+    model = t4.Model()
+    result = g.run(packet, tmp_path / 'new', invoke=model, presuppose_of=previous, fill=fill_record(old, ['D1']))
+    assert consume(result, packet) == result['document']
+    assert model.calls == [] and result['document']['bank_snapshot'] == old['document']['bank_snapshot']
+    assert result['medical'] == old['medical'] and result['manifest']['presupposeOnly']['addedMedical'] is None
+
+
+def test_fill_rewrites_a_published_question_from_the_operators_finding_and_only_its_history_restarts(tmp_path):
+    previous, old, packet = judged(tmp_path)
+    model = t4.Model()
+    rewrite = [{'question_id': 'Q2', 'note': 'The stem hands over the link the goal asks.', 'fix': 'Ask the link itself.'}]
+    result = g.run(packet, tmp_path / 'new', invoke=model, presuppose_of=previous, fill=fill_record(old, [], rewrite))
+    assert consume(result, packet) == result['document']
+    assert model.calls == ['v4-fix-presuppose-0', 'v4-review-presuppose-1', 'v4-coverage-fix-presuppose-0', 'medical-presuppose']
+    # the fix stage is given the operator's finding, not the published review
+    [finding] = model.inputs['v4-fix-presuppose-0']['findings']
+    assert (finding['question_id'], finding['design'], finding['note'], finding['fix']) == \
+        ('Q2', 'wrong', 'The stem hands over the link the goal asks.', 'Ask the link itself.')
+    new_q = {q['question_id']: q for q in result['document']['bank_snapshot']['questions']}
+    old_q = {q['question_id']: q for q in old['document']['bank_snapshot']['questions']}
+    assert new_q['Q2']['explanation'] == 'Synthetic clearer explanation' and new_q['Q1'] == old_q['Q1']
+    assert t4.tasks(result) == t4.tasks(old)                       # it stays on its goal
+    record = result['manifest']['presupposeOnly']
+    assert record['rewrittenQuestions'] == ['Q2'] and record['addedQuestions'] == []
+    assert result['manifest']['fixes'][len(old['manifest']['fixes']):] == \
+        [{'question_id': 'Q2', 'attempt': 1, 'stage': 'v4-fix-presuppose-0', 'reverted': False}]
+    # every other task continues its history; the rewritten one starts over
+    carried = next(c for c in record['carry'] if c['revision'] == old['document']['revision'])
+    assert (carried['tasks'], carried['of']) == (len(old['document']['tasks']) - 1, len(old['document']['tasks']))
+    # its medical verdict is the new review's, the others' the published one's
+    assert [r['question_id'] for r in record['addedMedical']['reviews']] == ['Q2']
+    assert [r['question_id'] for r in result['medical']['reviews']] == [q['question_id'] for q in result['document']['bank_snapshot']['questions']]
+    # the consumer refuses a rewritten question the run did not fix
+    bad = copy.deepcopy(result)
+    bad['manifest']['presupposeOnly']['rewrittenQuestions'] = ['Q1']
+    with pytest.raises(ValueError, match='rewritten questions'):
+        consume(bad, packet)
+
+
+def test_a_fill_record_must_fit_the_revision(tmp_path):
+    previous, old, packet = judged(tmp_path)
+    for record, message in [
+            ({**fill_record(old, ['D2']), 'previousRevision': 'auto-other'}, '다른 판'),
+            (fill_record(old, ['D9']), '지도에 없습니다'),
+            (fill_record(old, [], [{'question_id': 'Q9', 'note': 'n', 'fix': 'f'}]), '다시 쓸 문항'),
+            (fill_record(old), '목표도 다시 쓸 문항도'),
+            ({k: v for k, v in fill_record(old, ['D2']).items() if k != 'approval'}, '형식')]:
+        with pytest.raises(ValueError, match=message):
+            g.run(packet, tmp_path / 'x', invoke=t4.Model(), presuppose_of=previous, fill=record)
+    # a revision that was never judged is backfilled, not filled
+    (tmp_path / 'plain').mkdir()
+    plain_previous, plain_old, plain_packet = published(tmp_path / 'plain')
+    with pytest.raises(ValueError, match='이미 거친 판만'):
+        g.run(plain_packet, tmp_path / 'y', invoke=t4.Model(), presuppose_of=plain_previous, fill=fill_record(plain_old, ['D2']))

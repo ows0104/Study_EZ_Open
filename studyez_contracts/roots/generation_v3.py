@@ -1275,15 +1275,26 @@ BACKFILL_MEDICAL = 'medical-presuppose'
 def _check_backfill_medical(value, packet, reviewed, meta, stages, POLICY, backfill):
     """presuppose-only/1 (docs/changes/2026-11-15-tree-edge-goals R6): the published medical review (its stage record and
     output carried over) stands for the published questions; `medical-presuppose` reviewed only the questions the run
-    added, with the same input a whole review would give them. The stored review holds exactly those rows."""
+    added, with the same input a whole review would give them. The stored review holds exactly those rows.
+
+    Fill mode (docs/changes/2026-11-17-fill-recovery): `rewrittenQuestions` are published questions the run wrote again
+    from an operator's finding (each has a fix record that stands). They are reviewed with the added ones, and their
+    published verdict is replaced."""
     added = backfill['addedQuestions']
+    rewritten = backfill.get('rewrittenQuestions') or []
     prev, more = backfill['previousMedical'], backfill['addedMedical']
     require(stages['medical-0']['outputHash'] == document_hash(prev), 'result3: the carried medical review is not the published one')
     ids = [q['question_id'] for q in reviewed['questions']]
-    require(set(added) <= set(ids) and not set(added) & {r['question_id'] for r in prev['reviews']},
+    known = {r['question_id'] for r in prev['reviews']}
+    require(set(added) <= set(ids) and not set(added) & known,
             'result3: added questions are not new questions of this bank')
-    if added:
-        sub = {**reviewed, 'questions': [q for q in reviewed['questions'] if q['question_id'] in set(added)]}
+    require(len(rewritten) == len(set(rewritten)) and set(rewritten) <= known & set(ids)
+            and all(any(f['question_id'] == q and not f['reverted'] and '-fix-presuppose-' in f['stage'] for f in meta['fixes']) for q in rewritten),
+            'result3: rewritten questions are not published questions this run fixed')
+    fresh = set(added) | set(rewritten)
+    prev = {**prev, 'reviews': [r for r in prev['reviews'] if r['question_id'] not in set(rewritten)]}
+    if fresh:
+        sub = {**reviewed, 'questions': [q for q in reviewed['questions'] if q['question_id'] in fresh]}
         sub_input, _ = medical_parts(sub, context_sent(meta['clinicalConflicts'], meta['clinicalContext']))
         med_input = {'title': packet['title'], 'bank': sub, 'clinicalInput': sub_input, 'medicalFinal': True, '_pipeline_version': POLICY}
         require(BACKFILL_MEDICAL in stages and stages[BACKFILL_MEDICAL]['inputHash'] == document_hash(med_input)
