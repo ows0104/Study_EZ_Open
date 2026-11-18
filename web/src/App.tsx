@@ -32,6 +32,7 @@ const RootLearningPage = lazy(() => import("./bank/RootLearning").then((m) => ({
 const ConnectionLearningPage = lazy(() => import("./bank/ConnectionLearning").then((m) => ({ default: m.ConnectionLearningPage })));
 const BankCatalogPage = lazy(() => import("./bank/BankCatalog").then((m) => ({ default: m.BankCatalogPage })));
 const BankBatchPage = lazy(() => import("./bank/BankBatch").then((m) => ({ default: m.BankBatchPage })));
+const RootBatchPage = lazy(() => import("./bank/RootBatch").then((m) => ({ default: m.RootBatchPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
@@ -133,6 +134,8 @@ function Shell() {
           <Routes>
             <Route path="/" element={<CalendarPage />} />
             <Route path="/study" element={<BankBatchPage />} />
+            {/* Main-Quiz 모아풀기(2026-11-18): 강의 목록에서 고른 강의를 섞어 푼다. */}
+            <Route path="/study/mix" element={<RootBatchPage />} />
             <Route path="/mastery" element={<Navigate to="/study" replace />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}

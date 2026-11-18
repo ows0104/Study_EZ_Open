@@ -1,0 +1,81 @@
+{
+  "id": "2026-11-18-main-quiz-batch",
+  "title": "Main-Quiz 모아풀기",
+  "area": "site",
+  "created_at": "2026-11-18T01:43:37.302914+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-18T01:53:30.868532+00:00",
+      "evidence": "2026-11-18 채팅: 「강의록 모아풀기 만들어줘.」 / 범위 질문에 「Main-Quiz 여러 강의 섞어 풀기」 선택, 「강의 목록형에서 선택해서 섞어서 풀 수 있게.」",
+      "scope": "웹만: RootBatch 새 화면(/study/mix), 강의 목록 Main-Quiz 행 체크, BankBatch onStart 이동, useRootFrames warm export, 검사 fixture·브라우저 검사. 서버·DB·프롬프트 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "57f69a75d5b668522f1a2b9c3eef690e3e518dee6a6c50bc0edbe6c2e148f40a",
+      "plan_hash": "abe9590bb839d1f24cfc2cb8b2d84bc0dde8d1cf9b10ec8af12c2507e912ac9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "e1add5eea61670a02501bb00a50575dbec5a2b23477d72978f66dbe9299bb09c"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-18T01:53:53.765213+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "57f69a75d5b668522f1a2b9c3eef690e3e518dee6a6c50bc0edbe6c2e148f40a",
+      "plan_hash": "abe9590bb839d1f24cfc2cb8b2d84bc0dde8d1cf9b10ec8af12c2507e912ac9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-main-quiz-batch/1794966824996019900-web.log",
+      "web_artifact": "c722e58b2bbeb830c1f31fe663b63485a89faf8f4ecbfc1abd0d2cbed5c9c0e6",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-18T01:53:57.370401+00:00"
+}
