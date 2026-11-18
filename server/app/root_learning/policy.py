@@ -32,9 +32,31 @@ FOUR_RATING_PARAMETERS = {
 # Main-Quiz only: Quiz Bank's policy.json is unchanged.
 # /2 events are replayed with /3's mastery too (2026-11-18 사용자 「지금 시험이 곧인데 지난평가에도 이에 맞춰 복습일을
 # 조정해줄래?」). The stored events are unchanged; only how they are read moves (replay_parameters).
-TARGET_RATING_POLICY = 'roots-four-rating/3'
+#
+# /4 (2026-11-18 사용자 「Again, Hard도 중요도가 반영되면 좋겠어 … 한번 봤다는 것도 기억에 어느 정도는 영향 … 시험 전에 안
+# 중요한데 어려운것보다 차라리 중요한 걸 더」, 「늦게 맞힌 보너스랑 난이도도 넣어서」; docs/changes/2026-11-18-review-curve-2):
+# the review date no longer reads M. Right after any rating the answer was just seen, so recall is taken as full and
+# decays as 1/(1+t/9S); the next review is when it reaches the target, t = 9S(1/target - 1). The rating only moves S
+# (curve_schedule): Again/Hard therefore follow the tier too, a seen question gains a little even on Again, a late
+# correct recall grows S more, and a question's difficulty D scales the growth. M stays the 학습률 level.
+# Every four-rating event with targetParameters is replayed this way; an event saved from now on freezes CURVE.
+TARGET_RATING_POLICY = 'roots-four-rating/4'
 ROOT_MASTERY = {'firstFromRating': True, 'ratingAlpha': {'Good': 0.5, 'Easy': 0.7}}
 RETIMED_RATING_POLICIES = ('roots-four-rating/2',)
+CURVE = {
+    'policy': 'roots-curve/1',
+    'initialDays': {'Again': 0.25, 'Hard': 0.5, 'Good': 1, 'Easy': 2},
+    'growth': {'Hard': 1.35, 'Good': 2, 'Easy': 3},
+    # Again: S is held at one day or less, but a question already that weak still gains from being seen again.
+    'againGrowth': 1.2, 'lapseMaxDays': 1, 'minDays': 0.25, 'maxDays': 365,
+    # Late bonus: growth scales with the days actually passed over the planned interval, up to twice.
+    'lateBonusMax': 2.0,
+    # Difficulty D in [0, 1]; growth is multiplied by (1.5 - D): 0.5 for the hardest, 1.5 for the easiest.
+    'initialDifficulty': {'Again': 0.8, 'Hard': 0.65, 'Good': 0.5, 'Easy': 0.3},
+    'difficultyStep': {'Again': 0.15, 'Hard': 0.0, 'Easy': -0.1}, 'goodReversion': 0.2,
+    # Exam pressure (exam_fraction) keeps only these tiers; the others follow their curve up to the exam.
+    'examTiers': ['Essential', 'Core'],
+}
 TIER_POLICY = 'roots-personal-tier/1'
 TIERS = ('Essential', 'Core', 'Important', 'Optional')
 GRADE_RATING = {'missed': 'Again', 'partial': 'Hard', 'independent': 'Good'}
@@ -92,6 +114,53 @@ def next_mastery(value, rating, when, params):
         decayed = previous / (1 + elapsed / (9 * stability))
     baseline = previous if rating in ('Good', 'Easy') else decayed
     return (1 - alpha) * baseline + alpha * params['ratings'][rating]
+
+
+def curve_parameters():
+    """CURVE, frozen into each new rating event (`curveParameters`)."""
+    return deepcopy(CURVE)
+
+
+def curve_schedule(previous, updated, rating, when, target, tier, policy, exam_date, params):
+    """/4 review date for one four-button rating (docs/changes/2026-11-18-review-curve-2).
+
+    `previous` is the state before this rating, `updated` the result of transition()/next_mastery for it.
+    S (`curveDays`) and D (`difficulty`) move as CURVE says; the interval is the time for full recall to fall to
+    `target`, 9S(1/target - 1), at least one day and at most the policy's max_days. Exam compression applies only to
+    CURVE['examTiers']. A second rating on one study day is not interval evidence (Again still lowers S)."""
+    when = utc(when)
+    day = study_day(when, policy)
+    last = instant(previous['lastAt']) if previous.get('lastAt') else None
+    stability, difficulty = previous.get('curveDays'), previous.get('difficulty')
+    if stability is None and previous.get('rating') is not None:
+        # Rated before by an older rule: carry its stability, start from a middle difficulty.
+        stability, difficulty = max(params['minDays'], previous.get('ratingDays', previous.get('baseDays', 1))), 0.5
+    if stability is None:
+        stability, difficulty = params['initialDays'][rating], params['initialDifficulty'][rating]
+    else:
+        difficulty = 0.5 if difficulty is None else difficulty
+        if rating == 'Again':
+            stability = min(params['lapseMaxDays'], max(params['minDays'], stability * params['againGrowth']))
+        elif last is None or study_day(last, policy) != day:
+            elapsed = max(0, (when - last).total_seconds() / 86400) if last else 0
+            late = min(elapsed / max(1, previous.get('baseDays') or 1), params['lateBonusMax'])
+            gain = (params['growth'][rating] - 1) * late * (1.5 - difficulty)
+            stability = min(params['maxDays'], stability * (1 + gain))
+        else:
+            rating = None  # same study day: neither S nor D moves
+        if rating == 'Good':
+            difficulty += (0.5 - difficulty) * params['goodReversion']
+        elif rating is not None:
+            difficulty += params['difficultyStep'][rating]
+        difficulty = min(1.0, max(0.0, difficulty))
+    maximum = policy.get('max_days', max(policy.get('intervals', [30])))
+    base = min(maximum, max(1, ceil(9 * stability * (1 / target - 1) - 1e-9)))
+    pressure = tier in params['examTiers']
+    limit = exam_limit(exam_date, when, policy) if pressure else None
+    interval = min(base, limit) if limit is not None else base
+    return {**updated, 'curveDays': stability, 'difficulty': difficulty, 'ratingDays': min(maximum, stability),
+            'target': target, 'examPressure': pressure, 'baseDays': base, 'scheduledDays': interval,
+            'due': (day + timedelta(days=interval)).isoformat()}
 
 
 def target_due(value, mastery, target, policy, exam_date):
@@ -222,11 +291,12 @@ def transition(value, grade, helped, when, policy, exam_date=None, self_rating=N
 
 
 def effective_due(value, when, policy, exam_date):
-    """Anchor exam compression to the last assessment so due dates cannot drift away."""
+    """Anchor exam compression to the last assessment so due dates cannot drift away.
+    A /4 rating of a tier outside CURVE['examTiers'] (`examPressure` False) is never compressed."""
     if not value.get('due'):
         return None
     due = date.fromisoformat(value['due'])
-    limit = exam_limit(exam_date, when, policy)
+    limit = exam_limit(exam_date, when, policy) if value.get('examPressure', True) else None
     if limit is not None and value.get('lastAt'):
         due = min(due, study_day(instant(value['lastAt']), policy) + timedelta(days=limit))
     return due.isoformat()

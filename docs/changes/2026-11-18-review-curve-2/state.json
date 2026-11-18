@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-18-review-curve-2",
+  "title": "Main-Quiz 복습 간격 2차: 평가는 버티는 힘만, 중요도·난이도·늦게 맞힌 보너스",
+  "area": "site",
+  "created_at": "2026-11-18T01:01:40.946494+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-18T01:01:40.946518+00:00"
+}

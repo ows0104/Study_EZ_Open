@@ -1,7 +1,8 @@
 """Replay immutable events; revealing an answer never implies successful recall."""
 from datetime import timedelta
 from .policy import (instant, study_day, day_start, transition, effective_due, GRADE_RATING, LEGACY_MASTERY,
-                     next_mastery, replay_parameters, target_due, target_retention, utc)
+                     next_mastery, replay_parameters, target_retention, utc, curve_parameters, curve_schedule,
+                     canonical_tier)
 
 
 def targets(doc):
@@ -97,7 +98,11 @@ def _rate(value, event, p, when, task_questions, questions, plans, tiers):
         q = questions.get(qid, {})
         chosen = tiers.get(qid)
         target = target_retention(q, plans.get(q.get('concept_id')), params, chosen and chosen['tier'])
-        updated = target_due(updated, mastery, target, p['policy'], p.get('exam_date'))
+        # /4 curve (2026-11-18 review-curve-2): every such rating, older ones included, is retimed by the event's
+        # frozen curveParameters or, for events saved before them, the current CURVE. target_due is no longer used for replay.
+        tier = chosen['tier'] if chosen else canonical_tier(q) or 'Core'
+        updated = curve_schedule(value, updated, p['selfRating'], when, target, tier, p['policy'], p.get('exam_date'),
+                                 p.get('curveParameters') or curve_parameters())
     if updated['rating'] == 'independent':
         # Study days with a Good/Easy result: 「저장」 needs two, as Quiz Bank's card_progress does.
         day = study_day(when, p['policy']).isoformat()

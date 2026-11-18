@@ -1124,7 +1124,7 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
             if payload.selfRating is not None:
                 data.update(selfRating=payload.selfRating, ratingPolicy=policy.TARGET_RATING_POLICY,
                             ratingParameters=copy.deepcopy(policy.FOUR_RATING_PARAMETERS),
-                            targetParameters=policy.target_parameters())
+                            targetParameters=policy.target_parameters(), curveParameters=policy.curve_parameters())
             set_undo_stack(session_state, undo_stack(session_state) + [
                 {'requestId': payload.requestId, 'kind': 'rate', 'index': session_state['index']}])
             session_state['index'] += 1
