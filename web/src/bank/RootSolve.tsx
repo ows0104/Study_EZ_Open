@@ -8,6 +8,7 @@ import { MemoBox, MineQuestionDialog, type MineMode } from './MineQuestionDialog
 import { RootSummaryPanel } from './RootToday';
 import { ANSWER_SECONDS, questionSeconds, readTimerOn, saveTimerOn, useQuizTimer } from './quizTimer';
 import { mcqChoices, recallChoices, readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
+import { RootOrder } from './RootOrder';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
 const JokboSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootJokboSlides})));
@@ -43,6 +44,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const task=view.task;
   const key=`studyez:root-draft:${scope}:${JSON.stringify([view.revision,task?.id])}`;
   const [picked,setPicked]=useState<Set<string>>(new Set());
+  // 순서 맞추기(2026-11-18 ordering-screen)에서 놓은 단계 ID, 놓은 차례대로.
+  const [placed,setPlaced]=useState<string[]>([]);
   // 「폈음」은 그 문항의 것일 때만 참이다 — 다음 문항이 그려지는 첫 순간에 앞 문항의 값으로 선지가 비치지 않게 한다.
   // seen: 한 번이라도 폈는지. 다시 접어도(2026-11-12, V·Z) 도움받은 풀이 기록은 그대로 남는다.
   const [choiceState,setChoiceState]=useState({key:'',shown:false,seen:false});
@@ -69,17 +72,21 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const imagesReady=!task?.question.stimuli?.length||(imageState?.taskId===task.id&&imageState.ready);
   // 객관식 모드(2026-11-14): 선지가 있는 모든 문항을 처음부터 선지로 푼다. 정답 개수는 알리지 않고 여러 개를 고를 수 있다.
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
-  const mcq=mode==='mcq'&&task?mcqChoices(task.question,task.answer):null;
-  const hiddenChoices=!mcq&&task?.question.mcq_mode==='recall_first'&&!choices&&!task.answer;
+  // 순서형 나열(2026-11-18 ordering-screen)은 선지 대신 순서 맞추기. 객관식 모드는 처음부터, 주관식은 V로 편다.
+  const orderItems=task?.question.order_items?.length?task.question.order_items:null;
+  const mcq=mode==='mcq'&&task&&!orderItems?mcqChoices(task.question,task.answer):null;
+  const hiddenChoices=!mcq&&!orderItems&&task?.question.mcq_mode==='recall_first'&&!choices&&!task.answer;
   // 「선지 보기」(2026-11-12): 문항의 options와 별개인 선지. 사용자가 펼 때만 보이고, 편 풀이는 도움받은 풀이로 남는다.
   // 2026-11-14 choices-merge부터 객관식 모드와 같은 선지(mcq_choices)를 먼저 쓴다 — 빈칸·순서 문항도 편다.
-  const recallSet=!mcq&&task?recallChoices(task.question,task.answer):null;
+  const recallSet=!mcq&&!orderItems&&task?recallChoices(task.question,task.answer):null;
   const recall=recallSet?.choices??null;
-  const recallClosed=!!recall&&!choices&&!task?.answer;
-  const recallOpen=!!recall&&choices&&!task?.answer;
+  const orderRecall=!!orderItems&&mode!=='mcq';
+  const recallClosed=(!!recall||orderRecall)&&!choices&&!task?.answer;
+  const recallOpen=(!!recall||orderRecall)&&choices&&!task?.answer;
+  const orderShown=!!orderItems&&(mode==='mcq'||choices||!!task?.answer&&choicesSeen);
   useEffect(()=>{
     // 고른 선지는 문항을 열 때마다 비운다(사용자 2026-11-14 「무조건 과거 기록은 삭제되도록」). 예전에 보관한 선택도 지운다.
-    setPicked(new Set());clearSavedPicks();
+    setPicked(new Set());setPlaced([]);clearSavedPicks();
     try {
       const saved=localStorage.getItem(key+':choices');
       setChoices(saved==='shown',saved==='shown'||saved==='seen');
@@ -102,20 +109,26 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     setPicked(next);
     heading.current?.focus({preventScroll:true});
   }
+  /** 순서 맞추기: 안 놓은 단계는 끝에 놓고, 놓은 단계는 그것만 뺀다. */
+  function place(id:string){
+    if(locked||task?.answer)return;
+    setPlaced(now=>now.includes(id)?now.filter(other=>other!==id):[...now,id]);
+    heading.current?.focus({preventScroll:true});
+  }
   function showChoices(){if(save(':choices','shown'))setChoices(true);heading.current?.focus({preventScroll:true});}
   /** 편 단답·나열 선지를 다시 접는다(V 한 번 더·Z·Ctrl+Z). 안 보이는 선택이 답으로 가지 않게 고른 것도 비운다. */
   function hideChoices(){
-    if(save(':choices','seen')){setChoices(false,true);setPicked(new Set());}
+    if(save(':choices','seen')){setChoices(false,true);setPicked(new Set());setPlaced([]);}
     heading.current?.focus({preventScroll:true});
   }
   function reveal(attempted=true){
     if(locked||!task||task.answer||attempted&&!imagesReady)return;
     // Retired text drafts remain untouched in storage; no new text is required.
-    const response=picked.size?`선택: ${[...picked].join(', ')}`:'';
+    const response=orderShown&&placed.length?`순서: ${placed.join(' → ')}`:picked.size?`선택: ${[...picked].join(', ')}`:'';
     onAction({kind:'reveal',attempted,response,helped:view.mapSeen,
       // 객관식 모드의 풀이는 주관식과 같은 풀이로 기록·평가한다(사용자 2026-11-14 「분리하지 말고」). 덧붙인 선지(객관식 모드·OX·선지 보기)는
       // 도움받은 풀이로 세지 않고, 문항 자체 선지는 주관식 모드와 같게 센다.
-      choicesShown:mcq?!!task.question.options.length:recall?choicesSeen:!!task.question.options.length&&!hiddenChoices,
+      choicesShown:mcq||orderItems&&mode==='mcq'?!!task.question.options.length:recall||orderItems?choicesSeen:!!task.question.options.length&&!hiddenChoices,
       ...(attempted&&task.question.stimuli?.length?{stimulusHashes:task.question.stimuli.map(s=>s.sha256)}:{})});
     heading.current?.focus({preventScroll:true});
   }
@@ -152,7 +165,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     onExpire:()=>{if(task?.answer)rate('Again');else reveal();},
   });
   function toggleTimer(){const on=!timerOn;saveTimerOn(on);setTimerOn(on);heading.current?.focus({preventScroll:true});}
-  function toggleMode(){const next:QuizMode=mode==='mcq'?'recall':'mcq';saveQuizMode(next);setMode(next);setPicked(new Set());heading.current?.focus({preventScroll:true});}
+  function toggleMode(){const next:QuizMode=mode==='mcq'?'recall':'mcq';saveQuizMode(next);setMode(next);setPicked(new Set());setPlaced([]);heading.current?.focus({preventScroll:true});}
   useEffect(()=>{
     const handler=(event:KeyboardEvent)=>{
       const target=event.target as HTMLElement;
@@ -172,6 +185,14 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(event.ctrlKey||event.metaKey)return;
       if(event.key==='Tab'&&!event.shiftKey&&timerOn){event.preventDefault();timer.togglePause();return;}
       const number=/^[1-4]$/.test(event.key);
+      // 순서 맞추기: 1–9로 그 번호 단계를 놓거나 빼고, Backspace로 마지막 단계를 뺀다.
+      if(orderShown&&orderItems&&!task.answer&&!target.closest('button')){
+        if(/^[1-9]$/.test(event.key)){
+          const item=orderItems[Number(event.key)-1];
+          if(item){event.preventDefault();place(item.id);return;}
+        }
+        if(event.key==='Backspace'&&placed.length){event.preventDefault();setPlaced(placed.slice(0,-1));return;}
+      }
       // 객관식 모드에서 답 보기 전에는 1–9로 그 번호 선지를 고른다(선지가 5개 이상일 수 있다).
       if(mcq&&!task.answer&&/^[1-9]$/.test(event.key)&&!target.closest('button')){
         const option=mcq.choices[Number(event.key)-1];
@@ -192,7 +213,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(event.key==='5'){event.preventDefault();exclude();}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
-  },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,recallOpen,choices,choicesSeen,view.mapSeen,view.canUndo,timerOn,timer.togglePause,mcq,clue,clueOpen]);
+  },[locked,task,picked,placed,orderShown,orderItems,imagesReady,hiddenChoices,recallClosed,recallOpen,choices,choicesSeen,view.mapSeen,view.canUndo,timerOn,timer.togglePause,mcq,clue,clueOpen]);
   const done=Math.min(view.position,view.count);
   const head=<header className="mq-solve-head">
     <p className="mq-kicker">
@@ -265,6 +286,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       showOptions={mcq?true:recall?choices||!!task.answer&&choicesSeen:!hiddenChoices} showChoiceScore={false}
       recallChoices={mcq?.choices??recall??undefined} choiceCorrectIds={mcq?mcq.correct:recallSet?.correct} choiceHint={!mcq}
       choiceNotes={task.answer?.mcqWrongNotes} choiceGroups={(mcq??recallSet)?.groups}/>
+      {orderShown&&orderItems&&<RootOrder key={task.id} items={orderItems} placed={placed} disabled={locked}
+        correct={task.answer?.orderCorrectIds} onToggle={place}/>}
       {/* 예습 퀴즈와 같은 알약 버튼(2026-11-15 사용자). 문항마다 접힌 채로 시작하고 H로도 편다. */}
       {clue&&<div className="quiz-hint mq-clue"><button type="button" className="quiz-hint-toggle" disabled={locked} onClick={toggleClue}
         aria-expanded={clueOpen} aria-keyshortcuts="H">
@@ -273,8 +296,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
         <span>{clueOpen?'힌트 접기':'힌트 보기'}</span> <kbd>H</kbd>
         <svg className="quiz-hint-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
       </button>{clueOpen&&<p>{clue}</p>}</div>}
-      {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">선지 보기 <kbd>V</kbd></button>}
-      {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">선지 접기 <kbd>V</kbd></button>}
+      {recallClosed&&<button className="is-quiet" disabled={locked} onClick={showChoices} aria-keyshortcuts="V">{orderRecall?'순서 맞추기':'선지 보기'} <kbd>V</kbd></button>}
+      {recallOpen&&<button className="is-quiet" disabled={locked} onClick={hideChoices} aria-keyshortcuts="V Z Control+Z Meta+Z">{orderRecall?'순서 맞추기 접기':'선지 접기'} <kbd>V</kbd></button>}
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
       {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
         {mineBase&&task.answer.memo!==undefined&&<MemoBox key={task.id} value={task.answer.memo} disabled={disabled||advancing}

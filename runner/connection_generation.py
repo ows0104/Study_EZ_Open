@@ -258,4 +258,7 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     # root_choices 대신 root_mcq(`root-mcq/2`)를 부른다. 실패해도 게시 결과는 그대로다.
     from .root_mcq import publish as publish_choices
     publish_choices(client, subject, run_id, out, payload, model=model, run=run_forwarded)
+    # 순서 맞추기 판정(2026-11-18, docs/changes/2026-11-18-ordering-screen). 실패해도 게시 결과·선지는 그대로다.
+    from .root_order import publish as publish_order
+    publish_order(client, subject, run_id, out, payload, model=model, run=run_forwarded)
     return 0

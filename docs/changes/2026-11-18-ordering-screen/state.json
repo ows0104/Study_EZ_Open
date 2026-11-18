@@ -1,0 +1,24 @@
+{
+  "id": "2026-11-18-ordering-screen",
+  "title": "Main-Quiz 순서 맞추기 화면",
+  "area": "site",
+  "created_at": "2026-11-18T00:00:00+09:00",
+  "required_checks": [
+    "contracts",
+    "quizbank",
+    "server",
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "plan": "2026-11-18 사용자 「승인, 시작」"
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "building",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-18T00:00:00+09:00"
+}

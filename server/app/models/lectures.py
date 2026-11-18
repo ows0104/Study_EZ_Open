@@ -36,6 +36,7 @@ ASSET_KINDS = frozenset(
         "root_evidence",  # Main-Quiz 판별 근거 보강 JSON(`<revision>.json`, quizbank/root_evidence.py)
         "root_choices",  # Main-Quiz 단답·나열 「선지 보기」 JSON(`<revision>.json`, quizbank/root_choices.py)
         "root_mcq",  # Main-Quiz 객관식 모드 선지 JSON(`<revision>.json`, quizbank/root_mcq.py)
+        "root_order",  # Main-Quiz 순서 맞추기 판정 JSON(`<revision>.json`, quizbank/root_order.py)
     }
 )
 

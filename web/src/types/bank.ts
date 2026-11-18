@@ -87,6 +87,8 @@ export type BankQuestion = {
   mcq_choices?: { id: string; text: string }[];
   /** 나눠 묻는 문항의 묶음(빈칸마다·「항목: 값」마다). mcq_choices를 이 순서로 나눠 제목과 함께 보인다. */
   mcq_groups?: { label: string; ids: string[] }[];
+  /** 순서형 나열의 섞은 단계(2026-11-18 ordering-screen). 있으면 선지 대신 순서 맞추기로 푼다. 앞면에는 정답 순서가 없다. */
+  order_items?: { id: string; text: string }[];
   personalEdited?: boolean;
   question_id: string;
   personalTier?: boolean;
@@ -127,6 +129,8 @@ export type BankAnswer = {
   mcqCorrectIds?: string[];
   /** mcq_choices 오답마다 왜 틀렸나·족보 출처(root-mcq/2, 2026-11-14 choices-merge). 답을 편 응답에만 온다. */
   mcqWrongNotes?: Record<string, { why: string; source: string }>;
+  /** order_items의 올바른 순서(ID). 답을 편 응답에만 온다(2026-11-18 ordering-screen). */
+  orderCorrectIds?: string[];
   answerPairs: { left: string; right: string }[];
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
