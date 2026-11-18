@@ -84,6 +84,9 @@ def main(name):
     elif name == 'root-batch':
         # Main-Quiz 모아풀기(2026-11-18): 합성 두 강의를 섞어 푼다.
         browser('tests.serve_main_quiz_batch_fixture', 8029, 5195, 'root-batch', 'ROOT_BATCH_URL')
+    elif name == 'jokbo-mix':
+        # 족보 모아풀기(2026-11-18-jokbo-mix): 합성 족보 세 칸을 고르게 배분해 푼다.
+        browser('tests.serve_jokbo_mix_fixture', 8033, 5199, 'jokbo-mix', 'JOKBO_MIX_URL')
     elif name == 'web-types':
         run(['node', 'web/node_modules/typescript/bin/tsc', '-b', 'web/tsconfig.json', '--noEmit'])
     elif name == 'web-build':

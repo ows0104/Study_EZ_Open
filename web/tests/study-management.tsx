@@ -33,6 +33,8 @@ const lazyEvents = (): TimetableEvent[] => [
   { ...events()[0], lectures: Array.from({ length: 10 }, (_, i) => ({ ...mainQuizLecture(), runId: String(i), title: `강의 ${i}` })) },
   { ...events()[0], id: "other", date: "2026-09-01", course: "다른 블록",
     lectures: [{ ...mainQuizLecture(), subject: "다른 과목", runId: "other", title: "다른 강의" }] },
+  // 족보만 있는 칸(필기 전, 2026-11-18-jokbo-mix): Main-Quiz가 없어도 족보 모아풀기로 고를 수 있다.
+  { ...events()[0], id: "j", date: "2026-10-02", title: "족보만", details: "족보만", lectures: [] },
 ];
 window.fetch = async (input, init) => {
   const url = new URL(String(input), location.origin);
@@ -55,6 +57,9 @@ window.fetch = async (input, init) => {
     result = { events: url.searchParams.get("include_study") === "false"
       ? rows.map(e => ({ ...e, lectures: e.lectures.map(l => ({ ...l, studyLoaded: false, mastery: null,
         cardProgress: null })) })) : rows };
+  } else if (path === "/api/jokbo/summaries") {
+    const ids: string[] = JSON.parse(String(init?.body ?? "{}")).eventIds ?? [];
+    result = { summaries: ids.filter(id => id === "0" || id === "j").map(eventId => ({ eventId, audience: "all", items: 5, sameItems: 3, otherItems: 2, unknownItems: 0 })) };
   } else if (path === "/api/root-learning") {
     rootRequests.push(path);
     if (options.has("lazy")) await new Promise<void>(resolve => rootReleases.push(resolve));
@@ -97,13 +102,18 @@ window.fetch = async (input, init) => {
 if (options.has("lazy")) history.replaceState(null, "", "/study");
 await getMe();
 const { BankBatchPage } = await import("../src/bank/BankBatch");
-const { readMix } = await import("../src/bank/mixLinks");
+const { readMix, readJokboMix } = await import("../src/bank/mixLinks");
 // 「모아풀기」는 Main-Quiz 모아풀기 주소로 간다(2026-11-18). 여기서는 그 주소가 고른 강의를 그대로 싣는지만 본다.
 function MixProbe() {
   const { search } = useLocation();
   return <p role="status" aria-label="모아풀기 주소">{JSON.stringify(readMix(new URLSearchParams(search)))}</p>;
 }
+function JokboMixProbe() {
+  const { search } = useLocation();
+  return <p role="status" aria-label="족보 모아풀기 주소">{JSON.stringify(readJokboMix(new URLSearchParams(search)))}</p>;
+}
 createRoot(document.getElementById("root")!).render(<MemoryRouter><main style={{ padding: 16 }}><Routes>
   <Route path="/study/mix" element={<MixProbe />} />
+  <Route path="/study/jokbo-mix" element={<JokboMixProbe />} />
   <Route path="*" element={<BankBatchPage />} />
 </Routes></main></MemoryRouter>);

@@ -3,13 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
 import type { BankNext, BankSession } from "../types/bank";
-import { StudyOverview, type StudyLecture } from "./StudyOverview";
+import { StudyOverview, eventIdOf, type StudyLecture } from "./StudyOverview";
 import { DeleteQuizDialog } from "./DeleteQuizDialog";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import { useStudyTimetable } from "./useStudyTimetable";
 import { prefetchRootCatalog } from "./useRootCatalog";
-import { mixHref } from "./mixLinks";
+import { jokboMixHref, mixHref } from "./mixLinks";
 import "./batch.css";
 
 type Lecture = Pick<StudyLecture, "subject" | "runId" | "title" | "date">;
@@ -130,9 +130,9 @@ export function BankBatchPage() {
     }} /> : null}
     {!events ? !loadError && <p className="notice" role="status">강의 목록을 불러오는 중…</p>
       : <StudyOverview events={events} hiddenKeys={hiddenKeys} managing={managing || auditing || deleting !== null}
-        onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={chosen => {
-        // 2026-11-18부터 모아풀기는 Main-Quiz 강의를 섞는다(RootBatch). 옛 Quiz Bank 큐는 남은 세션 저장값으로만 열린다.
-        navigate(mixHref(chosen));
+        onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={(chosen, kind) => {
+        // 2026-11-18부터 모아풀기는 Main-Quiz 강의를 섞는다(RootBatch). 족보 모아풀기는 고른 강의의 시간표 칸으로(JokboMix).
+        navigate(kind === "jokbo" ? jokboMixHref(chosen.flatMap(l => eventIdOf(l) ?? [])) : mixHref(chosen));
       }} adminActions={me?.isAdmin ? chosen => <>
         <button className="is-quiet" disabled={!chosen.length || auditing} onClick={() => void (async () => {
           setAuditing(true); setAuditMessage("");

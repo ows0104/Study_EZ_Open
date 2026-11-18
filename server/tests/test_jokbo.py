@@ -76,6 +76,11 @@ def main():
     s = client.get("/api/jokbo/events/ev18/summary").json()
     assert s == {"eventId": "ev18", "audience": "all", "items": 2, "sameItems": 1, "otherItems": 1, "unknownItems": 0}, s
     assert client.get("/api/jokbo/events/ev18").json()["doc"]["items"][1]["answers"] == [2]
+    # 여러 칸 요약(족보 모아풀기 2026-11-18): 있는 칸만, 겹침·모양 틀린 ID는 빠진다. 1–200개.
+    summaries = lambda ids: client.post("/api/jokbo/summaries", json={"eventIds": ids})
+    assert summaries(["ev18", "nope", "ev18", "../x"]).json() == {"summaries": [s]}
+    assert summaries([]).status_code == 422
+    assert summaries([f"e{i}" for i in range(201)]).status_code == 422
 
     # 학생은 올릴 수 없다
     assert client.put("/api/admin/jokbo/events/ev18", json=DOC).status_code in (401, 403)
@@ -126,6 +131,10 @@ def main():
     assert client.put("/api/admin/jokbo/events/ev18", json=DOC, headers=RUNNER).status_code == 200
     login()
     assert client.get("/api/jokbo/wrong-notes").json() == {"items": [], "missing": 1}
+    assert summaries(["ev18"]).json() == {"summaries": []}  # 관리자만 족보는 학생 목록에 안 보인다
+    login(admin=True)
+    assert [x["eventId"] for x in summaries(["ev18"]).json()["summaries"]] == ["ev18"]
+    login()
     assert ans("a", "wrong").status_code == 404
     assert client.post("/api/jokbo/events/ev18/rounds").status_code == 404  # 안 보이는 족보에는 못 더한다
     print("jokbo: 모두 통과")

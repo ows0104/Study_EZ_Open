@@ -90,7 +90,8 @@ export function JokboPage() {
   return (
     <main className={`main-quiz-learning jokbo-learning${queue ? "" : " is-start"}`}>
       {queue
-        ? <JokboSolve key={round} doc={data.doc} items={queue} bands={bands}
+        ? <JokboSolve key={round} items={queue} bands={bands}
+            titleOf={() => lectureTitle(data.doc)} whoOf={it => professorsOf(data.doc, it.id)}
             onExit={() => setQueue(null)} onLeave={back} onRetry={start} onAnswered={answered} onRate={rate}
             onFinish={queue === range.current ? finished : undefined} />
         : <JokboStart data={data} onBack={back} onStart={startRange} />}
@@ -210,8 +211,14 @@ const BACK_ICON = (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
 );
 
-function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, onRate, onFinish }: {
-  doc: JokboDoc; items: JokboItem[];
+/**
+ * 풀이·끝 화면. 강의 하나 족보와 족보 모아풀기(`JokboMix`)가 같이 쓴다(2026-11-18).
+ * `titleOf`: 머리줄 강의 제목(문항이 없으면 끝 화면), `whoOf`: 그 문항의 출제 구획·교수.
+ */
+export function JokboSolve({ items, titleOf, whoOf, bands, onExit, onLeave, onRetry, onAnswered, onRate, onFinish }: {
+  items: JokboItem[];
+  titleOf: (item?: JokboItem) => string;
+  whoOf: (item: JokboItem) => { kind: string; professors: string[] };
   bands: Record<string, JokboBand | null>;
   onExit: () => void; onLeave: () => void; onRetry: (items: JokboItem[]) => void;
   onAnswered: (itemId: string, verdict: Verdict) => void;
@@ -316,14 +323,14 @@ function JokboSolve({ doc, items, bands, onExit, onLeave, onRetry, onAnswered, o
       <p className="pq-kicker">
         <button type="button" className="quiz-back" onClick={onExit}>{BACK_ICON}뒤로</button>
         <span className="pq-badge jokbo-badge">족보</span>
-        <span className="pq-title">{lectureTitle(doc)}</span>
+        <span className="pq-title">{titleOf(item)}</span>
       </p>
     </header>
   );
 
   if (!item) return <JokboDone head={head} items={items} results={results} bands={bands} onLeave={onLeave} onRetry={onRetry} />;
 
-  const who = professorsOf(doc, item.id);
+  const who = whoOf(item);
   const asked = yearsOf(item);
   // 반복 표시: 합친 사본의 연도가 정본이고, 없으면 원천이 적어 둔 반복 연도(다른 강의로 간 사본 포함).
   const repeat = asked.length > 1 ? asked : item.repeatYears?.length ? item.repeatYears : [];

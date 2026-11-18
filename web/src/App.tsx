@@ -32,6 +32,7 @@ const RootLearningPage = lazy(() => import("./bank/RootLearning").then((m) => ({
 const ConnectionLearningPage = lazy(() => import("./bank/ConnectionLearning").then((m) => ({ default: m.ConnectionLearningPage })));
 const BankCatalogPage = lazy(() => import("./bank/BankCatalog").then((m) => ({ default: m.BankCatalogPage })));
 const BankBatchPage = lazy(() => import("./bank/BankBatch").then((m) => ({ default: m.BankBatchPage })));
+const JokboMixPage = lazy(() => import("./jokbo/JokboMix").then((m) => ({ default: m.JokboMixPage })));
 const RootBatchPage = lazy(() => import("./bank/RootBatch").then((m) => ({ default: m.RootBatchPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
@@ -136,6 +137,8 @@ function Shell() {
             <Route path="/study" element={<BankBatchPage />} />
             {/* Main-Quiz 모아풀기(2026-11-18): 강의 목록에서 고른 강의를 섞어 푼다. */}
             <Route path="/study/mix" element={<RootBatchPage />} />
+            {/* 족보 모아풀기(2026-11-18): 강의 목록에서 고른 강의들의 족보를 한 판으로. */}
+            <Route path="/study/jokbo-mix" element={<JokboMixPage />} />
             <Route path="/mastery" element={<Navigate to="/study" replace />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}

@@ -21,3 +21,16 @@ export function readMix(params: URLSearchParams): MixLecture[] {
   }
   return out;
 }
+
+/** 족보 모아풀기 주소(2026-11-18-jokbo-mix). 족보는 시간표 칸에 붙어서 칸 ID를 고른 순서대로 싣는다. */
+export const JOKBO_MIX_PATH = "/study/jokbo-mix";
+
+export function jokboMixHref(eventIds: string[]) {
+  const params = new URLSearchParams();
+  for (const id of [...new Set(eventIds)]) params.append("e", id);
+  return `${JOKBO_MIX_PATH}?${params.toString()}`;
+}
+
+export function readJokboMix(params: URLSearchParams): string[] {
+  return [...new Set(params.getAll("e").filter(id => /^[A-Za-z0-9_-]{1,64}$/.test(id)))];
+}
