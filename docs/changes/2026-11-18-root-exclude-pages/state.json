@@ -1,0 +1,90 @@
+{
+  "id": "2026-11-18-root-exclude-pages",
+  "title": "Main-Quiz 운영자 제외 쪽(page-withhold/1)과 261109_02 재출제",
+  "area": "integration",
+  "created_at": "2026-11-18T09:21:14.857434+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-18T09:22:43.713037+00:00",
+      "evidence": "2026-11-18 사용자 결정(이 세션을 연 세션 local_d10e0b8e가 사용자에게서 받아 전달): 모델 GPT(기본 Codex, model-overrides 행 금지) · 자료 손지민 v2 PDF(asset d74531e7…)+족보 그대로 · 빼는 쪽 v2 필기 S1의 36~48쪽만(34·35·52·72쪽은 남김) · 공개판 교체 「교체한다」(restart+replacePublished)",
+      "scope": "plan.md 범위: quizbank/withheld_pages.py(신규)·runner/page_exclusions.py(신규)·runner/connection_generation.py·runner/root_front.py·quizbank/connection_generate.py·quizbank/evidence_sources.py·runner/CLAUDE.md·tests/runner/test_page_exclusions.py. 구현·검사·PR·병합·러너 재설치, 운영 DB 쓰기는 261109_02 restart+replacePublished 요청 하나",
+      "evidence_version": 2,
+      "source_hash": "b98b13b3232a653249a9ade3be4684594f015527b8fe1bee463791221644a01f",
+      "plan_hash": "b26d0e50008731a933fd5b110314595051bfb421cc4217f60b356553ba3059a5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "97f6a3b5e5e6d880675146d96f0ab65be22cf1988e0b4ba28e2678eea6553c23"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-18T09:48:10.680214+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_page_exclusions.py",
+        "tests/runner/test_root_front.py",
+        "tests/runner/test_front_overlap.py",
+        "tests/quizbank/test_connection_generate.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b98b13b3232a653249a9ade3be4684594f015527b8fe1bee463791221644a01f",
+      "plan_hash": "b26d0e50008731a933fd5b110314595051bfb421cc4217f60b356553ba3059a5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-18-root-exclude-pages/1794995041928875100-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-18T09:48:10.685894+00:00"
+}

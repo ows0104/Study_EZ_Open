@@ -38,6 +38,7 @@ from studyez_llm import codex
 from studyez_contracts.learning_links import concept_tree
 from studyez_contracts.bank import importance as imp
 from studyez_contracts.roots import document_hash, map_tree
+from quizbank import withheld_pages
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPTS = ROOT / 'content/prompts/learning-links'
@@ -124,14 +125,17 @@ def require(ok, message):
     if not ok: raise ValueError(message)
 
 
-def refs_ok(value, pages):
+def refs_ok(value, pages, withheld=None):
+    """`withheld`: source → pages the operator withheld (page-withhold/1); a reference to one is refused."""
     if isinstance(value, list):
-        for x in value: refs_ok(x, pages)
+        for x in value: refs_ok(x, pages, withheld)
     elif isinstance(value, dict):
         if set(value) == {'source_id', 'pages', 'locator'}:
             require(value['source_id'] in pages, 'unknown source ' + str(value['source_id']))
             require(all(1 <= p <= pages[value['source_id']] for p in value['pages']), 'outside page')
-        for x in value.values(): refs_ok(x, pages)
+            hidden = sorted(set(value['pages']) & set((withheld or {}).get(value['source_id'], ())))
+            require(not hidden, f"{value['source_id']} page {hidden} was withheld by the operator and shows nothing; cite only shown pages")
+        for x in value.values(): refs_ok(x, pages, withheld)
 
 
 def audit_schema():
@@ -324,7 +328,11 @@ class Front:
         for s in self.packet['sources']:
             sid, original = s['id'], Path(s['localPath'])
             require(sha(original) == s['sha256'] and original.stat().st_size == s['sizeBytes'], 'Source changed before snapshot: ' + sid)
-            frozen = building / (sid + '.pdf'); shutil.copy2(original, frozen)
+            frozen = building / (sid + '.pdf')
+            # page-withhold/1 (docs/changes/2026-11-18-root-exclude-pages): the run's frozen operator record says which
+            # pages of this copy no model reads. They become blank notice pages; numbering and count stay the original's.
+            withheld = sorted(withheld_pages.save_model_copy(original, frozen)) if withheld_pages.pages(original) else []
+            if not withheld: shutil.copy2(original, frozen)
             with pymupdf.open(frozen) as pdf:
                 pages = len(pdf)
                 text = '\n\n'.join(f'## {sid} physical PDF page {i}\n{page.get_text()}' for i, page in enumerate(pdf, 1))
@@ -333,7 +341,8 @@ class Front:
             (building / (sid + '.md')).write_bytes(text.encode('utf-8'))
             inventory.append({'source_id': sid, 'label': s['filename'], 'kind': s['kind'], 'sha256': s['sha256'], 'page_count': pages,
                               'sizeBytes': s['sizeBytes'], 'pdf': sid + '.pdf', 'text': sid + '.md',
-                              'images': [f'{sid}-{i:04}.png' for i in range(1, pages + 1)]})
+                              'images': [f'{sid}-{i:04}.png' for i in range(1, pages + 1)],
+                              **({'withheld_pages': withheld} if withheld else {})})
         pages = {s['source_id']: s['page_count'] for s in inventory}
         ctx = {'subject': self.packet['subject'], 'runId': self.packet['runId'], 'title': self.title,
                'scope': map_tree.lecture_scope(self.title, pages, self.packet.get('scope', '')), 'sources': inventory}
@@ -345,6 +354,9 @@ class Front:
     def pages(self):
         return {s['source_id']: s['page_count'] for s in read(self.out / 'input.json')['sources']}
 
+    def withheld(self):
+        return {s['source_id']: s['withheld_pages'] for s in read(self.out / 'input.json')['sources'] if s.get('withheld_pages')}
+
     def validate(self, kind, value):
         from jsonschema import Draft202012Validator
         Draft202012Validator(json.loads(asset_text(self.asset[kind][0]))).validate(value)
@@ -352,7 +364,7 @@ class Front:
             from studyez_contracts.roots import generation_v4 as v4
             v4.check_points(value)
         elif kind == 'point': imp.point_table(value['points'], value['notebook_profile'])  # every basis is computable
-        refs_ok(value, self.pages())
+        refs_ok(value, self.pages(), self.withheld())
         key, rows = ('concept_id', value['concepts']) if kind == 'map' else ('point_id', value['points'])
         ids = [r[key] for r in rows]
         require(len(ids) == len(set(ids)), 'duplicate ID')
@@ -409,10 +421,11 @@ class Front:
             Draft202012Validator(schema).validate(value)
             if self.v4:
                 v4.check_intake(value)   # one basis row per question (R2)
-            pages = self.pages()
-            refs_ok(value, pages)
+            pages, withheld = self.pages(), self.withheld()
+            refs_ok(value, pages, withheld)
             for s in value['visual_stimuli']:
                 require(s['source_id'] in pages and 1 <= s['page'] <= pages[s['source_id']], 'bank: image page outside the source')
+                require(s['page'] not in withheld.get(s['source_id'], ()), 'bank: image page was withheld by the operator')
             ids = [q['question_id'] for q in value['bank']['questions']]
             require(ids and len(ids) == len(set(ids)), 'bank: empty or duplicate question IDs')
             # What the generator's intake will do with this bank, here, while the author can still correct it: an
@@ -438,10 +451,13 @@ class Front:
         require(len({i['issue_id'] for i in value['issues']}) == len(value['issues']), 'Duplicate audit issue')
         for issue in value['issues']:
             require(set(issue['point_ids']) <= ids and issue['source_refs'] and issue['reason'].strip(), 'Untraceable issue')
-            refs_ok(issue['source_refs'], self.pages())
+            refs_ok(issue['source_refs'], self.pages(), self.withheld())
+        withheld = self.withheld()
         for sid, count in self.pages().items():
-            covered = [p for row in value['page_review'] if row['source_id'] == sid for p in row['pages']]
-            require(sorted(covered) == list(range(1, count + 1)), f'Incomplete page review for {sid}')
+            covered = sorted(p for row in value['page_review'] if row['source_id'] == sid for p in row['pages'])
+            every = list(range(1, count + 1))
+            # Withheld pages show nothing: the review may list them or leave them out.
+            require(covered in (every, [p for p in every if p not in withheld.get(sid, ())]), f'Incomplete page review for {sid}')
         return {'verdict': value['verdict'], 'issues': len(value['issues']), 'points': len(points),
                 'unreadable': sum(1 for r in value['page_review'] if r['status'] == 'unreadable')}
 
