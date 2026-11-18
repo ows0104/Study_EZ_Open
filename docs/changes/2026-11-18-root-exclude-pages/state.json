@@ -37,12 +37,54 @@
       "release_hash": "97f6a3b5e5e6d880675146d96f0ab65be22cf1988e0b4ba28e2678eea6553c23"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-18T09:48:10.680214+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_page_exclusions.py",
+        "tests/runner/test_root_front.py",
+        "tests/runner/test_front_overlap.py",
+        "tests/quizbank/test_connection_generate.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b98b13b3232a653249a9ade3be4684594f015527b8fe1bee463791221644a01f",
+      "plan_hash": "b26d0e50008731a933fd5b110314595051bfb421cc4217f60b356553ba3059a5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-18-root-exclude-pages/1794995041928875100-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-18T09:22:46.717456+00:00"
+  "updated_at": "2026-11-18T09:48:10.685894+00:00"
 }
