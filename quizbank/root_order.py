@@ -18,7 +18,7 @@ from studyez_contracts.roots import order as contract
 from .root_mcq import _call, _stage
 
 PROMPT = Path(__file__).resolve().parents[1] / "content/prompts/learning-links/order/judge.md"
-POLICY = "order-judge/1"
+POLICY = "order-judge/2"
 BATCH = 60
 _STR = {"type": "string"}
 JUDGMENTS = {"type": "object", "additionalProperties": False, "required": ["judgments"], "properties": {"judgments": {
