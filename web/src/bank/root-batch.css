@@ -8,7 +8,24 @@
 .mq-mix-count{flex:none;font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .mq-mix-list li.is-off .mq-mix-count{color:var(--ink-3)}
 .mq-mix-one{flex:none;font-size:12.5px;color:var(--ink-3)}
+/* 시작 화면 선택지(2026-11-18-mix-options) */
+.mq-mix-list li{flex-wrap:wrap}
+.mq-mix-tiers{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.mq-mix-tiers .mq-focus{margin-top:0}
+.main-quiz-learning .mq-focus button[aria-pressed="mixed"]{border-color:var(--accent);color:var(--accent-ink);
+  background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.main-quiz-learning .mq-mix-expand{display:inline-flex;align-items:center;gap:4px;height:34px;min-height:0;padding:0 10px;border:0;
+  border-radius:8px;background:transparent;color:var(--ink-2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.mq-mix-expand:hover:not(:disabled){color:var(--ink)}
+.mq-mix-expand svg{width:14px;height:14px;transition:transform .15s}
+.mq-mix-expand[aria-expanded="true"] svg{transform:rotate(180deg)}
+.mq-mix-checks{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px}
+.mq-mix-checks label{display:inline-flex;align-items:center;gap:8px;min-height:34px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+.mq-mix-checks input{width:17px;height:17px;margin:0;accent-color:var(--accent)}
+.mq-mix-modes{display:flex;flex-wrap:wrap;gap:8px}
+.mq-mix-lane-tiers{flex-basis:100%;margin-top:4px}
+.main-quiz-learning .mq-mix-lane-tiers button{height:30px;padding:0 11px;font-size:12.5px}
 @media(max-width:600px){
-  .mq-mix-list li{flex-wrap:wrap;gap:4px 12px}
+  .mq-mix-list li{gap:4px 12px}
   .mq-mix-title{flex-basis:100%}
 }

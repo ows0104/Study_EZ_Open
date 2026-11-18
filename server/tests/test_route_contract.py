@@ -245,6 +245,7 @@ POST /api/jokbo/events/{event_id}/rounds
 PUT /api/admin/jokbo/events/{event_id}
 GET /api/admin/jokbo/figures/{name}
 PUT /api/admin/jokbo/figures/{name}"""
+    # 2026-11-18: root-learning lectures/{subject}/{run_id}/mix·mix-sessions — 모아풀기 시작 화면 선택지(root_session state.mix).
     # 2026-11-15: root-learning mine·mine-draft·memo — 내 문제(추가·복사 후 수정)와 뒷면 메모(root_event kind='mine'·'memo').
     # 2026-11-13: root-learning/optional — Optional 계산 제외(계정 단위, root_event kind='optional').
     # 2026-11-12: root-learning lectures/{subject}/{run_id}/focus — 오늘 학습 중요도 필터(root_event kind='focus').
@@ -278,6 +279,8 @@ PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/memo
 POST /api/root-learning/lectures/{subject}/{run_id}/mine
 PUT /api/root-learning/lectures/{subject}/{run_id}/mine/{mine_id}
 PUT /api/root-learning/lectures/{subject}/{run_id}/focus
+GET /api/root-learning/lectures/{subject}/{run_id}/mix
+POST /api/root-learning/lectures/{subject}/{run_id}/mix-sessions
 GET /api/root-learning/optional
 PUT /api/root-learning/optional"""
     want = sorted(line for line in (ROUTES + '\n' + connection_routes + '\n' + root_routes + '\n' + jokbo_routes).strip().split("\n") if line)

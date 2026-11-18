@@ -17,99 +17,143 @@ async function revealAndRate(page,key='3'){
   await enabled(page,'답 보기');await heading(page).focus();await page.keyboard.press('Space');
   await enabled(page,'Good');await heading(page).focus();await page.keyboard.press(key);
 }
+/** 시작 화면의 수가 다 읽힐 때까지. */
+async function counted(page){await page.waitForFunction(()=>{const t=document.querySelector('.mq-mix-list')?.textContent;return t&&!t.includes('…');});}
+const lectureRows=page=>page.getByRole('list',{name:'고른 강의'}).locator('li');
+const startCount=page=>page.locator('.mq-start-button .mq-card-count').innerText();
+const globalChip=(page,tier)=>page.getByRole('group',{name:'중요도',exact:true}).getByRole('button').filter({hasText:tier});
 
-/** forced: the random pick always takes the first open lecture, so the first three answers finish lecture A
- *  before the reload (the case where a finished lecture drops out of the resumed mix). */
-async function run(forced){
+async function launch(user){
   const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
-  // Each run is its own learner, so the second starts from fresh sessions on the same fixture.
-  const context=await browser.newContext({viewport:{width:1360,height:900},extraHTTPHeaders:{'X-Root-Test-User':forced?'mix-first':'a'}});context.setDefaultTimeout(15000);
-  if(forced)await context.addInitScript(()=>{Math.random=()=>0;});
+  const context=await browser.newContext({viewport:{width:1360,height:900},extraHTTPHeaders:{'X-Root-Test-User':user}});
+  context.setDefaultTimeout(15000);
   await context.addInitScript(()=>localStorage.setItem('studyez:quiz-timer','off'));
-  await context.route('**/api/me',r=>r.fulfill({json:{id:'a',email:'a@example.com',isApproved:true,isAdmin:false}}));
-  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await context.route('**/api/me',r=>r.fulfill({json:{id:user,email:user+'@example.com',isApproved:true,isAdmin:false}}));
+  return {browser,page:await context.newPage()};
+}
+
+test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·강의를 건넌 Z·재개·마침',async()=>{
+  const {browser,page}=await launch('a');const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const events=[];
   page.on('request',r=>{if(r.method()==='POST'&&/\/sessions\/[^/]+\/events$/.test(r.url()))events.push({session:r.url().split('/').at(-2),kind:r.postDataJSON().kind});});
   try{
-    // A lecture that does not exist is shown and left out; the two published ones are counted.
+    // A lecture that does not exist is shown and left out.
     await page.goto(url+'?l=test/demo&l=test/none&l=test/demo2');
     await page.getByRole('heading',{name:'모아풀기 · 3개 강의'}).waitFor();
-    const list=page.getByRole('list',{name:'고른 강의'});
-    await page.waitForFunction(()=>!document.querySelector('.mq-mix-list')?.textContent?.includes('…'));
-    assert.match(await list.innerText(),/Synthetic root lecture[\s\S]*오늘 3문항[\s\S]*열 수 없음[\s\S]*Second root lecture[\s\S]*오늘 3문항/);
-    assert.match(await page.getByRole('region',{name:'모아풀기 시작'}).innerText(),/2개 강의 · 6문항/);
-    await shot(page,(forced?'forced-':'')+'start');
+    await counted(page);
+    // Nothing studied yet: without 미열람 문항 보기 there is nothing to solve.
+    assert.match(await page.getByRole('list',{name:'고른 강의'}).innerText(),/Synthetic root lecture[\s\S]*0문항[\s\S]*열 수 없음[\s\S]*Second root lecture[\s\S]*0문항/);
+    assert.equal(await startCount(page),'0');
+    assert.equal(await page.getByRole('button',{name:/^모아풀기 시작/}).isDisabled(),true);
+
+    await page.getByLabel('미열람 문항 보기').check();
+    assert.equal(await startCount(page),'6');
+    assert.match(await globalChip(page,'Core').innerText(),/Core\s*6/);
+    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'true');
+
+    // 강의별: 한 강의의 Core를 끄면 그 강의만 0, 전체 칩은 「일부」.
+    await page.getByRole('button',{name:'강의별'}).click();
+    const second=lectureRows(page).filter({hasText:'Second root lecture'});
+    await second.getByRole('button').filter({hasText:'Core'}).click();
+    assert.match(await second.innerText(),/0문항/);
+    assert.equal(await startCount(page),'3');
+    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'mixed');
+    await shot(page,'start-per-lecture');
+    // 전체 칩을 누르면 모든 강의에 다시 적용된다.
+    await globalChip(page,'Core').click();
+    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'true');
+    assert.equal(await startCount(page),'6');
+    // 마지막 남은 전체 칩은 끌 수 없다(다른 중요도는 0개라도 켜져 있어 Core는 끌 수 있다).
+    for(const tier of ['Essential','Important','Optional'])await globalChip(page,tier).click();
+    assert.equal(await globalChip(page,'Core').isDisabled(),true);
+    assert.equal(await startCount(page),'6');
+
     await page.getByRole('button',{name:/^모아풀기 시작/}).click();
-
-    // The next lecture is random (weighted by questions left); each lecture keeps its own order.
-    const seen=[];let offset=0,total=6;
-    const lectureOf=q=>q.startsWith('Synthetic')?'Synthetic root lecture':'Second root lecture';
-    async function answer(key='3'){
-      // Without a prepared frame the next question is drawn only after the save is confirmed: wait for its number.
-      await page.getByRole('heading',{name:`문항 ${seen.length-offset+1} / ${total}`}).waitFor();await enabled(page,'답 보기');
-      const at=await where(page);
-      assert.equal(at.title,lectureOf(at.question));
-      await revealAndRate(page,key);seen.push(at.question);return at;
+    // 순서대로: 강의 번호 순으로 한 강의를 끝낸 뒤 다음 강의.
+    for(const [i,question] of ['Synthetic question 1?','Synthetic question 2?','Synthetic question 3?'].entries()){
+      assert.deepEqual(await where(page),{title:'Synthetic root lecture',question,step:`문항 ${i+1} / 6`});
+      await revealAndRate(page);
     }
-    const first=await answer();
-    await shot(page,(forced?'forced-':'')+'next-question');
+    assert.deepEqual(await where(page),{title:'Second root lecture',question:'Second question 1?',step:'문항 4 / 6'});
 
-    // Z goes back across lectures to the question just rated (answer shown again), then its reveal.
+    // Z goes back across lectures: first the rating in lecture A (answer shown again), then its reveal.
     await enabled(page,'되돌리기');await heading(page).focus();await page.keyboard.press('z');
-    await page.getByText(first.question,{exact:true}).waitFor();await enabled(page,'Good');
-    assert.equal(await heading(page).innerText(),'문항 1 / 6');
+    await page.getByText('Synthetic question 3?',{exact:true}).waitFor();await enabled(page,'Good');
+    assert.equal(await heading(page).innerText(),'문항 3 / 6');
     await heading(page).focus();await page.keyboard.press('z');
     await enabled(page,'답 보기');assert.equal(await page.getByRole('button',{name:/^Good/}).count(),0);
-    seen.pop();
-    await revealAndRate(page);seen.push(first.question);
-    await answer();await answer();
+    await revealAndRate(page);
+    await revealAndRate(page);
+    assert.deepEqual(await where(page),{title:'Second root lecture',question:'Second question 2?',step:'문항 5 / 6'});
 
-    // Leaving and coming back resumes both open sessions where they are.
-    // Every write is confirmed first (an unconfirmed one waits for 「같은 요청 다시 저장」 after a reload, as on the lecture page).
+    // Leaving and coming back: the same options resume the open sessions.
     await page.waitForFunction(()=>!Object.keys(localStorage).some(k=>k.startsWith('studyez:root-write:')));
     await page.reload();
-    await page.waitForFunction(()=>/남은 \d문항/.test(document.querySelector('.mq-mix-list')?.textContent??''));
-    const leftRows=[...(await list.innerText()).matchAll(/남은 (\d)문항/g)].map(m=>Number(m[1]));
-    assert.equal(leftRows.reduce((s,n)=>s+n,0),3);
-    // If the first three all came from one lecture, that lecture's list is done: it is shown so and left out,
-    // and the counter covers only what is left (the finished screen still lists it).
-    if(forced){
-      assert.deepEqual(seen,['Synthetic question 1?','Synthetic question 2?','Synthetic question 3?']);assert.equal(leftRows.length,1);
-    }
-    if(leftRows.length===1){assert.match(await list.innerText(),/오늘 목록 마침/);offset=3;total=3;}
+    await counted(page);
+    // Default options again: the four solved today are not due, the two left are unseen.
+    assert.equal(await startCount(page),'0');
+    await page.getByLabel('미열람 문항 보기').check();
+    // 다른 조건(중요도 넷)이면 새 회차 자리다. 시작할 때와 같은 조건(Core만)이면 그 회차를 잇는다.
+    assert.equal(await page.getByRole('button',{name:/^모아풀기 시작/}).count(),1);
+    for(const tier of ['Essential','Important','Optional'])await globalChip(page,tier).click();
+    await page.waitForFunction(()=>(document.querySelector('.mq-mix-list')?.textContent??'').includes('남은 2문항'));
+    assert.match(await page.getByRole('list',{name:'고른 강의'}).innerText(),/Synthetic root lecture[\s\S]*0문항[\s\S]*Second root lecture[\s\S]*남은 2문항/);
     await page.getByRole('button',{name:/^모아풀기 재개/}).click();
-    await answer();await answer();
-    const last=await answer('4');
+    assert.deepEqual(await where(page),{title:'Second root lecture',question:'Second question 2?',step:'문항 2 / 3'});
+    await revealAndRate(page);
+    assert.equal((await where(page)).question,'Second question 3?');
+    await revealAndRate(page,'4');
     await page.getByRole('heading',{name:'오늘 모아풀기를 마쳤어요'}).waitFor();
-
-    // Every question once, and inside each lecture in the server's order.
-    assert.equal(new Set(seen).size,6);
-    for(const name of ['Synthetic','Second'])
-      assert.deepEqual(seen.filter(q=>q.startsWith(name)),[1,2,3].map(i=>`${name} question ${i}?`));
-    const results=page.getByRole('list',{name:'강의별 결과'});
+    // Lecture A was finished before the reload: it still shows among the results (#219 e198b5c8).
     await page.waitForFunction(()=>(document.querySelector('[aria-label="강의별 결과"]')?.textContent?.match(/첫 학습 2\/3/g)??[]).length===2);
-    assert.match(await results.innerText(),/Synthetic root lecture[\s\S]*3문항 · 첫 학습 2\/3[\s\S]*Second root lecture[\s\S]*3문항 · 첫 학습 2\/3/);
-    await shot(page,(forced?'forced-':'')+'done');
+    assert.match(await page.getByRole('list',{name:'강의별 결과'}).innerText(),/Synthetic root lecture[\s\S]*3문항 · 첫 학습 2\/3[\s\S]*Second root lecture[\s\S]*3문항 · 첫 학습 2\/3/);
+    assert.match(await page.locator('.mq-done-card').innerText(),/2개 강의 · 6문항/);
+    await shot(page,'done');
 
-    // Z from the finished screen reopens the last question answered, in its own lecture.
-    await page.keyboard.press('z');
-    assert.deepEqual(await where(page),{title:lectureOf(last.question),question:last.question,step:`문항 ${total} / ${total}`});
-    await enabled(page,'Good');await heading(page).focus();await page.keyboard.press('3');
-    await page.getByRole('heading',{name:'오늘 모아풀기를 마쳤어요'}).waitFor();
+    // 기존 학습률 무시: today's six are counted again; 미열람은 없다.
+    await page.getByRole('button',{name:'강의 목록으로'}).waitFor();
+    await page.goto(url+'?l=test/demo&l=test/demo2');
+    await counted(page);
+    assert.equal(await startCount(page),'0');
+    await page.getByLabel('미열람 문항 보기').check();
+    assert.equal(await startCount(page),'0');
+    await page.getByLabel('기존 학습률 무시').check();
+    assert.equal(await startCount(page),'6');
 
-    // Each lecture got its own events: 2 sessions, and nothing was sent for the missing lecture.
     const sessions=new Set(events.map(e=>e.session));
     assert.equal(sessions.size,2);
-    assert.equal(events.filter(e=>e.kind==='rate').length,8);   // 6 + the first again after the cross-lecture undo + the last again after the finished-screen undo
-    assert.equal(events.filter(e=>e.kind==='undo').length,3);
+    assert.equal(events.filter(e=>e.kind==='rate').length,7);   // 6 + A3 again after the cross-lecture undo
+    assert.equal(events.filter(e=>e.kind==='undo').length,2);
 
     await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'강의별'}).click();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-    await shot(page,(forced?'forced-':'')+'done-mobile');
+    await shot(page,'start-mobile');
     assert.deepEqual(errors,[]);
-  }catch(error){await shot(page,(forced?'forced-':'')+'failure');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
+  }catch(error){await shot(page,'failure');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
   finally{await browser.close();}
-}
+});
 
-test('모아풀기: two lectures mixed at random in their own order, undo crosses lectures, resume and finish',()=>run(false));
-test('모아풀기: a lecture finished before the reload stays on the finished screen',()=>run(true));
+test('모아풀기 섞어서: 강의 사이·강의 안을 모두 섞고 모든 문항을 한 번씩 낸다',async()=>{
+  const {browser,page}=await launch('b');const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  try{
+    await page.goto(url+'?l=test/demo&l=test/demo2');
+    await counted(page);
+    await page.getByLabel('미열람 문항 보기').check();
+    await page.getByRole('radio',{name:'섞어서'}).click();
+    await page.getByRole('button',{name:/^모아풀기 시작/}).click();
+    const seen=[];
+    for(let i=1;i<=6;i++){
+      const at=await where(page);
+      assert.equal(at.step,`문항 ${i} / 6`);
+      seen.push(at.question);
+      await revealAndRate(page);
+    }
+    await page.getByRole('heading',{name:'오늘 모아풀기를 마쳤어요'}).waitFor();
+    assert.deepEqual([...seen].sort(),['Second question 1?','Second question 2?','Second question 3?',
+      'Synthetic question 1?','Synthetic question 2?','Synthetic question 3?']);
+    console.log('섞어서 순서:',seen.join(' → '));
+    assert.deepEqual(errors,[]);
+  }catch(error){await shot(page,'failure-random');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
+  finally{await browser.close();}
+});

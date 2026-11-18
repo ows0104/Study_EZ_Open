@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { SlidePreloader } from '../slidePreload';
-import type { RootAction, RootFrame, RootOverview, RootSummary, RootView } from '../types/rootLearning';
+import { ROOT_TIERS } from '../types/rootLearning';
+import type { RootAction, RootFrame, RootMixInfo, RootMixOptions, RootMixOrder, RootSummary, RootTierName, RootView } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
 import { useRootStudyWrites } from './useRootStudyWrites';
 import { warm } from './useRootFrames';
@@ -18,9 +19,9 @@ import './root-batch.css';
 /**
  * Main-Quiz 모아풀기(2026-11-18 사용자 「강의 목록형에서 선택해서 섞어서 풀 수 있게」).
  *
- * 서버 회차는 강의 단위 그대로다. 고른 강의마다 기존 회차를 열고, 이 화면이 문항을 번갈아 낸다.
- * 한 강의 안의 순서(선행·슬라이드 흐름)는 서버가 정한 그대로이고, 기록·복습일은 강의별로 쌓인다.
- * 다음 문항은 무작위 강의가 낸다(남은 문항 수에 비례) — 강의마다 진행도는 따로 쌓이고, 내는 순서만 섞인다.
+ * 서버 회차는 강의 단위 그대로다. 고른 강의마다 모아풀기 회차를 열고, 이 화면이 문항을 번갈아 낸다.
+ * 시작 화면 선택지(docs/changes/2026-11-18-mix-options): 중요도(전체 + 강의별), 순서대로/섞어서, 기존 학습률 무시, 미열람 문항 보기.
+ * 강의 안 순서는 서버가 회차를 열 때 정한다(순서대로 = 판 순서, 섞어서 = 선행 문항을 지킨 무작위). 기록·복습일은 강의별로 쌓인다.
  * 되돌리기(Z)는 강의를 가리지 않고 방금 한 행동부터 거꾸로 돌린다.
  */
 
@@ -28,17 +29,18 @@ const endpoint=(l:MixLecture)=>`/api/root-learning/lectures/${encodeURIComponent
 const keyOf=(l:MixLecture)=>`${l.subject}/${l.runId}`;
 const sessionPath=(id:string)=>`/api/root-learning/sessions/${encodeURIComponent(id)}`;
 
-type Lane = MixLecture & {key:string; base:string;
-  /** 시작 화면: 그 강의의 오늘 현황. */
-  info?:RootOverview; left?:number; error?:string;
-  /** 오늘 목록을 이미 다 푼 강의. 섞을 문항은 없지만 마침 화면에 그 강의의 결과로 남는다. */
-  closed?:{count:number;summary:RootSummary|null};
+type Lane = MixLecture & {key:string; base:string; title?:string;
+  /** 시작 화면: 중요도별 미열람·복습 대상·나중 수와 오늘 안 끝난 모아풀기 회차. */
+  mix?:RootMixInfo; error?:string;
+  /** 같은 조건으로 오늘 이미 다 푼 강의. 섞을 문항은 없지만 마침 화면에 그 강의의 결과로 남는다. */
+  closed?:{count:number;summary:RootSummary};
   /** 풀이 중: 그 강의의 회차. */
   view?:RootView};
 /** 화면 전체의 되돌리기 한 칸. before가 있으면 서버 확인 전에 그 화면을 바로 그린다. */
 type Step = {key:string; before:RootView|null};
 
 const AHEAD=3, BATCH=4;
+const ALL:RootTierName[]=[...ROOT_TIERS];
 
 /** 강의마다 다음 문항을 미리 받는다(GET …/prepare는 아무것도 기록하지 않는다). useRootFrames의 여러 회차판. */
 function useLaneFrames() {
@@ -66,19 +68,41 @@ function useLaneFrames() {
   return {ensure,get,forget};
 }
 
+/** 고른 조건의 문항 수: 고른 중요도마다 복습 대상 + (기존 학습률 무시면 나중) + (미열람 문항 보기면 미열람). */
+export function mixCount(mix:RootMixInfo|undefined,tiers:readonly RootTierName[],unseen:boolean,ignoreSchedule:boolean):number {
+  if(!mix)return 0;
+  return tiers.reduce((sum,t)=>{const c=mix.counts[t];return c?sum+c.due+(ignoreSchedule?c.later:0)+(unseen?c.unseen:0):sum;},0);
+}
+
+const sameOptions=(a:RootMixOptions,b:RootMixOptions)=>a.unseen===b.unseen&&a.ignoreSchedule===b.ignoreSchedule
+  &&a.order===b.order&&a.tiers.join()===b.tiers.join();
+
+/** 섞어서: 회차·자리마다 정해지는 값(FNV-1a). 새로고침해도 같은 순서로 번갈아 낸다. */
+function spread(text:string) {
+  let h=0x811c9dc5;
+  for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,0x01000193);}
+  // 끝 글자(자리 번호)만 다른 값들이 비슷하게 나오지 않게 섞는다(murmur3 fmix32). 없으면 한 강의가 늘 먼저였다.
+  h^=h>>>16;h=Math.imul(h,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;
+  return h>>>0;
+}
+
 /**
- * 다음 문항을 낼 강의를 무작위로 고른다(2026-11-18 사용자 「병렬처리인데 랜덤인 느낌」).
- * 남은 문항 수에 비례해 뽑으므로, 오늘 문항 전체를 강의 안 순서는 지킨 채 고르게 섞은 것과 같다. 다 끝났으면 null.
+ * 다음 문항을 낼 강의. 다 끝났으면 null.
+ * 순서대로: 고른 순서(강의 번호 순)로 한 강의를 끝낸 뒤 다음.
+ * 섞어서: 남은 문항 수에 비례한 확률로 강의를 고른다 — 모든 번갈아 놓기가 같은 확률이다. 값은 회차들·지금까지 푼 수로 정해
+ * 새로고침해도 같은 순서다.
  */
-export function nextLane(lanes:Pick<Lane,'key'|'view'>[],random:()=>number=Math.random):string|null {
-  const open=lanes.flatMap(lane=>{
-    const v=lane.view;
-    const left=v&&!v.finished?Math.max(0,v.count-v.position):0;
-    return left>0?[{key:lane.key,left}]:[];
-  });
-  let pick=random()*open.reduce((sum,l)=>sum+l.left,0);
-  for(const l of open){if(pick<l.left)return l.key;pick-=l.left;}
-  return open.at(-1)?.key??null;
+export function nextLane(lanes:Pick<Lane,'key'|'view'>[],order:RootMixOrder='ordered'):string|null {
+  const open=lanes.filter(l=>l.view&&!l.view.finished&&l.view.count>0&&l.view.position<l.view.count);
+  if(!open.length)return null;
+  if(order==='ordered')return open[0].key;
+  const views=lanes.flatMap(l=>l.view?[l.view]:[]);
+  const done=views.reduce((sum,v)=>sum+Math.min(v.position,v.count),0);
+  const seed=views.map(v=>v.sessionId).sort().join(',');
+  const left=open.map(l=>l.view!.count-l.view!.position);
+  let pick=spread(`${seed}:${done}`)%left.reduce((a,b)=>a+b,0);
+  for(const [i,l] of open.entries()){if(pick<left[i])return l.key;pick-=left[i];}
+  return open[open.length-1].key;
 }
 
 export function RootBatchPage() {
@@ -104,33 +128,32 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   const [advancing,setAdvancing]=useState(false);
   const [error,setError]=useState('');
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
+  // 시작 화면 선택지. 강의 하나 화면의 중요도 저장값과 따로다.
+  const [laneTiers,setLaneTiers]=useState<Record<string,RootTierName[]>>({});
+  const [unseen,setUnseen]=useState(false);
+  const [ignoreSchedule,setIgnoreSchedule]=useState(false);
+  const [order,setOrder]=useState<RootMixOrder>('ordered');
+  const [perLecture,setPerLecture]=useState(false);
+  const orderRef=useRef<RootMixOrder>('ordered');
   const lanes=lanesRef.current;
   const setLanes=(change:(lanes:Lane[])=>Lane[])=>{lanesRef.current=change(lanesRef.current);redraw(v=>v+1);};
   const patch=(key:string,change:Partial<Lane>)=>setLanes(all=>all.map(l=>l.key===key?{...l,...change}:l));
   const setCurrent=(key:string|null)=>{currentRef.current=key;redraw(v=>v+1);};
   const lane=(key:string|null)=>lanesRef.current.find(l=>l.key===key);
-  const choose=()=>setCurrent(nextLane(lanesRef.current));
+  const choose=()=>setCurrent(nextLane(lanesRef.current,orderRef.current));
 
   useEffect(()=>{document.title='모아풀기 · Study_EZ';},[]);
 
-  /** 시작 화면의 강의별 오늘 현황. 열린 회차가 있으면 남은 문항을 센다. */
+  /** 시작 화면의 강의별 수(중요도 × 미열람·복습 대상·나중)와 오늘 안 끝난 모아풀기 회차. */
   const survey=useCallback(async()=>{
     setLoading(true);
     const read=await Promise.all(lanesRef.current.map(async l=>{
       try{
-        const info=await api<RootOverview>(l.base);
-        if(!info.policyReady)return {...l,info,left:0,error:info.message||'지금 열 수 없습니다.',view:undefined,closed:undefined};
-        if(info.sessionId){
-          const v=await api<RootView>(sessionPath(info.sessionId));
-          return {...l,info,left:v.finished?0:Math.max(0,v.count-v.position),error:undefined,view:undefined,
-            closed:v.finished?{count:v.count,summary:v.summary}:undefined};
-        }
-        // 오늘 목록을 다 푼 강의(todayDone)는 「더 풀기」 자리다. 모아풀기는 오늘 목록만 섞는다.
-        return {...l,info,left:info.todayDone?0:info.plan?.tasks.length??0,error:undefined,view:undefined,
-          closed:info.todayDone?{count:info.todayDone,summary:info.summary}:undefined};
+        const mix=await api<RootMixInfo>(`${l.base}/mix`);
+        return {...l,mix,title:mix.title,error:undefined,view:undefined};
       }catch(e){
         const message=e instanceof ApiError&&e.status===404?'공개된 Main-Quiz가 없습니다.':(e as Error).message;
-        return {...l,info:undefined,left:0,error:message,view:undefined,closed:undefined};
+        return {...l,mix:undefined,error:message,view:undefined};
       }
     }));
     lanesRef.current=read;setLoading(false);redraw(v=>v+1);
@@ -147,14 +170,41 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
     patch(key,{view:next});
   }
 
-  const eligible=lanes.filter(l=>!l.error&&(l.left??0)>0);
+  const tiersOf=(key:string)=>laneTiers[key]??ALL;
+  const optionsOf=(key:string):RootMixOptions=>({tiers:tiersOf(key),unseen,ignoreSchedule,order});
+  const openOf=(l:Lane)=>l.mix?.open.find(o=>sameOptions(o.options,optionsOf(l.key)));
+  /** 강의 줄의 수. 같은 조건으로 이어 풀 회차가 있으면 남은 수. */
+  const countOf=(l:Lane)=>l.error||!l.mix||!tiersOf(l.key).length?0:openOf(l)?.left??mixCount(l.mix,tiersOf(l.key),unseen,ignoreSchedule);
+  const live=lanes.filter(l=>l.mix&&!l.error);
+  const eligible=live.filter(l=>countOf(l)>0);
+  const totalCount=eligible.reduce((sum,l)=>sum+countOf(l),0);
+  /** 전체 칩 하나를 모든 강의에 적용한다(강의별로 바꾼 그 중요도를 덮어쓴다). 다른 중요도는 강의별 값 그대로. */
+  function setTierEverywhere(tier:RootTierName,on:boolean) {
+    setLaneTiers(old=>{
+      const next={...old};
+      for(const l of live){const now=old[l.key]??ALL;next[l.key]=ROOT_TIERS.filter(t=>t===tier?on:now.includes(t));}
+      return next;
+    });
+  }
+  function setLaneTier(key:string,tier:RootTierName,on:boolean) {
+    setLaneTiers(old=>{const now=old[key]??ALL;return {...old,[key]:ROOT_TIERS.filter(t=>t===tier?on:now.includes(t))};});
+  }
+
   async function begin() {
     if(advancing||writes.blocked||!eligible.length)return;
     setAdvancing(true);setError('');
     try{
-      // 열린 회차는 그대로 잇고, 없으면 강의 화면과 같은 시작 요청을 보낸다. 요청은 한 줄로 순서대로 간다.
-      const started=eligible.map(l=>l.info?.sessionId?Promise.resolve({sessionId:l.info.sessionId}):writes.run(l.base+'/sessions',{}));
+      // 같은 조건의 안 끝난 회차는 그대로 잇고, 없으면 모아풀기 회차를 연다. 요청은 한 줄로 순서대로 간다.
+      orderRef.current=order;
+      const started=eligible.map(l=>{const open=openOf(l);
+        return open?Promise.resolve({sessionId:open.sessionId}):writes.run(l.base+'/mix-sessions',optionsOf(l.key));});
       if(started.some(p=>!p))return;
+      // 같은 조건으로 오늘 이미 다 푼 강의: 섞을 문항은 없지만 마침 화면에 결과로 남긴다(#219 e198b5c8).
+      const finished=live.filter(l=>!eligible.includes(l)).flatMap(l=>{
+        const closed=l.mix?.closed?.find(c=>sameOptions(c.options,optionsOf(l.key)));return closed?[{key:l.key,closed}]:[];});
+      const closedViews=await Promise.all(finished.map(f=>api<RootView>(sessionPath(f.closed.sessionId)).catch(()=>null)));
+      setLanes(all=>all.map(l=>{const i=finished.findIndex(f=>f.key===l.key);const v=i<0?null:closedViews[i];
+        return {...l,closed:v?{count:v.count,summary:v.summary}:undefined};}));
       const ids=await Promise.all(started as Promise<{sessionId:string}>[]);
       const views=await Promise.all(ids.map(r=>api<RootView>(sessionPath(r.sessionId))));
       stack.current=[];
@@ -262,14 +312,15 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
 
   const solving=phase==='solve'?lanes.filter(l=>l.view):[];
   const allDone=solving.length>0&&solving.every(l=>l.view!.finished);
-  // 마침 화면: 이번에 푼 강의와, 새로고침 전에 이미 오늘 목록을 끝낸 강의(closed)를 함께 보인다.
-  const results=phase==='solve'?lanes.filter(l=>l.view||l.closed).map(l=>({key:l.key,title:l.info?.title??l.runId,
-    count:l.view?.count??l.closed!.count,summary:l.view?.summary??l.closed!.summary})):[];
   const cur=lane(currentRef.current);
   const total=solving.reduce((sum,l)=>sum+l.view!.count,0);
+  // 마침 화면: 이번에 푼 강의와, 새로고침 전에 이미 끝낸 강의(closed).
+  const results=phase==='solve'?lanes.flatMap(l=>{const r=l.view?{count:l.view.count,summary:l.view.summary}:l.closed;
+    return r?[{key:l.key,title:l.title??l.runId,...r}]:[];}):[];
   const done=solving.reduce((sum,l)=>sum+Math.min(l.view!.position,l.view!.count),0);
   const shown:RootView|null=cur?.view&&!allDone?{...cur.view,position:done,count:total,canUndo:stack.current.length>0,finished:false}:null;
   const back=()=>(window.history.state?.idx>0?navigate(-1):navigate('/study'));
+  const count=(n:number)=>n.toLocaleString('ko-KR');
 
   return <main className="root-learning main-quiz-learning mq-mix">
     {(error||writes.error||writes.pending&&!writes.busy||writes.conflicts.some(r=>!r.acknowledged))&&<div role="alert" className="notice is-error">{error||writes.error||'이전에 저장 확인을 받지 못한 요청 또는 충돌 응답이 있습니다.'}
@@ -284,45 +335,84 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
         <h1>모아풀기 · {lectures.length}개 강의</h1>
       </div></header>
       {!lectures.length?<p className="notice">고른 강의가 없습니다. <Link to="/study">강의 목록</Link>에서 강의를 체크하세요.</p>:<>
-        <ul className="mq-mix-list" aria-label="고른 강의">
-          {lanes.map(l=><li key={l.key} className={l.error||!(l.left??0)?'is-off':undefined}>
-            <span className="mq-mix-title">{l.info?.title??l.runId}</span>
-            <span className="mq-mix-count">{loading?'…':l.error?`열 수 없음 · ${l.error}`:(l.left??0)>0?`${l.info?.sessionId?'남은':'오늘'} ${l.left}문항`:l.info?.todayDone?'오늘 목록 마침':'오늘 과제 없음'}</span>
-            {l.info&&<Link className="mq-mix-one" to={bankHref(l)}>이 강의만</Link>}
-          </li>)}
-        </ul>
-        <section className="mq-today" aria-label="모아풀기 시작">
+        <section className="mq-today mq-mix-options" aria-label="모아풀기 시작">
           <div className="mq-today-text">
-            <h2>섞어 풀기</h2>
-            <p>{loading?'오늘 과제를 세는 중…':eligible.length?<><b>{eligible.length}</b>개 강의 · <b>{eligible.reduce((s,l)=>s+(l.left??0),0)}</b>문항</>:'오늘 섞어 풀 과제가 없습니다.'}</p>
-            <small>강의마다 오늘 목록을 그 순서대로 두고 번갈아 냅니다. 기록·복습일은 강의별로 쌓입니다.</small>
-            <div className="mq-mode" role="radiogroup" aria-label="풀이 모드">
-              {([['recall','주관식'],['mcq','객관식']] as [QuizMode,string][]).map(([value,label])=>
-                <button key={value} type="button" role="radio" aria-checked={mode===value} className={mode===value?'is-on':''}
-                  disabled={advancing} onClick={()=>{saveQuizMode(value);setMode(value);}}>{label}</button>)}
+            <div className="mq-mix-tiers">
+              <div className="mq-focus" role="group" aria-label="중요도">
+                {ROOT_TIERS.map(tier=>{
+                  const having=live.filter(l=>tiersOf(l.key).includes(tier)).length;
+                  const on=live.length>0&&having===live.length,some=having>0&&!on;
+                  // 끄면 어느 강의에도 중요도가 남지 않는 칩은 끌 수 없다.
+                  const last=on&&ROOT_TIERS.every(t=>t===tier||!live.some(l=>tiersOf(l.key).includes(t)));
+                  const n=live.reduce((sum,l)=>sum+mixCount(l.mix,[tier],unseen,ignoreSchedule),0);
+                  return <button key={tier} type="button" aria-pressed={on?true:some?'mixed':false}
+                    disabled={loading||advancing||last||!live.length}
+                    className={[n?'':'is-empty',some?'is-some':''].filter(Boolean).join(' ')||undefined}
+                    onClick={()=>setTierEverywhere(tier,!on)}>
+                    {on&&<Icon.check/>}{tier}<b>{loading?'…':count(n)}</b></button>;
+                })}
+              </div>
+              <button type="button" className="mq-mix-expand" aria-expanded={perLecture} aria-controls="mq-mix-lectures"
+                disabled={!live.length} onClick={()=>setPerLecture(v=>!v)}>강의별<Icon.chevronDown/></button>
+            </div>
+            <div className="mq-mix-checks">
+              <label><input type="checkbox" checked={ignoreSchedule} disabled={advancing}
+                onChange={e=>setIgnoreSchedule(e.target.checked)}/>기존 학습률 무시</label>
+              <label><input type="checkbox" checked={unseen} disabled={advancing}
+                onChange={e=>setUnseen(e.target.checked)}/>미열람 문항 보기</label>
+            </div>
+            <div className="mq-mix-modes">
+              <div className="mq-mode" role="radiogroup" aria-label="문항 순서">
+                {([['ordered','순서대로'],['random','섞어서']] as [RootMixOrder,string][]).map(([value,label])=>
+                  <button key={value} type="button" role="radio" aria-checked={order===value} className={order===value?'is-on':''}
+                    disabled={advancing} onClick={()=>setOrder(value)}>{label}</button>)}
+              </div>
+              <div className="mq-mode" role="radiogroup" aria-label="풀이 모드">
+                {([['recall','주관식'],['mcq','객관식']] as [QuizMode,string][]).map(([value,label])=>
+                  <button key={value} type="button" role="radio" aria-checked={mode===value} className={mode===value?'is-on':''}
+                    disabled={advancing} onClick={()=>{saveQuizMode(value);setMode(value);}}>{label}</button>)}
+              </div>
             </div>
           </div>
           <button className="mq-start-button" disabled={loading||advancing||writes.blocked||!eligible.length} onClick={()=>void begin()} aria-busy={advancing}>
-            <Icon.play/>{eligible.some(l=>l.info?.sessionId)?'모아풀기 재개':'모아풀기 시작'}</button>
+            <Icon.play/>{eligible.some(l=>openOf(l))?'모아풀기 재개':'모아풀기 시작'}
+            <span className="mq-card-count" aria-label={`${totalCount}문항`} aria-live="polite">{loading?'…':count(totalCount)}</span></button>
           {advancing&&<span className="sr-only" role="status">첫 문항을 여는 중…</span>}
         </section>
+        <ul className="mq-mix-list" id="mq-mix-lectures" aria-label="고른 강의">
+          {lanes.map(l=>{
+            const n=countOf(l),open=openOf(l);
+            return <li key={l.key} className={l.error||!n?'is-off':undefined}>
+              <span className="mq-mix-title">{l.title??l.runId}</span>
+              <span className="mq-mix-count">{loading?'…':l.error?`열 수 없음 · ${l.error}`:open?`남은 ${count(n)}문항`:`${count(n)}문항`}</span>
+              {l.mix&&<Link className="mq-mix-one" to={bankHref(l)}>이 강의만</Link>}
+              {perLecture&&l.mix&&!l.error&&<div className="mq-focus mq-mix-lane-tiers" role="group" aria-label={`${l.title??l.runId} 중요도`}>
+                {ROOT_TIERS.map(tier=>{
+                  const on=tiersOf(l.key).includes(tier),k=mixCount(l.mix,[tier],unseen,ignoreSchedule);
+                  return <button key={tier} type="button" aria-pressed={on} disabled={advancing} className={k?undefined:'is-empty'}
+                    onClick={()=>setLaneTier(l.key,tier,!on)}>{on&&<Icon.check/>}{tier}<b>{count(k)}</b></button>;
+                })}
+              </div>}
+            </li>;
+          })}
+        </ul>
         <p><Link to="/study">강의 다시 선택</Link></p>
       </>}
     </section>
     :allDone?(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>
     :<section className="mq-done">
       <div className="mq-today mq-done-card"><div className="mq-today-text"><h2>오늘 모아풀기를 마쳤어요</h2>
-        <p><b>{results.length}</b>개 강의 · <b>{results.reduce((s,r)=>s+r.count,0)}</b>문항</p></div>
+        <p><b>{results.length}</b>개 강의 · <b>{results.reduce((sum,r)=>sum+r.count,0)}</b>문항</p></div>
         <div className="root-actions"><button className="pill-button" disabled={writes.blocked||!stack.current.length} onClick={()=>undo()}>되돌리기 <kbd>Z</kbd></button>
           <button className="mq-start-button" onClick={()=>navigate('/study')}>강의 목록으로</button></div></div>
       <ul className="mq-mix-list" aria-label="강의별 결과">
         {results.map(r=><li key={r.key}><span className="mq-mix-title">{r.title}</span>
-          <span className="mq-mix-count">{r.count}문항{r.summary?` · 첫 학습 ${r.summary.learned}/${r.summary.total} · 회상 가능 ${r.summary.recalled}`:''}</span></li>)}
+          <span className="mq-mix-count">{r.count}문항 · 첫 학습 {r.summary.learned}/{r.summary.total} · 회상 가능 {r.summary.recalled}</span></li>)}
       </ul>
       <UndoKey disabled={writes.blocked||!stack.current.length} onUndo={undo}/>
     </section>
     :shown&&cur?<>
-      <RootSolve view={shown} title={cur.info?.title} scope={JSON.stringify([account,cur.subject,cur.runId])} disabled={writes.blocked}
+      <RootSolve view={shown} title={cur.title} scope={JSON.stringify([account,cur.subject,cur.runId])} disabled={writes.blocked}
         editPath={qid=>`${cur.base}/questions/${encodeURIComponent(qid)}/personal`}
         onEdited={result=>patchTask(task=>({...task,question:result.question,answer:task.answer?{...result.answer,memo:task.answer.memo}:null}))}
         mineBase={cur.base}
