@@ -19,7 +19,7 @@ for i,rating in enumerate(('Again','Hard','Good','Easy')):
     with SessionLocal()as db:
         event=db.get(RootEvent,('four-'+str(i),'rate-'+str(i)))
         assert event.payload['selfRating']==rating and event.payload['helped']
-        assert event.payload['ratingPolicy']=='roots-four-rating/2' and event.payload['targetParameters']['maxTarget']==0.9
+        assert event.payload['ratingPolicy']=='roots-four-rating/3' and event.payload['targetParameters']['maxTarget']==0.9
         assert event.payload['ratingParameters']['growth']['Easy']==3
         saved=deepcopy(event.payload)
     assert action(client,sid,'undo-'+str(i),'undo').status_code==200
@@ -40,7 +40,8 @@ assert good['scheduledDays']==1 and easy['scheduledDays']==2
 later=transition(easy,'independent',False,NOW+timedelta(days=2),POLICY,None,'Easy')
 assert later['baseDays']==6
 helped=transition(empty,'independent',True,NOW,POLICY,None,'Good')
-assert helped['rating']=='partial' and helped['selfRating']=='Good'
+assert helped['rating']=='independent' and helped['selfRating']=='Good'   # 2026-11-18: the learner's own call
+assert transition(empty,'independent',True,NOW,POLICY)['rating']=='partial'   # three-grade events keep the downgrade
 old=transition(empty,'independent',False,NOW,LEGACY_POLICY)
 assert old['scheduledDays']==1 and 'selfRating' not in old
 mixed=transition(later,'partial',False,NOW+timedelta(days=8),POLICY)

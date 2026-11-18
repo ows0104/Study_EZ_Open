@@ -25,7 +25,16 @@ FOUR_RATING_PARAMETERS = {
 # with targetParameters is scheduled like Quiz Bank: mastery M is an EMA of ratings, the target
 # comes from the question's tier (or the learner's 「내 중요도」), and the interval is the time for
 # M/(1+t/9S) to fall to the target, t=9S(M/target-1). Earlier events keep their own schedule.
-TARGET_RATING_POLICY = 'roots-four-rating/2'
+#
+# /3 (2026-11-18 사용자 「쉬운건 걸러서 막판에 볼 게 몇개 없게 … 학습률 곡선처럼 빠져서 복습」): the same curve and
+# targets, but a first rating starts M at that rating's value and a correct recall moves M faster, so an easy question
+# leaves the daily queue after one or two reviews instead of four to seven (docs/changes/2026-11-18-review-curve).
+# Main-Quiz only: Quiz Bank's policy.json is unchanged.
+# /2 events are replayed with /3's mastery too (2026-11-18 사용자 「지금 시험이 곧인데 지난평가에도 이에 맞춰 복습일을
+# 조정해줄래?」). The stored events are unchanged; only how they are read moves (replay_parameters).
+TARGET_RATING_POLICY = 'roots-four-rating/3'
+ROOT_MASTERY = {'firstFromRating': True, 'ratingAlpha': {'Good': 0.5, 'Easy': 0.7}}
+RETIMED_RATING_POLICIES = ('roots-four-rating/2',)
 TIER_POLICY = 'roots-personal-tier/1'
 TIERS = ('Essential', 'Core', 'Important', 'Optional')
 GRADE_RATING = {'missed': 'Again', 'partial': 'Hard', 'independent': 'Good'}
@@ -34,9 +43,19 @@ LEGACY_MASTERY = {'alpha': 0.35, 'ratings': {'Again': 0, 'Hard': 0.45, 'Good': 0
 
 
 def target_parameters():
-    """Quiz Bank's current mastery policy, frozen into each new rating event."""
+    """Quiz Bank's current mastery policy plus Main-Quiz's ROOT_MASTERY, frozen into each new rating event."""
     from app.study_engine.policy import DEFAULT
-    return deepcopy({k: DEFAULT['mastery'][k] for k in ('alpha', 'ratings', 'maxTarget', 'targets', 'tierTargets')})
+    return deepcopy({**{k: DEFAULT['mastery'][k] for k in ('alpha', 'ratings', 'maxTarget', 'targets', 'tierTargets')},
+                     **ROOT_MASTERY})
+
+
+def replay_parameters(payload):
+    """The mastery parameters a stored rating is replayed with: its own frozen targetParameters, plus ROOT_MASTERY
+    for a /2 event (retimed 2026-11-18). None for events saved before targetParameters existed."""
+    params = payload.get('targetParameters')
+    if params and payload.get('ratingPolicy') in RETIMED_RATING_POLICIES:
+        return {**params, **ROOT_MASTERY}
+    return params
 
 
 def canonical_tier(q):
@@ -60,7 +79,11 @@ def target_retention(q, plan, params, personal=None):
 
 
 def next_mastery(value, rating, when, params):
-    """Quiz Bank mastery update: decay by the forgetting curve; recall restores the prior level."""
+    """Quiz Bank mastery update: decay by the forgetting curve; recall restores the prior level.
+    /3 parameters: a first rating is the starting level itself, and `ratingAlpha` weighs a correct recall more."""
+    if params.get('firstFromRating') and 'mastery' not in value:
+        return params['ratings'][rating]
+    alpha = params.get('ratingAlpha', {}).get(rating, params['alpha'])
     previous = value.get('mastery', 0)
     decayed = previous
     if value.get('lastAt'):
@@ -68,7 +91,7 @@ def next_mastery(value, rating, when, params):
         stability = max(0.25, value.get('ratingDays', value.get('baseDays', 1)))
         decayed = previous / (1 + elapsed / (9 * stability))
     baseline = previous if rating in ('Good', 'Easy') else decayed
-    return (1 - params['alpha']) * baseline + params['alpha'] * params['ratings'][rating]
+    return (1 - alpha) * baseline + alpha * params['ratings'][rating]
 
 
 def target_due(value, mastery, target, policy, exam_date):
@@ -142,7 +165,10 @@ def transition(value, grade, helped, when, policy, exam_date=None, self_rating=N
     """Return the next assessment state; never mutate an event or infer correctness."""
     when = utc(when)
     day = study_day(when, policy)
-    grade = 'partial' if grade == 'independent' and helped else grade
+    # A four-button self-rating is the learner's own call even after choices, the map or answer-only; the help stays a
+    # separate stored fact (2026-11-18 사용자 「선지를 보고 맞힌 풀이도 사람의 선택지를 그대로 적용하자」). Older
+    # three-grade events keep the downgrade.
+    grade = 'partial' if grade == 'independent' and helped and self_rating is None else grade
     stage = value.get('stage', -1)
     if self_rating is not None:
         # New four-button events use the established Quiz Bank rating spacing.

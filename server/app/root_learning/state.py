@@ -1,7 +1,7 @@
 """Replay immutable events; revealing an answer never implies successful recall."""
 from datetime import timedelta
 from .policy import (instant, study_day, day_start, transition, effective_due, GRADE_RATING, LEGACY_MASTERY,
-                     next_mastery, target_due, target_retention, utc)
+                     next_mastery, replay_parameters, target_due, target_retention, utc)
 
 
 def targets(doc):
@@ -86,7 +86,7 @@ def per_task(doc):
 def _rate(value, event, p, when, task_questions, questions, plans, tiers):
     """One rating applied to one learner state (a direction's, or for /4 a task's). Mutates `value`."""
     # Mastery follows every rating (older ones too) so a target-scheduled rating starts from history.
-    params = p.get('targetParameters')
+    params = replay_parameters(p)   # /2 ratings are retimed with /3's mastery (2026-11-18 review-curve R3)
     mastery = next_mastery(value, p.get('selfRating') or GRADE_RATING[p['grade']], when, params or LEGACY_MASTERY)
     updated = transition(value, p['grade'], p['helped'], when, p['policy'], p.get('exam_date'),
                          p.get('selfRating'), p.get('ratingParameters'))

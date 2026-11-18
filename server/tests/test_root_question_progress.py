@@ -74,12 +74,12 @@ assert two_days['retained'] == 1 and two_days['unseen'] == 2, two_days
 later = progress(doc, day2, available, NOW + timedelta(days=200))
 assert later['retained'] == 0 and later['retrieving'] == 1, later
 
-# An undone rating does not count; a helped Good is not Good (graded partial).
+# An undone rating does not count. A helped Good is still the learner's Good (2026-11-18 review-curve R2).
 undo = {'id': 'undo-last', 'kind': 'undo', 'revision': 'v1', 'at': NOW + timedelta(days=1, seconds=5),
         'payload': {'undo': day2[-1]['id']}}
 assert progress(doc, day2 + [undo], available, NOW + timedelta(days=1, hours=1))['retained'] == 0
 helped = [reveal('task2', 'D2', NOW), rate('task2', 'D2', NOW, 'Good', helped=True)]
-assert progress(doc, helped, available, NOW + timedelta(minutes=5))['recognized'] == 1
+assert progress(doc, helped, available, NOW + timedelta(minutes=5))['retrieving'] == 1
 
 # Ratings without a target (before 2026-11-09) never count as 「저장」.
 legacy = [reveal('task3', 'D3', NOW), {'id': 'legacy-a', 'kind': 'rate', 'revision': 'v1', 'at': NOW + timedelta(seconds=1),
