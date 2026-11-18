@@ -41,6 +41,8 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     await page.goto(url+'?l=test/demo&l=test/none&l=test/demo2');
     await page.getByRole('heading',{name:'모아풀기 · 3개 강의'}).waitFor();
     await counted(page);
+    // 모아풀기 화면에는 강의 하나로 가는 길을 두지 않는다(2026-11-18 사용자 「없애줘」).
+    assert.equal(await page.getByText('이 강의만').count(),0);
     // Nothing studied yet: without 미열람 문항 보기 there is nothing to solve.
     assert.match(await page.getByRole('list',{name:'고른 강의'}).innerText(),/Synthetic root lecture[\s\S]*0문항[\s\S]*열 수 없음[\s\S]*Second root lecture[\s\S]*0문항/);
     assert.equal(await startCount(page),'0');
