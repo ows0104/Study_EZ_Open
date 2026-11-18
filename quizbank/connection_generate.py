@@ -20,6 +20,7 @@ from studyez_contracts.roots.automation import (BRIEF_SCHEMA, AUDIT_SCHEMA, pack
 from studyez_contracts.roots.source_assessment import (VERSION as SOURCE_FORMAT,
     source_assessment_schema,compile_source_assessment,envelope)
 from .generate import item_quality_guidance, lecture_scope
+from . import withheld_pages
 from .review import review as medical_review
 
 PROMPTS = Path(__file__).resolve().parents[1] / 'content/prompts/learning-links/automation'
@@ -160,7 +161,8 @@ def prepare(packet, directory):
         sid = source['id']
         pages = None
         if path.suffix.lower() == '.pdf':
-            with fitz.open(path) as pdf:
+            # page-withhold/1: pages the operator withheld are blank notice pages here (numbering unchanged).
+            with withheld_pages.document(path) as pdf:
                 if not len(pdf): raise ValueError('빈 PDF입니다.')
                 pages = len(pdf)
                 text = []

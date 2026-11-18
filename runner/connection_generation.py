@@ -189,6 +189,10 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
         frozen_source(path,url,source)
         del source['downloadUrl']
         source['localPath'] = str(path.resolve())
+    # Pages the administrator withheld from this lecture's model input (docs/changes/2026-11-18-root-exclude-pages):
+    # frozen once beside the downloaded copies; the front, the generator and the evidence read those pages blank.
+    from . import page_exclusions
+    withheld = page_exclusions.freeze(out, packet, runs_dir)
     packet_path = out / 'packet.json'
     packet_path.write_text(json.dumps(packet, ensure_ascii=False, indent=2), encoding='utf-8')
     if packet.get('parallelAuthoring'):
@@ -202,12 +206,12 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
     used = json.loads(used_path.read_text(encoding='utf-8'))['used'] if used_path.exists() else 0
     if resume is None and len(reasons) > used: resume = reasons[-1]
     try:
-        return _generate(client, subject, run_id, base, packet, packet_path, out, model=model, resume=resume)
+        return _generate(client, subject, run_id, base, packet, packet_path, out, model=model, resume=resume, withheld=withheld)
     finally:
         if len(reasons) > used: used_path.write_text(json.dumps({'used': len(reasons)}), encoding='utf-8')
 
 
-def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=None, resume=None):
+def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=None, resume=None, withheld=None):
     # map-tree/1 runs the front stages first; the generator then works in <run>/generation on the derived packet.
     gen_out, gen_packet, gen_packet_path = out, packet, packet_path
     # duplicates-only/1, unplaced-only/1 (docs/changes/2026-11-15-unplaced-replace) and presuppose-only/1
@@ -241,6 +245,12 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
         payload = completed_result(gen_out,gen_packet)if is_v2_source(gen_packet)else json.loads((gen_out / 'result.json').read_text(encoding='utf-8'))
     validate_result(payload, packet)  # map-tree/1: re-derives gen_packet from the request, as the server does
     validate_continuations(gen_out,payload)
+    if withheld:
+        # No model saw those pages; a reference to one is reported, not blocked (the page shows only the notice).
+        from .page_exclusions import cited
+        hits = cited(payload.get('document'), withheld)
+        (out / 'withheld-citations.json').write_text(json.dumps(hits, ensure_ascii=False, indent=2), encoding='utf-8')
+        if hits: print(f'Quiz Bank {run_id}: 경고 — 제외 쪽을 가리키는 인용 {len(hits)}곳 (withheld-citations.json)', flush=True)
     posted = client.call('PUT', base + '/result', payload)
     if posted.get('status') != 'ready': raise ValueError('게시 완료 응답을 받지 못했습니다.')
     (out / 'published.json').write_text(json.dumps(posted, ensure_ascii=False), encoding='utf-8')

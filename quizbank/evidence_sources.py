@@ -8,6 +8,7 @@ from pathlib import Path
 import fitz
 
 from studyez_contracts.bank.slide_focus import all_selected_references, external_filename, source_id
+from . import withheld_pages
 
 
 def discover(pdf: Path) -> dict[str, Path]:
@@ -40,10 +41,18 @@ def prepare(pdf: Path, out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     images = out / "source-pages"
     images.mkdir(exist_ok=True)
+    # page-withhold/1 (docs/changes/2026-11-18-root-exclude-pages): the model reads the withheld pages blank.
+    withheld = withheld_pages.pages(pdf)
     digest = hashlib.sha256(pdf.read_bytes()).hexdigest()
+    if withheld:
+        digest += " withheld " + ",".join(map(str, sorted(withheld)))
     stamp = out / "source-sha256.txt"
     fresh = stamp.is_file() and stamp.read_text(encoding="utf-8") == digest
-    with fitz.open(pdf) as doc:
+    shown = pdf
+    if withheld:
+        shown = out / "model-source.pdf"
+        withheld_pages.save_model_copy(pdf, shown)
+    with withheld_pages.document(pdf) as doc:
         text = out / "source-text.md"
         if not fresh or not text.is_file():
             temp = out / f"text-{os.getpid()}.tmp"
@@ -60,7 +69,7 @@ def prepare(pdf: Path, out: Path) -> dict:
     temp = out / f"sha-{os.getpid()}.tmp"
     temp.write_text(digest, encoding="utf-8")
     temp.replace(stamp)
-    return {"pdf": str(pdf.resolve()), "text": str(text.resolve()), "images": paths}
+    return {"pdf": str(shown.resolve()), "text": str(text.resolve()), "images": paths}
 
 
 def render_selected(report: dict, paths: dict[str, Path], out: Path, run_id: str) -> list[Path]:
