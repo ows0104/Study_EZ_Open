@@ -108,6 +108,29 @@ def bank_hash(row):
     return value
 
 
+# revision -> existence_links of its generation (or None). A published revision never changes, so this never goes stale.
+_EXISTENCE_LINKS = {}
+
+
+def existence_links(db, row):
+    """Question-level existence prerequisites of a published revision (docs/changes/2026-11-18-existence-prereq-by-question
+    R3): the presuppose/1 records kept in `root_generation.result.manifest.presuppositions` of the generation that made
+    `auto-<id>`, read only. None for a revision without such records (photo import, older generation): the plan then keeps
+    the earlier goal-level rule."""
+    if row.revision in _EXISTENCE_LINKS:
+        return _EXISTENCE_LINKS[row.revision]
+    from app.models.root_generation import RootGeneration
+    from .planning import existence_links as links_of
+    records = None
+    if row.revision and row.revision.startswith('auto-'):
+        records = db.scalar(select(RootGeneration.result['manifest']['presuppositions']).where(
+            RootGeneration.id == row.revision[len('auto-'):], RootGeneration.subject == row.subject,
+            RootGeneration.run_id == row.run_id))
+    value = links_of(row.document, records) if isinstance(records, list) else None
+    _EXISTENCE_LINKS[row.revision] = value
+    return value
+
+
 # Columns availability never reads; still loaded on access if another caller needs them.
 _UNUSED_BANK_COLUMNS = (QuizBank.raw_response, QuizBank.validation, QuizBank.review, QuizBank.usage)
 

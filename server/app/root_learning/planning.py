@@ -8,17 +8,45 @@ from .policy import instant, study_day
 from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
-def plan(doc, events, available, now, policy, focus=None, new_goals=None):
+def existence_links(doc, records):
+    """Question-level existence prerequisites from the presuppose/1 records of the generation that made `doc`
+    (docs/changes/2026-11-18-existence-prereq-by-question R1): {question X: [questions Y]} where X's stem presupposes a
+    link that Y recalls (`recalled_by`, or a question placed on the goal made from the record's point). A pair is kept only
+    when (Y's goal, X's goal) is an existence edge of the document, so no edge the document left out (a cycle, the same
+    goal) comes back. Questions not placed in the document are ignored."""
+    from studyez_contracts.roots.presuppose import is_existence_edge
+    owners = direction_owners(doc)
+    placed = {t['question_id']: owners[t['direction_id']] for t in doc['tasks'] if t['direction_id'] in owners}
+    on_target = defaultdict(list)
+    for question_id, target_id in placed.items():
+        on_target[target_id].append(question_id)
+    existence = {(e['before_target'], e['after_target']) for e in doc['prerequisites'] if is_existence_edge(e)}
+    point_targets = {p['point_id']: p.get('target_ids') or [] for p in doc['review'].get('points') or []}
+    links = defaultdict(set)
+    for record in records:
+        after = placed.get(record['question_id'])
+        if after is None:
+            continue
+        befores = {q for q in record.get('recalled_by') or [] if q in placed}
+        if record.get('point_id'):
+            befores |= {q for t in point_targets.get(record['point_id'], []) for q in on_target[t]}
+        links[record['question_id']] |= {q for q in befores if (placed[q], after) in existence}
+    return {q: sorted(ys) for q, ys in sorted(links.items()) if ys}
+
+
+def plan(doc, events, available, now, policy, focus=None, new_goals=None, links=None):
     """`focus`, a subset of `available`, narrows the candidates only (오늘 학습 중요도 필터). An unassessed question
     prerequisite of a planned task is brought forward by order_plan even outside the focus; one that is not available
     is passed over. A target prerequisite brings in (「명시적 선행 연결」) an existence goal from `available` and any other
     prior goal only from the candidates (inside the focus), and otherwise just orders. Without a focus every available task is a candidate
     (docs/changes/2026-11-12-plan-prereq-closure, 2026-11-16-prereq-question-only).
+    With `links` (existence_links) an existence edge brings in, from `available`, only the questions that recall what a
+    planned question presupposes, not its whole prior goal (docs/changes/2026-11-18-existence-prereq-by-question).
 
     오늘 학습 이어 풀기(docs/changes/2026-11-14-continuous-today): `new_goals` fixes the new-goal quota (capped by
     the prepared unseen goals) for a stream that 「더 풀기」 lengthened. Without it the quota is the former one."""
     if per_task(doc):
-        return plan_tasks(doc, events, available, now, policy, focus, new_goals)
+        return plan_tasks(doc, events, available, now, policy, focus, new_goals, links)
     pool = available if focus is None else focus
     rows, states = replay(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
@@ -142,7 +170,7 @@ def spread_directions(tasks):
     return [task for _, _, task in sorted(ranked, key=lambda row: row[:2])]
 
 
-def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
+def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, links=None):
     """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
 
     Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
@@ -228,9 +256,9 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
             break
         add_target(tid, '새 범위 보완')
     # Explicit target prerequisites reorder already-selected tasks and bring a prepared prior goal forward: an
-    # existence goal from every prepared task, another target only from today's candidates. Question prerequisites
-    # come in by order_plan. Failure on one never locks the following direction.
-    chosen_targets = {owner(t) for t in selected}
+    # existence goal from every prepared task (with `links`: only the questions a planned question presupposes, below),
+    # another target only from today's candidates. Question prerequisites come in by order_plan. Failure on one never
+    # locks the following direction.
     prereqs = defaultdict(set)
     for edge in doc['prerequisites']:
         prereqs[edge['after_target']].add(edge['before_target'])
@@ -240,11 +268,32 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None):
             return
         for parent in sorted(prereqs[tid], key=lambda p: order[p]):
             prerequisites(parent, visiting | {tid})
+            if (parent, tid) in existence and links is not None:
+                continue  # 문항 단위로 아래에서 끌어온다
             if pull(parent):
                 add_target(parent, '명시적 선행 연결', prepared_tasks if (parent, tid) in existence else by_direction)
         expanded.add(tid)
-    for tid in sorted(chosen_targets, key=lambda t: order[t]):
-        prerequisites(tid, set())
+    # 존재 목표 선행을 문항 단위로(docs/changes/2026-11-18-existence-prereq-by-question R2): 오늘 고른 문항이 전제하는 연결을
+    # 답하는 문항만 필터 밖에서도 끌어온다. 261110_02에서 존재 목표 T020 전체가 끌려와, 어느 문항의 전제도 아닌 Optional Q107이 나왔다.
+    by_question = {t['question_id']: t for ts in prepared_tasks.values() for t in ts}
+    def wanted(task_id):
+        value = states.get(task_id, {})
+        return value.get('lastDay') != today and value.get('rating') != 'independent'
+    done = 0
+    while True:
+        for tid in sorted({owner(t) for t in selected}, key=lambda t: order[t]):
+            prerequisites(tid, set())
+        if links is None:
+            break
+        while done < len(selected):
+            task = selected[done]
+            done += 1
+            for question_id in links.get(task['question_id'], ()):
+                before = by_question.get(question_id)
+                if before is not None and wanted(before['task_id']):
+                    add(before, '명시적 선행 연결')
+        if all(owner(t) in expanded for t in selected):
+            break
     emitted, result = set(), []
     def emit(tid):
         if tid in emitted:

@@ -145,7 +145,8 @@ def overview_data(db, row, user, when):
     # 오늘 학습 이어 풀기(2026-11-14): 칩 조합과 상관없이 오늘 흐름 하나를 이어 푼다. 끝났으면 「더 풀기」(start)가 뒤에 붙인다.
     pending = stream if stream is not None and stream.state['index'] < len(stream.tasks) else None
     focused = {t for t in mine_ready if tiers[t] in chosen} if narrowed else None
-    planned = planning.plan({**mine_row.document, 'exam_date': exam_date}, events, mine_ready, when, configured, focus=focused)
+    planned = planning.plan({**mine_row.document, 'exam_date': exam_date}, events, mine_ready, when, configured, focus=focused,
+                            links=content.existence_links(db, row))
     counted = {**planned, 'tasks': [t for t in planned['tasks'] if not mine.is_mine(t['task_id'])]}
     # Optional 계산 제외(2026-11-13): 집계만 거른다. available·계획은 그대로다(선행 문항 500 재발 방지).
     skip = content.optional_excluded(db, user.id)
@@ -215,9 +216,10 @@ def refocus_stream(db, doc, user, when):
     chosen = content.focus_for(db, doc.subject, user.id)
     tiers = content.task_tiers(mine_doc.document, state.personal_tiers(doc.document, events))
     focused = {t for t in available if tiers[t] in chosen} if len(chosen) < len(policy.TIERS) else None
-    planned = planning.plan(document, morning, available, when, configured, focus=focused)
+    links = content.existence_links(db, doc)
+    planned = planning.plan(document, morning, available, when, configured, focus=focused, links=links)
     if stream.state.get('extraGoals'):
-        planned = planning.plan(document, morning, available, when, configured, focus=focused,
+        planned = planning.plan(document, morning, available, when, configured, focus=focused, links=links,
                                 new_goals=planned['newGoalQuota'] + stream.state['extraGoals'])
     rest = [t for t in planned['tasks'] if t['task_id'] not in seen]
     if stream.state.get('order') == 'random' and orderable(doc.document):
