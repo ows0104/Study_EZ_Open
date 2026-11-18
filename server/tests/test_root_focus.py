@@ -36,7 +36,7 @@ assert content.task_tiers(tiered, {'Q2': {'tier': 'Important', 'originalTier': '
 # ── Default: every tier, the former plan and session ID ──
 user('a')
 before = overview()
-assert before['focus'] == {'tiers': ALL, 'counts': {'Essential': 0, 'Core': 3, 'Important': 0, 'Optional': 0}}
+assert before['focus'] == {'tiers': ALL, 'prereqs': True, 'counts': {'Essential': 0, 'Core': 3, 'Important': 0, 'Optional': 0}}
 assert plan_questions(before) == ['Q1', 'Q2', 'Q3']
 base_total = before['summary']['total']
 

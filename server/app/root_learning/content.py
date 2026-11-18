@@ -231,11 +231,20 @@ def task_tiers(doc, tiers):
 def focus_for(db, subject, user_id):
     """오늘 학습 중요도 필터(2026-11-12): this learner's last choice for the subject, else every tier."""
     from .policy import TIERS
-    rows = focus_events(db, subject, user_id)
-    # `seq` orders choices saved at the same instant (request IDs are random), as 「내 중요도」 does.
-    row = max(rows, key=lambda e: (e.payload.get('seq', 0), e.created_at), default=None)
+    row = _last_focus(db, subject, user_id)
     chosen = set(row.payload.get('tiers', [])) if row else set(TIERS)
     return [t for t in TIERS if t in chosen] or list(TIERS)
+
+
+def focus_prereqs(db, subject, user_id):
+    """선행 문항 포함/미포함(2026-11-18-prereq-toggle): the same last choice. Older choices without it bring prerequisites in."""
+    row = _last_focus(db, subject, user_id)
+    return bool(row.payload.get('prereqs', True)) if row else True
+
+
+def _last_focus(db, subject, user_id):
+    # `seq` orders choices saved at the same instant (request IDs are random), as 「내 중요도」 does.
+    return max(focus_events(db, subject, user_id), key=lambda e: (e.payload.get('seq', 0), e.created_at), default=None)
 
 
 def focus_events(db, subject, user_id):

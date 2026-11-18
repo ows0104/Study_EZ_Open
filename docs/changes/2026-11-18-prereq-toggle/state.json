@@ -1,0 +1,142 @@
+{
+  "id": "2026-11-18-prereq-toggle",
+  "title": "선행 문항 포함/미포함 선택",
+  "area": "site",
+  "created_at": "2026-11-18T14:24:06.488900+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-18T14:51:15.581913+00:00",
+      "evidence": "사용자 2026-11-18 채팅: 「선행 문항 포함/미포함 선택할 수 있는 기능을 만들어줘. 복습 페이지에서 고를 수 있으면 될 거 같아. 그리고 모아풀기에도 적용할 수 있게 해줘. 지금 다른 블럭에서 족보 모아풀기 작업하는 거 끝나면 바로 이어서 작업해줘.」",
+      "scope": "오늘 학습 선행 문항 토글(과목별 저장)·모아풀기 선행 문항 포함 체크, planning/mix/content/root_learning routes, RootToday/RootLearning/RootBatch, 검사·문서",
+      "evidence_version": 2,
+      "source_hash": "f8709f3a54be9adb3d112776452509bc39f054243ad4e1fc0d0cc722c8ca720f",
+      "plan_hash": "5725b8fe617063ddefee6bce7dc23722a6d78ae8af5d505cbc0d9d40361cfcd8",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "ca419fdeb84a4e6bb45cacd85b6190297ec869da9addb7c1d9127e9b4874a68a"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-18T14:51:34.707461+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_multi-review/server/.venv/Scripts/python.exe",
+        "server/tests/test_root_prereq_toggle.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "f8709f3a54be9adb3d112776452509bc39f054243ad4e1fc0d0cc722c8ca720f",
+      "plan_hash": "5725b8fe617063ddefee6bce7dc23722a6d78ae8af5d505cbc0d9d40361cfcd8",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-prereq-toggle/1795013494183108800-regression.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-18T14:51:50.513999+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f8709f3a54be9adb3d112776452509bc39f054243ad4e1fc0d0cc722c8ca720f",
+      "plan_hash": "5725b8fe617063ddefee6bce7dc23722a6d78ae8af5d505cbc0d9d40361cfcd8",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-prereq-toggle/1795013495421678100-web.log",
+      "web_artifact": "e57c810283d4c0a8ced1d43ceabe2e180d9db55b59c728316e811977adb79604",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-18T14:52:13.017636+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_multi-review/server/.venv/Scripts/python.exe",
+        "server/tests/test_root_prereq_toggle.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f8709f3a54be9adb3d112776452509bc39f054243ad4e1fc0d0cc722c8ca720f",
+      "plan_hash": "5725b8fe617063ddefee6bce7dc23722a6d78ae8af5d505cbc0d9d40361cfcd8",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-prereq-toggle/1795013525477480900-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-18T14:52:13.018796+00:00"
+}

@@ -148,13 +148,15 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const focusSeq=useRef(0);
   // Start waits for the newest choice: the server plans from what it has stored.
   const [focusing,setFocusing]=useState(false);
-  async function changeFocus(tiers:RootTierName[]) {
+  async function changeFocus(tiers:RootTierName[],prereqs?:boolean) {
     const current=info;
     if(!current?.focus)return;
     const seq=++focusSeq.current;
-    setInfo({...current,focus:{...current.focus,tiers}});setFocusing(true);
+    // 선행 문항(2026-11-18-prereq-toggle)도 같은 저장값이다. 생략하면 서버가 지난 선택을 둔다.
+    setInfo({...current,focus:{...current.focus,tiers,...(prereqs===undefined?{}:{prereqs})}});setFocusing(true);
     try{
-      const next=await api<RootOverview>(base+'/focus',{method:'PUT',body:JSON.stringify({requestId:crypto.randomUUID(),tiers})});
+      const next=await api<RootOverview>(base+'/focus',{method:'PUT',body:JSON.stringify({requestId:crypto.randomUUID(),tiers,
+        ...(prereqs===undefined?{}:{prereqs})})});
       // 미리 받은 문항은 옛 뒷부분이다. 비우고 남은 수를 다시 읽는다.
       forget();
       if(seq===focusSeq.current){setInfo(next);setRefocused(v=>v+1);}
@@ -261,7 +263,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
     </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo={mapEntry.current?'back':'today'} onBack={mapBack}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
     :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={order=>{if(!focusing)void begin(order);}} onMap={()=>void showMap()}
-      onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}
+      onFocus={(tiers,prereqs)=>void changeFocus(tiers,prereqs)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}
       resumeCount={info.sessionId&&openLeft?.id===info.sessionId?openLeft.left:undefined} onBack={leave}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
 }

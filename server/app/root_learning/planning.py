@@ -34,7 +34,7 @@ def existence_links(doc, records):
     return {q: sorted(ys) for q, ys in sorted(links.items()) if ys}
 
 
-def plan(doc, events, available, now, policy, focus=None, new_goals=None, links=None):
+def plan(doc, events, available, now, policy, focus=None, new_goals=None, links=None, prereqs=True):
     """`focus`, a subset of `available`, narrows the candidates only (오늘 학습 중요도 필터). An unassessed question
     prerequisite of a planned task is brought forward by order_plan even outside the focus; one that is not available
     is passed over. A target prerequisite brings in (「명시적 선행 연결」) an existence goal from `available` and any other
@@ -44,10 +44,14 @@ def plan(doc, events, available, now, policy, focus=None, new_goals=None, links=
     planned question presupposes, not its whole prior goal (docs/changes/2026-11-18-existence-prereq-by-question).
 
     오늘 학습 이어 풀기(docs/changes/2026-11-14-continuous-today): `new_goals` fixes the new-goal quota (capped by
-    the prepared unseen goals) for a stream that 「더 풀기」 lengthened. Without it the quota is the former one."""
+    the prepared unseen goals) for a stream that 「더 풀기」 lengthened. Without it the quota is the former one.
+
+    선행 문항 포함/미포함(docs/changes/2026-11-18-prereq-toggle): with `prereqs` false and a focus, prerequisites come in
+    only from the focus. One outside it counts as not available: passed over, never holding back the task after it."""
     if per_task(doc):
-        return plan_tasks(doc, events, available, now, policy, focus, new_goals, links)
+        return plan_tasks(doc, events, available, now, policy, focus, new_goals, links, prereqs)
     pool = available if focus is None else focus
+    reach = available if prereqs or focus is None else focus
     rows, states = replay(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
     owners = direction_owners(doc)
@@ -133,7 +137,7 @@ def plan(doc, events, available, now, policy, focus=None, new_goals=None, links=
     if doc.get('generation_policy')=='root-generation/2':
         from studyez_contracts.roots.generation_v2 import order_plan
         assessed={t['question_id']for t in doc['tasks']if states.get(t['direction_id'],{}).get('rating')is not None}
-        result=order_plan(doc,result,available,assessed)
+        result=order_plan(doc,result,reach,assessed)
     return {'tasks': result, 'newGoalQuota': quota, 'days': days, 'habitualTasks': habitual,
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(
@@ -170,7 +174,7 @@ def spread_directions(tasks):
     return [task for _, _, task in sorted(ranked, key=lambda row: row[:2])]
 
 
-def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, links=None):
+def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, links=None, prereqs=True):
     """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
 
     Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
@@ -186,6 +190,8 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, 
     authored = {t['target_id']: t for t in target_list}
     position = {t['task_id']: i for i, t in enumerate(doc['tasks'])}
     pool = available if focus is None else focus
+    # 선행을 끌어올 범위(2026-11-18-prereq-toggle): 끄면 필터 안에서만.
+    reach = available if prereqs or focus is None else focus
     candidates = [t for t in doc['tasks'] if t['task_id'] in pool and t['direction_id'] in owners]
     by_direction = defaultdict(list)
     for task in candidates:
@@ -219,7 +225,7 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, 
     existence = {(e['before_target'], e['after_target']) for e in doc['prerequisites'] if is_existence_edge(e)}
     prepared_tasks = defaultdict(list)
     for task in doc['tasks']:
-        if task['task_id'] in available and task['direction_id'] in owners:
+        if task['task_id'] in reach and task['direction_id'] in owners:
             prepared_tasks[task['direction_id']].append(task)
     target_tasks = defaultdict(list)
     for task in doc['tasks']:
@@ -306,7 +312,7 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, 
         emit(owner(task))
     from studyez_contracts.roots.generation_v2 import order_plan
     assessed = {t['question_id'] for t in doc['tasks'] if states.get(t['task_id'], {}).get('rating') is not None}
-    result = order_plan(doc, spread_directions(result), available, assessed)
+    result = order_plan(doc, spread_directions(result), reach, assessed)
     return {'tasks': result, 'newGoalQuota': quota, 'days': days, 'habitualTasks': habitual,
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(t['target_id'] not in prepared for t in target_list),

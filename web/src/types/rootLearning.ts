@@ -18,11 +18,13 @@ export type RootPlan = {tasks:{task_id:string; direction_id:string; question_id:
   preparedUnseen:number; unpreparedGoals:number; scopeNote:string};
 export const ROOT_TIERS=['Essential','Core','Important','Optional'] as const;
 export type RootTierName=typeof ROOT_TIERS[number];
-export type RootFocus={tiers:RootTierName[]; counts:Record<RootTierName,number>};
+export type RootFocus={tiers:RootTierName[]; counts:Record<RootTierName,number>;
+  /** 선행 문항 포함/미포함(2026-11-18-prereq-toggle). 없으면 포함. */
+  prereqs?:boolean};
 /** 모아풀기 시작 화면(2026-11-18-mix-options). 미열람·복습 대상·나중 — 강의 목록 칸과 같은 단위. */
 export type RootMixKind='unseen'|'due'|'later';
 export type RootMixOrder='ordered'|'random';
-export type RootMixOptions={tiers:RootTierName[]; unseen:boolean; ignoreSchedule:boolean; order:RootMixOrder};
+export type RootMixOptions={tiers:RootTierName[]; unseen:boolean; ignoreSchedule:boolean; order:RootMixOrder; prereqs?:boolean};
 export type RootMixInfo={revision:string; title:string; counts:Record<RootTierName,Record<RootMixKind,number>>;
   /** 오늘 안 끝난 모아풀기 회차. 같은 조건으로 시작하면 이어 푼다. */
   open:{sessionId:string; options:RootMixOptions; left:number}[];
