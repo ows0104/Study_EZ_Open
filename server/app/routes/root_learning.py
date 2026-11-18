@@ -167,7 +167,8 @@ def today_stream(db, row, user, when, configured):
     sessions = db.scalars(select(RootSession).where(RootSession.user_id == user.id,
         RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
-    return next((s for s in sessions if s.policy == configured), None)
+    # 모아풀기 회차(state.mix, docs/changes/2026-11-18-mix-options R7)는 오늘 학습 흐름이 아니다.
+    return next((s for s in sessions if s.policy == configured and not s.state.get('mix')), None)
 
 
 def replace_tasks(db, stream, tasks, session_state=None):
@@ -1193,3 +1194,103 @@ def lecture_map(subject: str, run_id: str, payload: Start, user: CurrentUser = D
         except IntegrityError:
             db.rollback()  # A concurrent view stored the same record.
     return map_payload(doc, [])
+
+
+# ── 모아풀기 시작 화면 선택지 (2026-11-18, docs/changes/2026-11-18-mix-options) ─────────────────
+# 강의마다 고른 조건의 과제로 모아풀기 회차를 연다. 회차는 기존 root_session 행이고 state.mix로 표시한다.
+# 오늘 학습 흐름(today_stream)은 이 회차를 건너뛴다. 풀이·되돌리기는 기존 sessions/{id} 경로 그대로.
+
+class MixStart(Start):
+    tiers: list[Literal['Essential', 'Core', 'Important', 'Optional']] = Field(min_length=1, max_length=4)
+    unseen: bool = False
+    ignoreSchedule: bool = False
+    order: Literal['ordered', 'random'] = 'ordered'
+
+
+def mix_inputs(db, row, user, when):
+    """(정책, 분류, 과제별 중요도). 내 문제는 넣지 않는다 — 강의 목록 칸과 같은 단위(R1)."""
+    from app.root_learning import mix
+    configured = policy.configured_policy()
+    if configured is None:
+        raise HTTPException(409, '초기 추천·복습 정책 선택 대기')
+    events = content.events_for(db, row.subject, row.run_id, user.id)
+    available, _ = content.availability(db, row, user.id)
+    # 복습일은 시험일에 맞춰 당겨진다(overview_data와 같다). 사본은 가벼운 문서의 지문 속성을 그대로 들고 간다.
+    document = copy.copy(row.document)
+    document['exam_date'] = current_exam_date(db, row)
+    classes = mix.classify(document, events, available, when, configured)
+    tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
+    return configured, classes, tiers
+
+
+def mix_sessions(db, row, user, when, configured):
+    """오늘 학습일의 모아풀기 회차, 최근 것부터."""
+    day = policy.study_day(when, configured).isoformat()
+    sessions = db.scalars(select(RootSession).where(RootSession.user_id == user.id, RootSession.subject == row.subject,
+        RootSession.run_id == row.run_id, RootSession.revision == row.revision, RootSession.day == day)
+        .order_by(RootSession.created_at.desc())).all()
+    return [s for s in sessions if s.policy == configured and s.state.get('mix')]
+
+
+def open_mix_sessions(db, row, user, when, configured):
+    return [s for s in mix_sessions(db, row, user, when, configured) if s.state['index'] < len(s.tasks)]
+
+
+@router.get(BASE + '/mix')
+def mix_overview(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    """모아풀기 시작 화면의 강의 한 줄(읽기 전용): 중요도마다 미열람·복습 대상·나중 수, 오늘 안 끝난 모아풀기 회차."""
+    from app.root_learning import mix
+    row = active(db, subject, run_id, user)
+    when = now()
+    configured, classes, tiers = mix_inputs(db, row, user, when)
+    sessions = mix_sessions(db, row, user, when, configured)
+    # closed: 오늘 다 푼 모아풀기 회차. 새로고침 전에 끝낸 강의도 마침 화면에 결과로 남긴다(#219 e198b5c8와 같은 뜻).
+    return {'revision': row.revision, 'title': row.document['title'], 'counts': mix.counts(classes, tiers),
+            'open': [{'sessionId': s.id, 'options': s.state['mix'], 'left': len(s.tasks) - s.state['index']}
+                     for s in sessions if s.state['index'] < len(s.tasks)],
+            'closed': [{'sessionId': s.id, 'options': s.state['mix'], 'count': len(s.tasks)}
+                       for s in sessions if s.state['index'] >= len(s.tasks)]}
+
+
+@router.post(BASE + '/mix-sessions')
+def mix_start(subject: str, run_id: str, payload: MixStart, user: CurrentUser = Depends(require_approved_user),
+              db: Session = Depends(get_db)):
+    from app.root_learning import mix
+    row = active(db, subject, run_id, user)
+    if len(set(payload.tiers)) != len(payload.tiers):
+        raise HTTPException(422, '같은 중요도가 두 번 있습니다.')
+    request = payload.model_dump()
+    previous = db.get(RootEvent, (user.id, payload.requestId))
+    if previous:
+        if (previous.kind, previous.subject, previous.run_id, previous.payload.get('_request')) != ('start', subject, run_id, request):
+            raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
+        return previous.result
+    when = now()
+    configured, classes, tiers = mix_inputs(db, row, user, when)
+    options = {'tiers': [t for t in policy.TIERS if t in payload.tiers], 'unseen': payload.unseen,
+               'ignoreSchedule': payload.ignoreSchedule, 'order': payload.order}
+    day = policy.study_day(when, configured).isoformat()
+    # 같은 학습일·같은 조건의 안 끝난 회차는 그대로 잇는다(R6).
+    session = next((s for s in open_mix_sessions(db, row, user, when, configured) if s.state['mix'] == options), None)
+    if session is None:
+        tasks = mix.select(row.document, classes, tiers, options['tiers'], payload.unseen, payload.ignoreSchedule)
+        if not tasks:
+            raise HTTPException(409, '고른 조건에 맞는 문항이 없습니다.')
+        if payload.order == 'random':
+            tasks = mix.shuffled(row.document, tasks, document_hash([user.id, row.revision, day, payload.requestId]))
+        seen = db.get(RootEvent, (user.id, map_view_id(subject, run_id, row.revision, day))) is not None
+        fresh = {'index': 0, 'reveals': {}, 'mapSeen': seen, 'undo': None, 'exposedRelations': [], 'mix': options}
+        identity = document_hash([user.id, subject, run_id, row.revision, day, configured, tasks,
+                                  {'mix': options, 'request': payload.requestId}])
+        session = RootSession(id=identity, user_id=user.id, subject=subject, run_id=run_id, revision=row.revision,
+                              day=day, policy=configured, tasks=tasks, state=fresh, version=0)
+        db.add(session)
+    result = {'sessionId': session.id, 'version': session.version, 'count': len(session.tasks)}
+    db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id=session.id, subject=subject,
+        run_id=run_id, revision=row.revision, kind='start', payload={'_request': request}, result=result, created_at=when))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, '다른 탭에서 시작되었습니다. 다시 불러오세요.')
+    return result

@@ -19,6 +19,15 @@ export type RootPlan = {tasks:{task_id:string; direction_id:string; question_id:
 export const ROOT_TIERS=['Essential','Core','Important','Optional'] as const;
 export type RootTierName=typeof ROOT_TIERS[number];
 export type RootFocus={tiers:RootTierName[]; counts:Record<RootTierName,number>};
+/** 모아풀기 시작 화면(2026-11-18-mix-options). 미열람·복습 대상·나중 — 강의 목록 칸과 같은 단위. */
+export type RootMixKind='unseen'|'due'|'later';
+export type RootMixOrder='ordered'|'random';
+export type RootMixOptions={tiers:RootTierName[]; unseen:boolean; ignoreSchedule:boolean; order:RootMixOrder};
+export type RootMixInfo={revision:string; title:string; counts:Record<RootTierName,Record<RootMixKind,number>>;
+  /** 오늘 안 끝난 모아풀기 회차. 같은 조건으로 시작하면 이어 푼다. */
+  open:{sessionId:string; options:RootMixOptions; left:number}[];
+  /** 오늘 다 푼 모아풀기 회차. 새로고침 전에 끝낸 강의를 마침 화면에 남긴다. 옛 서버는 보내지 않는다. */
+  closed?:{sessionId:string; options:RootMixOptions; count:number}[]};
 /** 강의 목록 카드 열(문항 단위). Quiz Bank `CardProgress`와 같은 단계 이름. */
 export type RootQuestionProgress = {total:number; unseen:number; recognized:number; retrieving:number; retained:number; reviewDue:number};
 export type RootOverview = {revision:string; title:string; policyReady:boolean; message?:string;
