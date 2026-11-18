@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { SlidePreloader } from '../slidePreload';
-import type { RootAction, RootFrame, RootOverview, RootView } from '../types/rootLearning';
+import type { RootAction, RootFrame, RootOverview, RootSummary, RootView } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
 import { useRootStudyWrites } from './useRootStudyWrites';
 import { warm } from './useRootFrames';
@@ -20,7 +20,7 @@ import './root-batch.css';
  *
  * 서버 회차는 강의 단위 그대로다. 고른 강의마다 기존 회차를 열고, 이 화면이 문항을 번갈아 낸다.
  * 한 강의 안의 순서(선행·슬라이드 흐름)는 서버가 정한 그대로이고, 기록·복습일은 강의별로 쌓인다.
- * 다음 문항은 남은 비율이 가장 큰 강의가 낸다 — 강의들이 비슷한 때에 끝난다.
+ * 다음 문항은 무작위 강의가 낸다(남은 문항 수에 비례) — 강의마다 진행도는 따로 쌓이고, 내는 순서만 섞인다.
  * 되돌리기(Z)는 강의를 가리지 않고 방금 한 행동부터 거꾸로 돌린다.
  */
 
@@ -31,6 +31,8 @@ const sessionPath=(id:string)=>`/api/root-learning/sessions/${encodeURIComponent
 type Lane = MixLecture & {key:string; base:string;
   /** 시작 화면: 그 강의의 오늘 현황. */
   info?:RootOverview; left?:number; error?:string;
+  /** 오늘 목록을 이미 다 푼 강의. 섞을 문항은 없지만 마침 화면에 그 강의의 결과로 남는다. */
+  closed?:{count:number;summary:RootSummary|null};
   /** 풀이 중: 그 강의의 회차. */
   view?:RootView};
 /** 화면 전체의 되돌리기 한 칸. before가 있으면 서버 확인 전에 그 화면을 바로 그린다. */
@@ -64,16 +66,19 @@ function useLaneFrames() {
   return {ensure,get,forget};
 }
 
-/** 남은 비율이 가장 큰 강의. 같으면 고른 순서. 다 끝났으면 null. */
-export function nextLane(lanes:Pick<Lane,'key'|'view'>[]):string|null {
-  let best:string|null=null,score=-1;
-  for(const lane of lanes) {
+/**
+ * 다음 문항을 낼 강의를 무작위로 고른다(2026-11-18 사용자 「병렬처리인데 랜덤인 느낌」).
+ * 남은 문항 수에 비례해 뽑으므로, 오늘 문항 전체를 강의 안 순서는 지킨 채 고르게 섞은 것과 같다. 다 끝났으면 null.
+ */
+export function nextLane(lanes:Pick<Lane,'key'|'view'>[],random:()=>number=Math.random):string|null {
+  const open=lanes.flatMap(lane=>{
     const v=lane.view;
-    if(!v||v.finished||!v.count)continue;
-    const left=(v.count-Math.min(v.position,v.count))/v.count;
-    if(left>score){score=left;best=lane.key;}
-  }
-  return best;
+    const left=v&&!v.finished?Math.max(0,v.count-v.position):0;
+    return left>0?[{key:lane.key,left}]:[];
+  });
+  let pick=random()*open.reduce((sum,l)=>sum+l.left,0);
+  for(const l of open){if(pick<l.left)return l.key;pick-=l.left;}
+  return open.at(-1)?.key??null;
 }
 
 export function RootBatchPage() {
@@ -114,16 +119,18 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
     const read=await Promise.all(lanesRef.current.map(async l=>{
       try{
         const info=await api<RootOverview>(l.base);
-        if(!info.policyReady)return {...l,info,left:0,error:info.message||'지금 열 수 없습니다.',view:undefined};
+        if(!info.policyReady)return {...l,info,left:0,error:info.message||'지금 열 수 없습니다.',view:undefined,closed:undefined};
         if(info.sessionId){
           const v=await api<RootView>(sessionPath(info.sessionId));
-          return {...l,info,left:v.finished?0:Math.max(0,v.count-v.position),error:undefined,view:undefined};
+          return {...l,info,left:v.finished?0:Math.max(0,v.count-v.position),error:undefined,view:undefined,
+            closed:v.finished?{count:v.count,summary:v.summary}:undefined};
         }
         // 오늘 목록을 다 푼 강의(todayDone)는 「더 풀기」 자리다. 모아풀기는 오늘 목록만 섞는다.
-        return {...l,info,left:info.todayDone?0:info.plan?.tasks.length??0,error:undefined,view:undefined};
+        return {...l,info,left:info.todayDone?0:info.plan?.tasks.length??0,error:undefined,view:undefined,
+          closed:info.todayDone?{count:info.todayDone,summary:info.summary}:undefined};
       }catch(e){
         const message=e instanceof ApiError&&e.status===404?'공개된 Main-Quiz가 없습니다.':(e as Error).message;
-        return {...l,info:undefined,left:0,error:message,view:undefined};
+        return {...l,info:undefined,left:0,error:message,view:undefined,closed:undefined};
       }
     }));
     lanesRef.current=read;setLoading(false);redraw(v=>v+1);
@@ -255,6 +262,9 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
 
   const solving=phase==='solve'?lanes.filter(l=>l.view):[];
   const allDone=solving.length>0&&solving.every(l=>l.view!.finished);
+  // 마침 화면: 이번에 푼 강의와, 새로고침 전에 이미 오늘 목록을 끝낸 강의(closed)를 함께 보인다.
+  const results=phase==='solve'?lanes.filter(l=>l.view||l.closed).map(l=>({key:l.key,title:l.info?.title??l.runId,
+    count:l.view?.count??l.closed!.count,summary:l.view?.summary??l.closed!.summary})):[];
   const cur=lane(currentRef.current);
   const total=solving.reduce((sum,l)=>sum+l.view!.count,0);
   const done=solving.reduce((sum,l)=>sum+Math.min(l.view!.position,l.view!.count),0);
@@ -302,12 +312,12 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
     :allDone?(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>
     :<section className="mq-done">
       <div className="mq-today mq-done-card"><div className="mq-today-text"><h2>오늘 모아풀기를 마쳤어요</h2>
-        <p><b>{solving.length}</b>개 강의 · <b>{total}</b>문항</p></div>
+        <p><b>{results.length}</b>개 강의 · <b>{results.reduce((s,r)=>s+r.count,0)}</b>문항</p></div>
         <div className="root-actions"><button className="pill-button" disabled={writes.blocked||!stack.current.length} onClick={()=>undo()}>되돌리기 <kbd>Z</kbd></button>
           <button className="mq-start-button" onClick={()=>navigate('/study')}>강의 목록으로</button></div></div>
       <ul className="mq-mix-list" aria-label="강의별 결과">
-        {solving.map(l=><li key={l.key}><span className="mq-mix-title">{l.info?.title??l.runId}</span>
-          <span className="mq-mix-count">{l.view!.count}문항 · 첫 학습 {l.view!.summary.learned}/{l.view!.summary.total} · 회상 가능 {l.view!.summary.recalled}</span></li>)}
+        {results.map(r=><li key={r.key}><span className="mq-mix-title">{r.title}</span>
+          <span className="mq-mix-count">{r.count}문항{r.summary?` · 첫 학습 ${r.summary.learned}/${r.summary.total} · 회상 가능 ${r.summary.recalled}`:''}</span></li>)}
       </ul>
       <UndoKey disabled={writes.blocked||!stack.current.length} onUndo={undo}/>
     </section>

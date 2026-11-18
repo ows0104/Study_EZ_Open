@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-18T01:53:30.868532+00:00",
-      "evidence": "2026-11-18 채팅: 「강의록 모아풀기 만들어줘.」 / 범위 질문에 「Main-Quiz 여러 강의 섞어 풀기」 선택, 「강의 목록형에서 선택해서 섞어서 풀 수 있게.」",
-      "scope": "웹만: RootBatch 새 화면(/study/mix), 강의 목록 Main-Quiz 행 체크, BankBatch onStart 이동, useRootFrames warm export, 검사 fixture·브라우저 검사. 서버·DB·프롬프트 변경 없음",
+      "at": "2026-11-18T02:38:44.029471+00:00",
+      "evidence": "2026-11-18 채팅: 「강의록 모아풀기 만들어줘.」 / 「강의 목록형에서 선택해서 섞어서 풀 수 있게.」 / 정정: 「잠만 모아풀기를 어떻게 생각하면 되냐면 강의록마다 진행도를 쌓는데, 그걸 섞어서 제시하는거야. 그니까 병렬처리인데 랜덤인 느낌으로 생각하면 될듯.」",
+      "scope": "웹만: RootBatch(/study/mix) 무작위 섞기(남은 문항 수 비례), 마침 화면에 이미 끝낸 강의 유지, 검사. 서버·DB·프롬프트 변경 없음",
       "evidence_version": 2,
-      "source_hash": "57f69a75d5b668522f1a2b9c3eef690e3e518dee6a6c50bc0edbe6c2e148f40a",
-      "plan_hash": "abe9590bb839d1f24cfc2cb8b2d84bc0dde8d1cf9b10ec8af12c2507e912ac9c",
+      "source_hash": "efedcc85a794a66907877082836b13d962b26508218442d32d6abc0fdfa9a884",
+      "plan_hash": "739fcc7e40b421f7a407d27c563e4b9433322de1da38cf2adf9f59475ea686b5",
       "inputs": [
         ".github",
         "bridge",
@@ -31,7 +31,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "e1add5eea61670a02501bb00a50575dbec5a2b23477d72978f66dbe9299bb09c"
+      "release_hash": "aed3fd0c8e6c16f9e7f83b04d8e66b89099dbb5f472e15921f56e489462a382c"
     }
   },
   "checks": [
@@ -69,6 +69,41 @@
       "log": "runs/_development/2026-11-18-main-quiz-batch/1794966824996019900-web.log",
       "web_artifact": "c722e58b2bbeb830c1f31fe663b63485a89faf8f4ecbfc1abd0d2cbed5c9c0e6",
       "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-18T02:38:56.016771+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "efedcc85a794a66907877082836b13d962b26508218442d32d6abc0fdfa9a884",
+      "plan_hash": "739fcc7e40b421f7a407d27c563e4b9433322de1da38cf2adf9f59475ea686b5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-main-quiz-batch/1794969526198828400-web.log",
+      "web_artifact": "468585a1ed40cceb19030106c0151da55e47fc7e81a37eed28fecec47be6e234",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
     }
   ],
   "review": null,
@@ -77,5 +112,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-18T01:53:57.370401+00:00"
+  "updated_at": "2026-11-18T02:38:59.079799+00:00"
 }
