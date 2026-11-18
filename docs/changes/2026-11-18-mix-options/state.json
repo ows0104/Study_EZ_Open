@@ -511,6 +511,326 @@
       "log": "runs/_development/2026-11-18-mix-options/1794973736910732900-web.log",
       "web_artifact": "6055c0445663a84a171ecb22a7bc61f2aca7cdcf1ecf481434ac804fdd0340e7",
       "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:33:18.055461+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_mix'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794979986046861000-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:33:23.700293+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','route_contract'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794979998799375100-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:33:31.665661+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_api'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980004492578000-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:33:41.081990+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_focus'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980012469091600-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:33:48.399477+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_photo_order'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980021845142200-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:33:56.115096+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_learning_v4'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980029198633600-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-18T05:34:04.739232+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_mine'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980036873836600-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-18T05:34:13.916903+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980045449419300-web.log",
+      "web_artifact": "6055c0445663a84a171ecb22a7bc61f2aca7cdcf1ecf481434ac804fdd0340e7",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-18T05:34:29.489066+00:00",
+      "command": [
+        "python",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-batch"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980054828023900-web.log",
+      "web_artifact": "6055c0445663a84a171ecb22a7bc61f2aca7cdcf1ecf481434ac804fdd0340e7",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-18T05:35:28.027807+00:00",
+      "command": [
+        "python",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8846739a15319578682bced941929df5c0f294556ae5e6a13bfecaf57c29cdfe",
+      "plan_hash": "a77e15ee70b9be0b9b333333b8f3d94f72943b7786589d6fb141b862d27d2c1f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-mix-options/1794980070378918800-web.log",
+      "web_artifact": "6055c0445663a84a171ecb22a7bc61f2aca7cdcf1ecf481434ac804fdd0340e7",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
     }
   ],
   "review": {
@@ -542,5 +862,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-18T03:49:36.301217+00:00"
+  "updated_at": "2026-11-18T05:35:28.152790+00:00"
 }
