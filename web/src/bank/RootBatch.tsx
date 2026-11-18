@@ -74,7 +74,7 @@ export function mixCount(mix:RootMixInfo|undefined,tiers:readonly RootTierName[]
 }
 
 const sameOptions=(a:RootMixOptions,b:RootMixOptions)=>a.unseen===b.unseen&&a.ignoreSchedule===b.ignoreSchedule
-  &&a.order===b.order&&a.tiers.join()===b.tiers.join();
+  &&a.order===b.order&&a.tiers.join()===b.tiers.join()&&!!a.prereqs===!!b.prereqs;
 
 /** 섞어서: 회차·자리마다 정해지는 값(FNV-1a). 새로고침해도 같은 순서로 번갈아 낸다. */
 function spread(text:string) {
@@ -131,6 +131,8 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   const [laneTiers,setLaneTiers]=useState<Record<string,RootTierName[]>>({});
   const [unseen,setUnseen]=useState(false);
   const [ignoreSchedule,setIgnoreSchedule]=useState(false);
+  // 선행 문항 포함(2026-11-18-prereq-toggle): 서버가 고른 문항의 선행 문항을 중요도 밖에서도 더한다.
+  const [prereqs,setPrereqs]=useState(false);
   const [order,setOrder]=useState<RootMixOrder>('ordered');
   const [perLecture,setPerLecture]=useState(false);
   const orderRef=useRef<RootMixOrder>('ordered');
@@ -170,7 +172,7 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   }
 
   const tiersOf=(key:string)=>laneTiers[key]??ALL;
-  const optionsOf=(key:string):RootMixOptions=>({tiers:tiersOf(key),unseen,ignoreSchedule,order});
+  const optionsOf=(key:string):RootMixOptions=>({tiers:tiersOf(key),unseen,ignoreSchedule,order,...(prereqs?{prereqs}:{})});
   const openOf=(l:Lane)=>l.mix?.open.find(o=>sameOptions(o.options,optionsOf(l.key)));
   /** 강의 줄의 수. 같은 조건으로 이어 풀 회차가 있으면 남은 수. */
   const countOf=(l:Lane)=>l.error||!l.mix||!tiersOf(l.key).length?0:openOf(l)?.left??mixCount(l.mix,tiersOf(l.key),unseen,ignoreSchedule);
@@ -359,6 +361,8 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
                 onChange={e=>setIgnoreSchedule(e.target.checked)}/>기존 학습률 무시</label>
               <label><input type="checkbox" checked={unseen} disabled={advancing}
                 onChange={e=>setUnseen(e.target.checked)}/>미열람 문항 보기</label>
+              <label><input type="checkbox" checked={prereqs} disabled={advancing}
+                onChange={e=>setPrereqs(e.target.checked)}/>선행 문항 포함</label>
             </div>
             <div className="mq-mix-modes">
               <div className="mq-mode" role="radiogroup" aria-label="문항 순서">

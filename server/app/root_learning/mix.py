@@ -65,11 +65,36 @@ def counts(classes, tiers):
     return out
 
 
-def select(doc, classes, tiers, chosen, unseen, ignore_schedule):
-    """고른 중요도 ∩ (복습 대상 ∪ 나중(기존 학습률 무시) ∪ 미열람(미열람 문항 보기)). 판 문서의 과제 순서."""
+def select(doc, classes, tiers, chosen, unseen, ignore_schedule, prereqs=False, links=None):
+    """고른 중요도 ∩ (복습 대상 ∪ 나중(기존 학습률 무시) ∪ 미열람(미열람 문항 보기)). 판 문서의 과제 순서.
+
+    선행 문항 포함(2026-11-18-prereq-toggle): 고른 과제의 문항 선행과 존재 연결(`links`, 문항 → 전제를 답하는 문항)을
+    따라가며, 미열람·복습 대상인 과제를 중요도·체크와 상관없이 더한다. 「나중」(이미 익힌 것)은 더하지 않는다."""
     kinds = {'due'} | ({'later'} if ignore_schedule else set()) | ({'unseen'} if unseen else set())
     chosen = set(chosen)
-    return [t for t in doc['tasks'] if classes.get(t['task_id']) in kinds and tiers.get(t['task_id'], 'Core') in chosen]
+    picked = {t['task_id'] for t in doc['tasks'] if classes.get(t['task_id']) in kinds and tiers.get(t['task_id'], 'Core') in chosen}
+    if prereqs and picked:
+        picked |= _prerequisites(doc, classes, picked, links or {})
+    return [t for t in doc['tasks'] if t['task_id'] in picked]
+
+
+def _prerequisites(doc, classes, picked, links):
+    """고른 과제에서 거슬러 올라가 닿는, 아직 익히지 않은(미열람·복습 대상) 선행 과제."""
+    deps = _question_dependencies(doc)
+    by_question = {}
+    for task in doc['tasks']:
+        if task['task_id'] in classes:
+            by_question.setdefault(task['question_id'], task['task_id'])
+    question_of = {t['task_id']: t['question_id'] for t in doc['tasks']}
+    out, stack = set(), list(picked)
+    while stack:
+        task_id = stack.pop()
+        before = list(deps.get(task_id, [])) + [by_question[q] for q in links.get(question_of.get(task_id), ()) if q in by_question]
+        for pre in before:
+            if pre not in picked and pre not in out and classes.get(pre) in ('unseen', 'due'):
+                out.add(pre)
+                stack.append(pre)
+    return out
 
 
 def _question_dependencies(doc):

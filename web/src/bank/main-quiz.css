@@ -174,6 +174,9 @@
 .mq-focus button.is-empty[aria-pressed="false"]{opacity:.6}
 .mq-focus button:disabled{cursor:default}
 .main-quiz-learning .mq-focus button[aria-pressed="false"]:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
+/* 선행 문항(2026-11-18-prereq-toggle): 중요도 칩과 떨어뜨린다. 칩이 모두 켜져 있으면 효과가 없어 흐리게. */
+.mq-focus .mq-focus-prereqs{margin-left:10px}
+.mq-focus .mq-focus-prereqs:disabled{opacity:.45}
 .mq-card-count{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;padding:0 7px;margin-left:2px;
   border-radius:7px;background:color-mix(in srgb,var(--on-accent) 22%,transparent);color:var(--on-accent);
   font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}

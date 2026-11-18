@@ -140,20 +140,21 @@ def overview_data(db, row, user, when):
     exam_date = current_exam_date(db, row)
     document = {**row.document, 'exam_date': exam_date}
     chosen = content.focus_for(db, row.subject, user.id)
+    prereqs = content.focus_prereqs(db, row.subject, user.id)
     tiers = content.task_tiers(mine_row.document, state.personal_tiers(row.document, events))
     narrowed = len(chosen) < len(policy.TIERS)
     # 오늘 학습 이어 풀기(2026-11-14): 칩 조합과 상관없이 오늘 흐름 하나를 이어 푼다. 끝났으면 「더 풀기」(start)가 뒤에 붙인다.
     pending = stream if stream is not None and stream.state['index'] < len(stream.tasks) else None
     focused = {t for t in mine_ready if tiers[t] in chosen} if narrowed else None
     planned = planning.plan({**mine_row.document, 'exam_date': exam_date}, events, mine_ready, when, configured, focus=focused,
-                            links=content.existence_links(db, row))
+                            links=content.existence_links(db, row), prereqs=prereqs)
     counted = {**planned, 'tasks': [t for t in planned['tasks'] if not mine.is_mine(t['task_id'])]}
     # Optional 계산 제외(2026-11-13): 집계만 거른다. available·계획은 그대로다(선행 문항 500 재발 방지).
     skip = content.optional_excluded(db, user.id)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
             'scope': content.learner_scope(row.document), 'summary': state.summary(document, events, available, when, configured, skip),
             'plan': planned,
-            'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
+            'focus': {'tiers': chosen, 'prereqs': prereqs, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
             'questionProgress': state.question_progress(document, events, available, when, configured, counted, skip),
             'sessionId': pending.id if pending else None, 'todayDone': stream.state['index'] if stream is not None else 0,
             # 사진 반입 판이면 시작 화면에 「순서대로/랜덤」을 보인다. 진행 중 회차의 지금 순서도 함께 준다.
@@ -214,12 +215,13 @@ def refocus_stream(db, doc, user, when):
     mine_doc, available, _ = with_mine(db, doc, user.id, events)
     document = {**mine_doc.document, 'exam_date': current_exam_date(db, doc)}
     chosen = content.focus_for(db, doc.subject, user.id)
+    prereqs = content.focus_prereqs(db, doc.subject, user.id)
     tiers = content.task_tiers(mine_doc.document, state.personal_tiers(doc.document, events))
     focused = {t for t in available if tiers[t] in chosen} if len(chosen) < len(policy.TIERS) else None
     links = content.existence_links(db, doc)
-    planned = planning.plan(document, morning, available, when, configured, focus=focused, links=links)
+    planned = planning.plan(document, morning, available, when, configured, focus=focused, links=links, prereqs=prereqs)
     if stream.state.get('extraGoals'):
-        planned = planning.plan(document, morning, available, when, configured, focus=focused, links=links,
+        planned = planning.plan(document, morning, available, when, configured, focus=focused, links=links, prereqs=prereqs,
                                 new_goals=planned['newGoalQuota'] + stream.state['extraGoals'])
     rest = [t for t in planned['tasks'] if t['task_id'] not in seen]
     if stream.state.get('order') == 'random' and orderable(doc.document):
@@ -445,6 +447,10 @@ def start(subject: str, run_id: str, payload: StartSession, user: CurrentUser = 
         if len(info['focus']['tiers']) < len(policy.TIERS):
             fresh['focus'] = info['focus']['tiers']
             key.append({'focus': info['focus']['tiers']})
+            # 선행 문항 미포함(2026-11-18-prereq-toggle)은 다른 회차다. 기본(포함)은 예전 ID 그대로.
+            if not info['focus'].get('prereqs', True):
+                fresh['prereqs'] = False
+                key.append({'prereqs': False})
         if photo and payload.order == 'random':
             # 랜덤 회차는 순서대로 회차와 다른 회차다. seed는 사용자·판·학습일 — 같은 날 다시 시작해도 같은 순서.
             key.append({'order': 'random'})
@@ -889,6 +895,8 @@ def save_optional(payload: RootOptional, user: CurrentUser = Depends(require_app
 
 class RootFocus(Start):
     tiers: list[Literal['Essential', 'Core', 'Important', 'Optional']] = Field(min_length=1, max_length=4)
+    # 선행 문항 포함/미포함(2026-11-18-prereq-toggle). 생략하면 지난 선택을 그대로 둔다.
+    prereqs: bool | None = None
 
 
 @router.put(BASE + '/focus')
@@ -898,17 +906,21 @@ def save_focus(subject: str, run_id: str, payload: RootFocus,
     if len(set(payload.tiers)) != len(payload.tiers):
         raise HTTPException(422, '같은 중요도가 두 번 있습니다.')
     request = payload.model_dump()
+    if request['prereqs'] is None:
+        request.pop('prereqs')  # 예전 요청과 같은 모양
     previous = db.get(RootEvent, (user.id, payload.requestId))
     if previous:
         if previous.kind != 'focus' or previous.payload.get('_request') != request:
             raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
         return overview_data(db, doc, user, now())
     tiers = [t for t in policy.TIERS if t in payload.tiers]
+    prereqs = content.focus_prereqs(db, subject, user.id) if payload.prereqs is None else payload.prereqs
     seq = 1 + max((e.payload.get('seq', 0) for e in content.focus_events(db, subject, user.id)), default=0)
     when = now()
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
-                     revision=doc.revision, kind='focus', payload={'_request': request, 'tiers': tiers, 'seq': seq},
-                     result={'tiers': tiers}, created_at=when))
+                     revision=doc.revision, kind='focus',
+                     payload={'_request': request, 'tiers': tiers, 'prereqs': prereqs, 'seq': seq},
+                     result={'tiers': tiers, 'prereqs': prereqs}, created_at=when))
     db.flush()
     refocus_stream(db, doc, user, when)
     try:
@@ -1207,6 +1219,8 @@ class MixStart(Start):
     unseen: bool = False
     ignoreSchedule: bool = False
     order: Literal['ordered', 'random'] = 'ordered'
+    # 선행 문항 포함(2026-11-18-prereq-toggle): 고른 문항의 선행 문항을 중요도·체크 밖에서도 함께 낸다.
+    prereqs: bool = False
 
 
 def mix_inputs(db, row, user, when):
@@ -1262,6 +1276,8 @@ def mix_start(subject: str, run_id: str, payload: MixStart, user: CurrentUser = 
     if len(set(payload.tiers)) != len(payload.tiers):
         raise HTTPException(422, '같은 중요도가 두 번 있습니다.')
     request = payload.model_dump()
+    if not request['prereqs']:
+        request.pop('prereqs')  # 예전 요청과 같은 모양
     previous = db.get(RootEvent, (user.id, payload.requestId))
     if previous:
         if (previous.kind, previous.subject, previous.run_id, previous.payload.get('_request')) != ('start', subject, run_id, request):
@@ -1271,11 +1287,14 @@ def mix_start(subject: str, run_id: str, payload: MixStart, user: CurrentUser = 
     configured, classes, tiers = mix_inputs(db, row, user, when)
     options = {'tiers': [t for t in policy.TIERS if t in payload.tiers], 'unseen': payload.unseen,
                'ignoreSchedule': payload.ignoreSchedule, 'order': payload.order}
+    if payload.prereqs:
+        options['prereqs'] = True  # 끈 회차는 예전 조건 그대로라 열린 회차를 잇는다.
     day = policy.study_day(when, configured).isoformat()
     # 같은 학습일·같은 조건의 안 끝난 회차는 그대로 잇는다(R6).
     session = next((s for s in open_mix_sessions(db, row, user, when, configured) if s.state['mix'] == options), None)
     if session is None:
-        tasks = mix.select(row.document, classes, tiers, options['tiers'], payload.unseen, payload.ignoreSchedule)
+        tasks = mix.select(row.document, classes, tiers, options['tiers'], payload.unseen, payload.ignoreSchedule,
+                           prereqs=payload.prereqs, links=content.existence_links(db, row) if payload.prereqs else None)
         if not tasks:
             raise HTTPException(409, '고른 조건에 맞는 문항이 없습니다.')
         if payload.order == 'random':

@@ -32,8 +32,10 @@ function Stat({label,value,total,tone}:{label:string;value:number;total?:number;
  * 해야 할 일(오늘 학습)을 한 장의 카드에 두고, 설명·정책·판 정보는 접어 둔다.
  */
 /** 오늘 학습 중요도 필터(2026-11-12). 이름과 준비된 과제 수만. 마지막 남은 칩은 끌 수 없다. */
-function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;onChange:(tiers:RootTierName[])=>void}) {
+function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;onChange:(tiers:RootTierName[],prereqs?:boolean)=>void}) {
   const on=new Set(focus.tiers);
+  // 선행 문항(2026-11-18-prereq-toggle): 고른 중요도 밖의 선행 문항을 끌어올지. 모두 켜져 있으면 밖이 없다.
+  const prereqs=focus.prereqs!==false,narrowed=on.size<ROOT_TIERS.length;
   return <div className="mq-focus" role="group" aria-label="중요도">
     {ROOT_TIERS.map(tier=>{
       const pressed=on.has(tier),last=pressed&&on.size===1;
@@ -42,12 +44,14 @@ function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;
         onClick={()=>onChange(ROOT_TIERS.filter(t=>t===tier?!pressed:on.has(t)))}>
         {pressed&&<Icon.check/>}{tier}<b>{focus.counts[tier]}</b></button>;
     })}
+    <button type="button" className="mq-focus-prereqs" aria-pressed={prereqs} disabled={disabled||!narrowed}
+      onClick={()=>onChange(focus.tiers,!prereqs)}>{prereqs&&<Icon.check/>}선행 문항</button>
   </div>;
 }
 
 export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin,resumeCount,onBack}:{info:RootOverview;onStart:(order?:QuizOrder)=>void;disabled:boolean;
   /** 개념 지도는 회차가 없으면 쓰기 큐를 쓰지 않아, 보관된 충돌이 있어도 열린다(2026-11-12). */
-  mapDisabled?:boolean;starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;
+  mapDisabled?:boolean;starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[],prereqs?:boolean)=>void;
   /** 진행 중 회차의 남은 문항 수. 읽는 동안은 undefined. */
   resumeCount?:number;onBack?:()=>void;
   /** 중요도 저장·재계획 응답 대기 중: 카드 수를 흐리게 둔다. */
