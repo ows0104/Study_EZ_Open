@@ -150,7 +150,7 @@ export function PreviewAction({
       return;
     }
     setBusy(mode);
-    if (mode === "personal") notePreviewAction(base, "create");
+    notePreviewAction(base, mode === "personal" ? "create" : "screate");
     try {
       const template = mode === "shared" ? await readSharedPreviewPrompt() : promptStore.template;
       const sources = [notesPrev, ...detail.files.filter((file) => file.kind === "jokbo")];

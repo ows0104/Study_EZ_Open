@@ -10,6 +10,7 @@ import { usePersonalPrompt } from "../lecture/usePersonalPrompt";
 import type { PreviewProvider } from "../types/lectures";
 import { ActionCard, PanelGroup } from "./panelShared";
 import { MyLinkEditor } from "./MyLinkEditor";
+import { notePreviewAction } from "../usage";
 
 /** 올해 강의록으로 복습한다. 예습 대화와 문제은행에서 독립된 개인 대화다. */
 export function ReviewAction({ lecture, detail, base, onError, trailing, open }: {
@@ -35,6 +36,7 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
   async function start() {
     if (!notes || busy || !promptStore.loaded) return;
     setBusy(true);
+    notePreviewAction(base, "rcreate");
     try {
       const sources = [notes, ...detail.files.filter((file) => file.kind === "jokbo")];
       const files = await Promise.all(sources.map(async (file) => {
@@ -63,7 +65,8 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
       {/* C안(2026-11-07): 왼쪽은 처음엔 만들기(＋), 그 뒤엔 열기(↗). ▾에 새 대화 만들기·내 프롬프트 수정. */}
       {saved ? (
         <ChatSplit tone="review" linked
-          main={<a className="chat-split-main" href={saved.conversationUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span>개인 대화</a>}
+          main={<a className="chat-split-main" href={saved.conversationUrl} target="_blank" rel="noreferrer"
+            onClick={() => notePreviewAction(base, "rmine")}><span aria-hidden="true">↗</span>개인 대화</a>}
           onRemake={notes && installed ? () => void start() : undefined}
           remakeDisabled={busy || !compatible || !promptStore.loaded}
           onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt}

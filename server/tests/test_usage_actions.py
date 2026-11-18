@@ -57,6 +57,39 @@ def main():
     check('a saved private URL is a separate confirmation', response.status_code == 200
           and person(board())['activities']['personal_preview_saved']['count'] == 1)
     check('catalog and values never expose private URLs', url not in str(board())+str(detail()))
+    # 2026-11-18: 공통 예습 대화 만들기·복습 대화 만들기·복습 링크 열기는 서로·예습 갈래와 섞이지 않는다.
+    for kind in ['screate','rcreate','rcreate','rmine']:
+        check(f'{kind} goes through the same route', client.post(path+'/preview-open',headers=ADMIN,json={'kind':kind}).status_code==204)
+    current=person(board()); lecture=detail()['lectures'][0]['activities']
+    check('shared creation, review creation and review opens are separate actions',
+          current['activities']['shared_preview_create']['count']==1 and current['activities']['personal_review_create']['count']==1
+          and current['activities']['personal_review_open']['count']==1 and current['previewCreates']==1
+          and current['opens']=={'share':1,'mine':1})
+    check('lifetime detail keeps each review creation attempt', lecture['personal_review_create']['count']==2
+          and lecture['shared_preview_create']['count']==1 and lecture['personal_review_open']['count']==1)
+    review_url='https://chatgpt.com/c/00000000-0000-0000-0000-000000000002'
+    check('review link save is accepted', client.put(path+'/my-review',headers=ADMIN,
+          json={'provider':'chatgpt','conversationUrl':review_url}).status_code==200)
+    current=person(board())
+    check('a saved review URL is counted apart from preview links', current['activities']['personal_review_saved']['count']==1
+          and current['activities']['personal_preview_saved']['count']==1
+          and detail()['lectures'][0]['activities']['personal_review_saved']['count']==1)
+    check('review URL is never exposed', review_url not in str(board())+str(detail()))
+    from app.models.root_learning import RootEvent
+    root_total=lambda acts: sum(acts[k]['count'] for k in acts if k.startswith('root_'))
+    root_before=root_total(person(board())['activities'])
+    with SessionLocal() as db:
+        for n,kind in enumerate(['skip','exclude','exclude','mine','memo','map_view','publication','focus','map']):
+            db.add(RootEvent(user_id=LOCAL_TEST_USER_ID,request_id=f'usage-kind-{n}',session_id='',subject=NOW_SUBJECT,
+                             run_id=NOW_RUN,revision='r',kind=kind,payload={},result={}))
+        db.commit()
+    current=person(board())['activities']
+    check('stored Main-Quiz actions are counted', current['root_skip']['count']==1 and current['root_exclude']['count']==2
+          and current['root_mine']['count']==1 and current['root_memo']['count']==1 and current['root_map_view']['count']==1)
+    check('runner publication and subject settings are not counted as personal actions',
+          root_total(current)-root_before==6)
+    check('no file purpose is labelled as wholly unknown', all('미상' not in a['label'] for a in actions.catalog())
+          and all('미상' not in g['label'] for g in actions.ACTION_GROUPS))
     data=board()
     check('every response value has its registered label and unit', set(person(data)['activities']) == {a['key'] for a in data['activityCatalog']}
           and all(a['label'] and a['summaryUnit'] and a['detailUnit'] for a in data['activityCatalog']))
