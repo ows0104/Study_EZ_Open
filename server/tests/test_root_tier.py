@@ -52,7 +52,8 @@ assert action(client, sid, 'g1', 'rate', selfRating='Good').status_code == 200
 with SessionLocal() as db:
     rated = db.get(RootEvent, ('a', 'g1')).payload
     stored = db.scalars(select(RootContent)).first().document
-assert rated['ratingPolicy'] == 'roots-four-rating/3' and rated['targetParameters']['tierTargets'] == DEFAULT['mastery']['tierTargets']
+assert rated['curveParameters'] == policy.CURVE
+assert rated['ratingPolicy'] == 'roots-four-rating/4' and rated['targetParameters']['tierTargets'] == DEFAULT['mastery']['tierTargets']
 assert all(rated['targetParameters'][k] == v for k, v in policy.ROOT_MASTERY.items())
 # Choices saved at one fixed instant with IDs sorting against save order (z2 > y3 > x4 > w5): only seq decides.
 assert put('z2', 'Optional').json()['rescheduled'] is True
@@ -115,7 +116,7 @@ def tier_event(name, tier):
             'payload': {'question_id': task['question_id'], 'tier': tier, 'originalTier': None, 'seq': 1}}
 
 
-rated, end = goods(8)
+rated, end = goods(3)  # /4 curve (2026-11-18): eight Goods reach the 30-day cap in every tier
 schedule = {}
 for tier in (None, 'Essential', 'Important', 'Optional'):
     extra = [tier_event('choice', tier)] if tier else []
@@ -124,7 +125,8 @@ core, essential, important, optional = (schedule[t] for t in (None, 'Essential',
 assert core['target'] == 0.85 and optional['target'] == 0.55 and essential['target'] == 0.9
 assert essential['scheduledDays'] <= core['scheduledDays'] <= important['scheduledDays'] <= optional['scheduledDays']
 assert essential['scheduledDays'] < optional['scheduledDays'], schedule
-assert core['ratingDays'] == optional['ratingDays'] and core['mastery'] == optional['mastery']  # only the target moves
+# The tier moves the target; 학습률 M does not. Under /4 S follows the planned interval too (late ratio), so it may move.
+assert core['mastery'] == optional['mastery']
 # Before this change a four-rating event has no targetParameters: its interval stays ceil(S), tier or not.
 old, end = goods(4, rating_policy=False)
 plain = state.replay(stored, old, end, POLICY)[1][task['direction_id']]
