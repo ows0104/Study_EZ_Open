@@ -7,7 +7,8 @@ import time
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVER = ROOT / 'server/.venv/Scripts/python.exe'
+# worktree에는 server/.venv가 없을 수 있다. 그때는 메인 체크아웃의 venv를 STUDYEZ_SERVER_PYTHON으로 준다(PYTHONPATH가 이 ROOT라 계약은 이쪽 것).
+SERVER = Path(os.environ.get('STUDYEZ_SERVER_PYTHON') or ROOT / 'server/.venv/Scripts/python.exe')
 PYTHON = ROOT / '.venv/Scripts/python.exe'
 ENV = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'PYTHONPATH':str(ROOT)}
 
@@ -35,24 +36,25 @@ def ready(process, url):
     raise RuntimeError('Owned fixture readiness timeout')
 
 
-def browser():
+def browser(fixture='tests.serve_main_quiz_ui_fixture', api_port=8027, web_port=5193, page='root-learning', url_env='ROOT_TEST_URL'):
     logs = ROOT / 'runs/_development' / ENV.get('STUDYEZ_TEST_CHANGE_ID','2026-11-02-root-learning-product')
     logs.mkdir(parents=True, exist_ok=True)
-    ENV.update(VITE_LOCAL_TEST_TOKEN='local-test-admin', VITE_API_BASE_URL='', VITE_DEV_API='http://127.0.0.1:8027')
-    ENV['ROOT_TEST_URL'] = 'http://127.0.0.1:5193/tests/root-learning.html'
+    ENV.update(VITE_LOCAL_TEST_TOKEN='local-test-admin', VITE_API_BASE_URL='', VITE_DEV_API=f'http://127.0.0.1:{api_port}',
+               MAIN_QUIZ_UI_PORT=str(api_port), MAIN_QUIZ_BATCH_PORT=str(api_port))
+    ENV[url_env] = f'http://127.0.0.1:{web_port}/tests/{page}.html'
     ENV['ROOT_TEST_OUTPUT'] = str(logs)
     bundled = Path.home() / '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'
     if bundled.exists():
         ENV.setdefault('PLAYWRIGHT_MODULE', str(bundled))
     with (logs / 'fixture-api.log').open('w', encoding='utf-8') as api_log, (logs / 'fixture-web.log').open('w', encoding='utf-8') as web_log:
-        api = subprocess.Popen([str(SERVER), '-m', 'tests.serve_main_quiz_ui_fixture'], cwd=ROOT/'server', env=ENV, stdout=api_log, stderr=subprocess.STDOUT)
+        api = subprocess.Popen([str(SERVER), '-m', fixture], cwd=ROOT/'server', env=ENV, stdout=api_log, stderr=subprocess.STDOUT)
         web = None
         try:
-            ready(api, 'http://127.0.0.1:8027/api/health')
-            web = subprocess.Popen(['node', 'node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5193', '--strictPort'],
+            ready(api, f'http://127.0.0.1:{api_port}/api/health')
+            web = subprocess.Popen(['node', 'node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', str(web_port), '--strictPort'],
                                    cwd=ROOT/'web', env=ENV, stdout=web_log, stderr=subprocess.STDOUT)
-            ready(web, ENV['ROOT_TEST_URL'])
-            run(['node', '--test', 'tests/root-learning.test.cjs'], ROOT/'web')
+            ready(web, ENV[url_env])
+            run(['node', '--test', f'tests/{page}.test.cjs'], ROOT/'web')
         finally:
             for process in (web, api):
                 if process and process.poll() is None:
@@ -79,6 +81,9 @@ def main(name):
             server(pattern)
     elif name == 'root-ui':
         browser()
+    elif name == 'root-batch':
+        # Main-Quiz 모아풀기(2026-11-18): 합성 두 강의를 섞어 푼다.
+        browser('tests.serve_main_quiz_batch_fixture', 8029, 5195, 'root-batch', 'ROOT_BATCH_URL')
     elif name == 'web-types':
         run(['node', 'web/node_modules/typescript/bin/tsc', '-b', 'web/tsconfig.json', '--noEmit'])
     elif name == 'web-build':

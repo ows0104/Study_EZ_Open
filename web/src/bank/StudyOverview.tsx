@@ -25,7 +25,7 @@ const EventPanel = lazy(() => import("../calendar/EventPanel").then(m => ({ defa
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
   date: string; course: string; ready: boolean; key: string; eventKey?: string;
-  /** 모아풀기에 섞을 수 있는가(Quiz Bank). Main-Quiz만 있는 강의는 열리지만 섞이지 않는다. */
+  /** 모아풀기에 섞을 수 있는가. 2026-11-18부터 Main-Quiz가 열린 강의(RootBatch). */
   batch?: boolean; mainQuiz?: boolean;
   /** 화면 계산값(2026-11 개편). DB에는 없다. */
   startTime?: string; kind?: DisplayKind; code?: string; professor?: string; field?: string;
@@ -49,7 +49,8 @@ function lectureRows(events: TimetableEvent[]): StudyLecture[] {
       const title = event.lectures.length === 1 ? split.title || l.title : l.title;
       if (!rows.has(key)) rows.set(key, { ...l, ...shown, title, sources: [l.previewSource], key, eventKey: `event:${event.id}`,
         // 2026-11-11부터 Main-Quiz 하나. Quiz Bank(legacy)는 열림·모아풀기에 세지 않는다.
-        date: event.date, course, ready: Boolean(l.marks.mainQuiz), batch: false,
+        // 모아풀기는 2026-11-18부터 Main-Quiz 강의를 섞는다(RootBatch).
+        date: event.date, course, ready: Boolean(l.marks.mainQuiz), batch: Boolean(l.marks.mainQuiz),
         mainQuiz: Boolean(l.marks.mainQuiz) });
     }
     if (!event.lectures.length && ["lecture", "practice"].includes(event.category)) {

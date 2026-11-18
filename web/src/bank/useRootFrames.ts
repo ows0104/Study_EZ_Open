@@ -48,7 +48,8 @@ export function useRootFrames(sessionId: string | undefined) {
   return { get, ensure, forget };
 }
 
-function warm(frames: RootFrame[], images: SlidePreloader) {
+/** 미리 받은 문항의 그림·첫 슬라이드를 데운다. 모아풀기(RootBatch)도 같은 것을 쓴다. */
+export function warm(frames: RootFrame[], images: SlidePreloader) {
   const urls: string[] = [];
   const pdf: RootPdfSlide[] = [];
   for (const frame of frames) {

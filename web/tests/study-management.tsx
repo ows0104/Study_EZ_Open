@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { getMe } from "../src/firstScreen";
 import type { TimetableEvent } from "../src/types/lectures";
 import "../src/styles/base.css";
@@ -97,4 +97,13 @@ window.fetch = async (input, init) => {
 if (options.has("lazy")) history.replaceState(null, "", "/study");
 await getMe();
 const { BankBatchPage } = await import("../src/bank/BankBatch");
-createRoot(document.getElementById("root")!).render(<MemoryRouter><main style={{ padding: 16 }}><BankBatchPage /></main></MemoryRouter>);
+const { readMix } = await import("../src/bank/mixLinks");
+// 「모아풀기」는 Main-Quiz 모아풀기 주소로 간다(2026-11-18). 여기서는 그 주소가 고른 강의를 그대로 싣는지만 본다.
+function MixProbe() {
+  const { search } = useLocation();
+  return <p role="status" aria-label="모아풀기 주소">{JSON.stringify(readMix(new URLSearchParams(search)))}</p>;
+}
+createRoot(document.getElementById("root")!).render(<MemoryRouter><main style={{ padding: 16 }}><Routes>
+  <Route path="/study/mix" element={<MixProbe />} />
+  <Route path="*" element={<BankBatchPage />} />
+</Routes></main></MemoryRouter>);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
 import type { BankNext, BankSession } from "../types/bank";
@@ -9,6 +9,7 @@ import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import { useStudyTimetable } from "./useStudyTimetable";
 import { prefetchRootCatalog } from "./useRootCatalog";
+import { mixHref } from "./mixLinks";
 import "./batch.css";
 
 type Lecture = Pick<StudyLecture, "subject" | "runId" | "title" | "date">;
@@ -18,6 +19,7 @@ const keyOf = (lecture: Lecture) => `${lecture.subject}/${lecture.runId}`;
 /** 문항마다 서버가 고른 강의로 바뀐다. 기록과 복습 일정은 강의별로 유지한다. */
 export function BankBatchPage() {
   const me = useMe();
+  const navigate = useNavigate();
   const storageKey = `studyez-batch:${me?.id ?? ""}`;
   const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -129,8 +131,8 @@ export function BankBatchPage() {
     {!events ? !loadError && <p className="notice" role="status">강의 목록을 불러오는 중…</p>
       : <StudyOverview events={events} hiddenKeys={hiddenKeys} managing={managing || auditing || deleting !== null}
         onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={chosen => {
-        setPaused(false); setDone(false);
-        setQueue({ lectures: chosen.map(({ subject, runId, title, date }) => ({ subject, runId, title, date })) });
+        // 2026-11-18부터 모아풀기는 Main-Quiz 강의를 섞는다(RootBatch). 옛 Quiz Bank 큐는 남은 세션 저장값으로만 열린다.
+        navigate(mixHref(chosen));
       }} adminActions={me?.isAdmin ? chosen => <>
         <button className="is-quiet" disabled={!chosen.length || auditing} onClick={() => void (async () => {
           setAuditing(true); setAuditMessage("");
