@@ -24,7 +24,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -99,6 +99,27 @@ def summary_of(stored: dict[str, Any]) -> dict[str, Any]:
 @router.get("/jokbo/events/{event_id}/summary")
 def jokbo_summary(event_id: str, user: CurrentUser = Depends(require_approved_user)) -> dict[str, Any]:
     return summary_of(_visible(_load(event_id), user))
+
+
+class SummariesIn(BaseModel):
+    eventIds: list[str] = Field(min_length=1, max_length=200)
+
+
+@router.post("/jokbo/summaries")
+def jokbo_summaries(payload: SummariesIn, user: CurrentUser = Depends(require_approved_user)) -> dict[str, Any]:
+    """여러 시간표 칸의 족보 요약(족보 모아풀기, docs/changes/2026-11-18-jokbo-mix). 강의 목록이 체크할 칸을 안다.
+
+    족보가 없거나 이 사람에게 안 보이는(관리자만) 칸은 빠진다. 문서는 60초 캐시로 읽고 칸들을 나란히 읽는다."""
+    from concurrent.futures import ThreadPoolExecutor
+    ids = [e for e in dict.fromkeys(payload.eventIds) if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", e)]
+    storage_or_503()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        stored = list(pool.map(_load_cached, ids))
+    out = []
+    for doc in stored:
+        if doc is not None and (doc.get("audience") == "all" or user.is_admin):
+            out.append(summary_of(doc))
+    return {"summaries": out}
 
 
 @router.get("/jokbo/events/{event_id}")

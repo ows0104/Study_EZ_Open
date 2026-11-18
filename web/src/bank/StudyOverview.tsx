@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { bankHref, lectureHref } from "../links";
 import { useMe } from "../useMe";
@@ -19,6 +19,36 @@ import "./overview.css";
 import { useOptionalExclusion } from "./optionalExclusion";
 import { rootRate, useRootSummaries } from "./useRootCatalog";
 import type { RootQuestionProgress } from "../types/rootLearning";
+import type { JokboSummary } from "../types/jokbo";
+import { api } from "../api";
+
+/** 강의(행)가 붙은 시간표 칸. 족보는 칸에 붙는다. */
+export const eventIdOf = (l: Pick<StudyLecture, "key" | "eventKey">) =>
+  (l.eventKey ?? (l.key.startsWith("event:") ? l.key : "")).slice("event:".length) || null;
+
+/** 족보 모아풀기(2026-11-18-jokbo-mix): 이 블럭의 칸 중 족보가 있는 칸. 행·▶는 기다리지 않고 체크만 뒤에 붙는다. */
+function useJokboSummaries(eventIds: string[]) {
+  const [found, setFound] = useState<Map<string, JokboSummary>>(new Map());
+  const signature = [...new Set(eventIds)].sort().join(",");
+  useEffect(() => {
+    const ids = signature ? signature.split(",") : [];
+    if (!ids.length) return;
+    let alive = true;
+    void (async () => {
+      const got = new Map<string, JokboSummary>();
+      for (let i = 0; i < ids.length; i += 200) {
+        const part = await api<{ summaries: JokboSummary[] }>("/api/jokbo/summaries",
+          { method: "POST", body: JSON.stringify({ eventIds: ids.slice(i, i + 200) }) }).catch(() => ({ summaries: [] }));
+        for (const summary of part.summaries) got.set(summary.eventId, summary);
+      }
+      if (alive) setFound(got);
+    })();
+    return () => { alive = false; };
+  }, [signature]);
+  return found;
+}
+
+export type MixKind = "review" | "jokbo";
 
 // 캘린더와 같은 강의 패널. 행을 누를 때만 받는다.
 const EventPanel = lazy(() => import("../calendar/EventPanel").then(m => ({ default: m.EventPanel })));
@@ -134,7 +164,7 @@ const VIEWS = ["type", "order"] as const;
 
 /** 강의 목록: 블럭의 모든 강의와 카드 단계, 골라서 모아풀기. */
 export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], onVisibility, managing = false, onDeleteQuiz }: {
-  events: TimetableEvent[]; onStart: (lectures: StudyLecture[]) => void;
+  events: TimetableEvent[]; onStart: (lectures: StudyLecture[], kind: MixKind) => void;
   adminActions?: (lectures: StudyLecture[]) => React.ReactNode;
   hiddenKeys?: string[]; onVisibility?: (keys: string[], hidden: boolean, count: number) => void; managing?: boolean;
   onDeleteQuiz?: (lectures: StudyLecture[]) => void;
@@ -195,7 +225,11 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const score = rates.length ? Math.round(rates.reduce((sum, r) => sum + r, 0) / rates.length) : null;
   const display = (value: number) => loading ? "…" : number(value);
 
-  const selectable = scoped.filter(l => l.batch);
+  // 체크: Main-Quiz가 열렸거나 족보가 있는 강의. 막대에서 복습퀴즈·족보 모아풀기로 나눈다(2026-11-18-jokbo-mix).
+  const jokbo = useJokboSummaries(inCourse.flatMap(l => eventIdOf(l) ?? []));
+  const hasJokbo = (l: StudyLecture) => { const id = eventIdOf(l); return Boolean(id && jokbo.has(id)); };
+  const pickable = (l: StudyLecture) => Boolean(l.batch) || hasJokbo(l);
+  const selectable = scoped.filter(pickable);
   const chosen = selectable.filter(l => selected.has(l.key));
   const allPicked = selectable.length > 0 && selectable.every(l => selected.has(l.key));
   const pickedDue = chosen.reduce((sum, l) => sum + (l.cardProgress?.reviewDue ?? 0), 0);
@@ -291,7 +325,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
               onKeyDown={e => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(); } }}
               className={`list-row is-link${picked ? " is-picked" : ""}${closed ? " is-closed" : ""}${opened === l.key ? " is-active" : ""}`}>
               <span role="cell" onClick={e => e.stopPropagation()}>
-                {l.batch ? <Check checked={picked} label={`${l.title} 선택`} disabled={managing}
+                {pickable(l) ? <Check checked={picked} label={`${l.title} 선택`} disabled={managing}
                   onChange={checked => toggle(setSelected, [l.key], checked)} /> : null}
               </span>
               <span role="cell" className="list-code">{l.code}</span>
@@ -337,7 +371,10 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
       <span><b>{chosen.length}개 강의</b> 선택 · 오늘 복습 {number(pickedDue)}장</span>
       <span className="pick-spacer" />
       <button type="button" className="pick-clear" onClick={() => setSelected(new Set())}>선택 해제</button>
-      <button type="button" className="pick-start" disabled={managing} onClick={() => onStart(chosen)}><Icon.play /> 모아풀기</button>
+      <button type="button" className="pick-start" disabled={managing || !chosen.some(l => l.batch)}
+        onClick={() => onStart(chosen.filter(l => l.batch), "review")}><Icon.play /> 복습퀴즈 모아풀기</button>
+      <button type="button" className="pick-start is-jokbo" disabled={managing || !chosen.some(hasJokbo)}
+        onClick={() => onStart(chosen.filter(hasJokbo), "jokbo")}><Icon.play /> 족보 모아풀기</button>
     </div> : null}
 
     <details className="list-more" onToggle={e => setMore(e.currentTarget.open)}>
