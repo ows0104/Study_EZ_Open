@@ -11,7 +11,6 @@ import { warm } from './useRootFrames';
 import { RootSolve } from './RootSolve';
 import { readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
 import { readMix, type MixLecture } from './mixLinks';
-import { bankHref } from '../links';
 import './roots.css';
 import './main-quiz.css';
 import './root-batch.css';
@@ -385,7 +384,6 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
             return <li key={l.key} className={l.error||!n?'is-off':undefined}>
               <span className="mq-mix-title">{l.title??l.runId}</span>
               <span className="mq-mix-count">{loading?'…':l.error?`열 수 없음 · ${l.error}`:open?`남은 ${count(n)}문항`:`${count(n)}문항`}</span>
-              {l.mix&&<Link className="mq-mix-one" to={bankHref(l)}>이 강의만</Link>}
               {perLecture&&l.mix&&!l.error&&<div className="mq-focus mq-mix-lane-tiers" role="group" aria-label={`${l.title??l.runId} 중요도`}>
                 {ROOT_TIERS.map(tier=>{
                   const on=tiersOf(l.key).includes(tier),k=mixCount(l.mix,[tier],unseen,ignoreSchedule);
