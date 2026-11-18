@@ -67,7 +67,7 @@ assert state.personal_tiers(stored, events) == {}  # w5 (null) holds although it
 assert len([e for e in events if e['kind'] == 'tier']) == 5  # every choice stays as an event
 
 # ── Same target as Quiz Bank target_for, for every tier / private / plan case ─
-params = {k: v for k, v in policy.target_parameters().items() if k not in policy.ROOT_MASTERY}  # /2 events below
+params = {k: v for k, v in policy.target_parameters().items() if k not in policy.ROOT_MASTERY}  # /2 events below (replayed with ROOT_MASTERY)
 bank = {'retrieval_plan': [{'concept_id': 'C1', 'target_mastery': 0.7}]}
 for tier in policy.TIERS:
     for importance in (2, 3, 4, 5):

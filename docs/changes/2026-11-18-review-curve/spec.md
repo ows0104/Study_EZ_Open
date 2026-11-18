@@ -21,16 +21,21 @@ R1. 새 평가 정책 `roots-four-rating/3`. 평가 사건의 `targetParameters`
 R2. `transition`은 selfRating이 있으면 도움 여부로 등급을 낮추지 않는다(Good·Easy → independent).
 selfRating이 없는 예전 세 단계 사건은 지금처럼 `independent`+도움 → `partial`. 서버의 예전 클라이언트 거절(422)도 그대로.
 
+R3. 지난 평가도 새 곡선으로 다시 읽는다(사용자 2026-11-18 「지금 시험이 곧인데 지난평가에도 이에 맞춰 복습일을 조정해줄래?」).
+`ratingPolicy`가 `roots-four-rating/2`인 사건은 저장된 `targetParameters`에 R1 두 값을 더해 재생한다(`policy.replay_parameters`).
+- 그 문항의 숙련도·다음 복습일·학습률이 처음 평가부터 /3 규칙으로 다시 계산된다. 오늘 복습 수가 바로 줄어든다.
+- `targetParameters`가 없는 11-09 이전 평가는 그대로(목표치 간격이 없던 평가).
+
 ## 책임·입출력 계약·오류 상태
 
 - `policy.target_parameters()`가 Quiz Bank 값에 R1 두 값을 더해 돌려준다. Quiz Bank(`study_engine`) 정책 파일은 고치지 않는다.
-- `policy.next_mastery()`가 두 값을 읽는다. 값이 없는 사건(/2 이전)은 예전 계산 그대로.
+- `policy.next_mastery()`가 두 값을 읽는다. `state._rate`는 `policy.replay_parameters(payload)`로 파라미터를 받는다(/2는 R1 두 값 추가).
 - 평가 저장 응답·DB 형식 변경 없음. 사건 payload에 `ratingPolicy`가 `/3`, `targetParameters`에 두 키가 더해진다.
 
 ## 호환성과 데이터 보존
 
-- 사건은 고치지 않는다. 지난 /2 사건은 저장된 파라미터로 다시 재생되어 복습일이 바뀌지 않는다(R1).
-  다음에 그 문항을 평가할 때부터 새 값이 적용된다. 이미 쌓인 M에서 이어 간다.
+- 사건은 고치지 않는다. 읽는 규칙만 바뀐다(R2·R3). 지난 /2 사건의 저장된 파라미터도 그대로 남는다.
+- R3로 이미 평가한 문항의 다음 복습일이 바로 뒤로 밀리고, 보이는 학습률이 오른다.
 - R2는 재생 규칙이라 지난 네 단계 평가에도 적용된다: 선지·지도·답만 보기 뒤 Good/Easy가 이제 independent로 읽혀
-  인출·저장 칸, 「회상 가능」, goodDays가 오른다. 복습일과 학습률(M은 원래 selfRating을 썼다)은 바뀌지 않는다.
-- 보이는 학습률은 M을 쓰므로 새 평가부터 더 빨리 오른다(같은 곡선이라는 사용자 그림과 맞음).
+  인출·저장 칸, 「회상 가능」, goodDays가 오른다. R2만으로는 복습일과 학습률(M은 원래 selfRating을 썼다)이 바뀌지 않는다.
+- 보이는 학습률은 M을 쓰므로 더 빨리 오른다(같은 곡선이라는 사용자 그림과 맞음).

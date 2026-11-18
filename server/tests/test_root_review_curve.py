@@ -39,8 +39,12 @@ for (rating, tier), want in expected.items():
     got = days([rating] * 20, TARGETS[tier], V3)
     assert got == want, (rating, tier, got)
 
-# /2 events replay exactly as before: Easy Core came back four days in a row.
+# /2's own parameters brought Easy Core back four days in a row.
 assert days(['Easy'] * 20, 0.85, V2) == [0, 1, 2, 3, 4, 8, 23]
+# R3: stored /2 events are replayed with /3's mastery; events without targetParameters are left alone.
+assert policy.replay_parameters({'ratingPolicy': 'roots-four-rating/2', 'targetParameters': V2}) == V3
+assert policy.replay_parameters({'ratingPolicy': 'roots-four-rating/3', 'targetParameters': V3}) == V3
+assert policy.replay_parameters({'selfRating': 'Good'}) is None
 # A hard question stays: Again then Good comes back daily four times (was six).
 assert days(['Again'] + ['Good'] * 20, 0.85, V3)[:7] == [0, 1, 2, 3, 4, 6, 10]
 assert days(['Again'] + ['Good'] * 20, 0.85, V2)[:7] == [0, 1, 2, 3, 4, 5, 6]
@@ -52,4 +56,4 @@ assert abs(next_mastery({'mastery': 0.5}, 'Easy', NOW, V3) - (0.3 * 0.5 + 0.7)) 
 empty = {'stage': -1, 'lastDay': None, 'rating': None}
 assert transition(empty, 'independent', True, NOW, POLICY, None, 'Easy')['rating'] == 'independent'
 assert transition(empty, 'independent', True, NOW, POLICY)['rating'] == 'partial'
-print('PASS: /3 first rating and faster recall gains, spec schedule, /2 replay unchanged, self-rating kept after help')
+print('PASS: /3 first rating and faster recall gains, spec schedule, /2 retimed on replay, self-rating kept after help')

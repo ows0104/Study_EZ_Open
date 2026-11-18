@@ -29,9 +29,12 @@ FOUR_RATING_PARAMETERS = {
 # /3 (2026-11-18 사용자 「쉬운건 걸러서 막판에 볼 게 몇개 없게 … 학습률 곡선처럼 빠져서 복습」): the same curve and
 # targets, but a first rating starts M at that rating's value and a correct recall moves M faster, so an easy question
 # leaves the daily queue after one or two reviews instead of four to seven (docs/changes/2026-11-18-review-curve).
-# Main-Quiz only: Quiz Bank's policy.json is unchanged. /2 events keep their stored parameters.
+# Main-Quiz only: Quiz Bank's policy.json is unchanged.
+# /2 events are replayed with /3's mastery too (2026-11-18 사용자 「지금 시험이 곧인데 지난평가에도 이에 맞춰 복습일을
+# 조정해줄래?」). The stored events are unchanged; only how they are read moves (replay_parameters).
 TARGET_RATING_POLICY = 'roots-four-rating/3'
 ROOT_MASTERY = {'firstFromRating': True, 'ratingAlpha': {'Good': 0.5, 'Easy': 0.7}}
+RETIMED_RATING_POLICIES = ('roots-four-rating/2',)
 TIER_POLICY = 'roots-personal-tier/1'
 TIERS = ('Essential', 'Core', 'Important', 'Optional')
 GRADE_RATING = {'missed': 'Again', 'partial': 'Hard', 'independent': 'Good'}
@@ -44,6 +47,15 @@ def target_parameters():
     from app.study_engine.policy import DEFAULT
     return deepcopy({**{k: DEFAULT['mastery'][k] for k in ('alpha', 'ratings', 'maxTarget', 'targets', 'tierTargets')},
                      **ROOT_MASTERY})
+
+
+def replay_parameters(payload):
+    """The mastery parameters a stored rating is replayed with: its own frozen targetParameters, plus ROOT_MASTERY
+    for a /2 event (retimed 2026-11-18). None for events saved before targetParameters existed."""
+    params = payload.get('targetParameters')
+    if params and payload.get('ratingPolicy') in RETIMED_RATING_POLICIES:
+        return {**params, **ROOT_MASTERY}
+    return params
 
 
 def canonical_tier(q):

@@ -8,7 +8,7 @@ from tests.root_support import POLICY, NOW
 from app.root_learning.policy import ROOT_MASTERY, target_parameters
 from app.root_learning.score import DISPLAY_TARGET_SCALE, _unit_score, coverage, current_mastery, lecture_score
 
-# Events here are labelled roots-four-rating/2: freeze /2's parameters (no ROOT_MASTERY, 2026-11-18 review-curve).
+# Events here are labelled roots-four-rating/2 with /2's frozen parameters; replay adds ROOT_MASTERY (2026-11-18 review-curve R3).
 PARAMS = {k: v for k, v in target_parameters().items() if k not in ROOT_MASTERY}
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures/root_generation_v2_import.json').read_text(encoding='utf-8'))
 
@@ -133,7 +133,9 @@ assert _unit_score(half, 0.8, NOW, DISPLAY_TARGET_SCALE) == 1.0
 assert abs(_unit_score(dict(half, mastery=0.2), 0.8, NOW, DISPLAY_TARGET_SCALE) - 0.5) < 1e-9
 assert _unit_score(dict(half, mastery=0.9), 0.8, NOW, DISPLAY_TARGET_SCALE) == 1.0   # 1에서 자른다
 assert abs(_unit_score(half, 0.8, NOW) - 0.5) < 1e-9                                 # 계획 기준
-plan_view = lecture_score(doc, once, POLICY, NOW + timedelta(minutes=1))
-shown = lecture_score(doc, once, POLICY, NOW + timedelta(minutes=1), target_scale=DISPLAY_TARGET_SCALE)
-assert plan_view == one and shown['value'] > plan_view['value'], (plan_view, shown)
+# One Hard (M 0.45 since 2026-11-18 review-curve): below the Core target, above half of it.
+hard = rated('task-q1', 'D1', NOW, 'partial', selfRating='Hard', ratingPolicy='roots-four-rating/2', targetParameters=PARAMS)
+plan_view = lecture_score(doc, hard, POLICY, NOW + timedelta(minutes=1))
+shown = lecture_score(doc, hard, POLICY, NOW + timedelta(minutes=1), target_scale=DISPLAY_TARGET_SCALE)
+assert 0 < plan_view['value'] < shown['value'], (plan_view, shown)
 print('test_root_score ok')
