@@ -3,6 +3,9 @@
 ## 코드 리뷰·검증 결과
 - 계약 `tests/contracts/test_root_order_contract.py` 12개, 생성기 `tests/quizbank/test_root_order.py` 5개,
   러너 `tests/runner/test_root_order_publish.py` 4개와 게시 뒤 호출 순서를 본 기존 러너 검사(선지 다음에 판정) 통과.
+  루트 `tests/contracts`·`tests/quizbank` 전부 통과, `tests/runner` 871 통과(`test_desktop_control`의 바로가기 설치 검사 하나는
+  checkout 루트의 `.venv`를 찾아서 새 worktree에서는 돌지 않아 뺐다 — 이 변경과 무관). 게시 직후 하위 프로세스 목록을 보는
+  기존 검사(`test_root_front*.py`)에는 선지처럼 판정 단계도 가짜로 막았다.
 - 서버 `server/tests/test_main_quiz_order.py` 통과: 판·지문·순열이 어긋나면 지금처럼 선지, 맞으면 order_items만, 앞면에 정답 순서 없음, 답면에 orderCorrectIds.
   `-m tests main_quiz` 10/10, `route_contract` 1/1, `root` 52/54(남은 둘 `test_root_map_tree`·`_v3`는 빌린 venv에 pymupdf가 없어 import에서 멈춤 — 이 변경과 무관, CI에서 확인).
 - 웹: typecheck 통과, `tests/root-order.test.cjs` 4/4, 브라우저 고정물 `tests/root-order.html` 22/22
