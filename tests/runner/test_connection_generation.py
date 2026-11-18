@@ -8,7 +8,7 @@ import pytest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'contracts'))
 import automation_fixture as f
 from runner import connection_generation as worker
-from runner import root_choices, root_evidence, root_mcq
+from runner import root_choices, root_evidence, root_mcq, root_order
 from runner.bank_flow import execution
 
 
@@ -20,6 +20,7 @@ def no_evidence_model(monkeypatch):
     monkeypatch.setattr(root_evidence,'build',lambda *a,**k:calls.append(a) or None)
     monkeypatch.setattr(root_choices,'build',lambda *a,**k:None)
     monkeypatch.setattr(root_mcq,'build',lambda *a,**k:None)
+    monkeypatch.setattr(root_order,'build',lambda *a,**k:None)
     return calls
 
 

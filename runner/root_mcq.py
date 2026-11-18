@@ -36,9 +36,9 @@ FOLDER = "mcq"
 SCHEMA = "root-mcq/2"
 
 
-def upload(client: transport.Client, subject: str, run_id: str, path: Path) -> None:
+def upload(client: transport.Client, subject: str, run_id: str, path: Path, kind: str = KIND) -> None:
     base = transport.lecture_path(subject, run_id)
-    item = transport.Upload(KIND, path)
+    item = transport.Upload(kind, path)
     signed = client.call("POST", f"{base}/uploads", [item.payload()])
     url = next(e["uploadUrl"] for e in signed["files"] if e["filename"] == item.filename)
     transport._put_with_retry(client, url, item)

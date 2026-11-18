@@ -118,10 +118,13 @@ def test_게시_직후_선지를_기본으로_붙이고_실패해도_게시는_�
         return False   # 실패해도 게시 결과는 그대로다
 
     monkeypatch.setattr(root_mcq, "publish", choices)
+    from runner import root_order
+    # 순서 맞추기 판정은 선지 다음에 붙는다(2026-11-18 ordering-screen). 실패해도 게시는 그대로다.
+    monkeypatch.setattr(root_order, "publish", lambda client, subject, run_id, folder, got, **k: order.append("order") or False)
     client = SimpleNamespace(call=lambda method, path, body=None: {"status": "ready", "revision": "auto-1"})
     packet = {"sources": []}
     assert worker._generate(client, "감염과 면역", "261113_02", "/api/x", packet, out / "packet.json", out, model="m") == 0
-    assert order == ["evidence", ("choices", "감염과 면역", "261113_02", out, "auto-1", "m")]
+    assert order == ["evidence", ("choices", "감염과 면역", "261113_02", out, "auto-1", "m"), "order"]
     assert json.loads((out / "published.json").read_text(encoding="utf-8"))["status"] == "ready"
 
 

@@ -327,3 +327,24 @@
 .mq-memo label{display:grid;gap:6px;color:var(--ink-3);font-size:12.5px}
 .mq-memo textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px}
 .mq-memo-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+/* 순서 맞추기(2026-11-18 ordering-screen). 단계 버튼은 선지와 같은 모양, 놓은 차례는 오른쪽 작은 꼬리표. */
+.mq-order{margin-top:12px}
+.mq-order .bank-option{display:flex;justify-content:flex-start;align-items:baseline;gap:4px}
+.mq-order-at{margin-left:auto;padding-left:10px;color:var(--accent);font-size:.85em;font-weight:650;white-space:nowrap}
+.mq-order-placed{display:flex;text-align:left;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r-3)}
+.mq-order-label{color:var(--ink-3);font-size:12.5px;font-weight:650}
+.mq-order-placed ol{display:flex;flex-wrap:wrap;gap:4px 6px;margin:0;padding:0;list-style:none;counter-reset:mq-order}
+.mq-order-placed ol li{counter-increment:mq-order;overflow-wrap:anywhere}
+.mq-order-placed ol li::before{content:counter(mq-order) ". ";color:var(--ink-3)}
+.mq-order-placed ol li:not(:last-child)::after{content:" →";color:var(--ink-3)}
+.mq-order-placed kbd{margin-left:auto}
+.mq-order-compare{display:grid;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.mq-order-compare li{display:grid;text-align:left;grid-template-columns:1.5em 1fr;gap:2px 8px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-3);background:var(--surface)}
+.mq-order-compare li.is-correct{border-color:var(--ok);background:var(--ok-soft)}
+.mq-order-compare li.is-wrong{border-color:var(--bad);background:var(--bad-soft)}
+.mq-order-compare li.is-empty{border-style:dashed}
+.mq-order-mark{grid-row:span 2;font-weight:700}
+.mq-order-compare li.is-correct .mq-order-mark{color:var(--ok)}
+.mq-order-compare li.is-wrong .mq-order-mark{color:var(--bad)}
+.mq-order-right b{margin-right:6px;color:var(--ink-3)}
+.mq-order-mine{color:var(--ink-2);font-size:.88em;overflow-wrap:anywhere}

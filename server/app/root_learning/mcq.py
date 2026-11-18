@@ -91,7 +91,11 @@ def _resolve(db, doc, question):
 
 
 def entry(db, doc, question):
-    """이 판·이 문항 글에 맞는 (판 형식, 칸) 또는 None."""
+    """이 판·이 문항 글에 맞는 (판 형식, 칸) 또는 None. 순서형 나열(2026-11-18)은 순서 칸이 선지 자리다."""
+    from app.root_learning import order
+    ordered = order.row(db, doc, question)
+    if ordered:
+        return 'order', ordered[0]
     found = _resolve(db, doc, question)
     return found[:2] if found else None
 
@@ -102,6 +106,10 @@ def seed(user_id, question, when) -> str:
 
 
 def attach_front(db, doc, question, front, *, user_id=None, when=None):
+    # 순서형 나열(2026-11-18 ordering-screen): 선지 대신 섞은 단계. 「모두 고르기」로는 순서를 묻지 못한다.
+    from app.root_learning import order
+    if order.attach_front(db, doc, question, front, seed(user_id, question, when or datetime.now(UTC))):
+        return front
     found = _resolve(db, doc, question)
     if not found:
         return front
@@ -118,6 +126,9 @@ def attach_front(db, doc, question, front, *, user_id=None, when=None):
 
 
 def attach_answer(db, doc, question, answer):
+    from app.root_learning import order
+    if order.attach_answer(db, doc, question, answer):
+        return answer
     found = _resolve(db, doc, question)
     if not found:
         return answer
