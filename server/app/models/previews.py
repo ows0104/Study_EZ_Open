@@ -93,7 +93,10 @@ event.listen(
 PREVIEW_OPEN_SHARE = "share"  # 반 전체가 읽는 기본 링크
 PREVIEW_OPEN_MINE = "mine"  # 자기 대화
 PREVIEW_OPEN_KINDS = (PREVIEW_OPEN_SHARE, PREVIEW_OPEN_MINE)
-PREVIEW_ACTION_KINDS = (*PREVIEW_OPEN_KINDS, "create")  # personal creation attempt, not completion
+# 만들기 시도와 복습 링크 열기도 같은 표에 둔다(kind 칸은 8자). 시도는 완료를 뜻하지 않는다.
+#   create = 개인 예습 대화 만들기 · screate = 공통 예습 대화 만들기(관리자)
+#   rcreate = 개인 복습 대화 만들기 · rmine = 개인 복습 링크 열기
+PREVIEW_ACTION_KINDS = (*PREVIEW_OPEN_KINDS, "create", "screate", "rcreate", "rmine")
 
 
 class PreviewOpen(Base):

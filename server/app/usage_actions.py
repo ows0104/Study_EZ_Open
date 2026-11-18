@@ -8,11 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 ACTION_GROUPS = [
-    {"key": "personal", "label": "개인 링크 만들기·저장"},
+    {"key": "personal", "label": "대화 만들기·링크 저장"},
     {"key": "links", "label": "링크 열기"},
     {"key": "quizzes", "label": "퀴즈 풀이"},
     {"key": "records", "label": "회독·메모"},
-    {"key": "files", "label": "파일 요청·미상"},
+    # 파일 요청은 「누른 화면이 무엇을 하려고 자료를 받았나」로 가른다(file_requests.FilePurpose).
+    # 목적을 모르는 것은 2026-11-02 목적 구분 전의 기록뿐이다 — 칸 전체가 미상이 아니다.
+    {"key": "files", "label": "자료 첨부·받기"},
 ]
 
 
@@ -41,6 +43,11 @@ ACTIONS = (
           ('root_tier', 'Main Quiz 내 중요도 변경 저장', 'rootTiers'),
           ('root_generation', 'Main Quiz 생성 요청 저장', 'rootGenerations'),
           ('root_generated', 'Main Quiz 생성·검수 게시 완료', 'rootGenerated'),
+          ('root_skip', 'Main Quiz 문제 보류', 'rootSkips'),
+          ('root_exclude', 'Main Quiz 문항 제외', 'rootExcludes'),
+          ('root_mine', 'Main Quiz 내 문제 저장·삭제', 'rootMine'),
+          ('root_memo', 'Main Quiz 뒷면 메모 저장', 'rootMemos'),
+          ('root_map_view', '개념 지도 열기 (강의·하루에 한 번)', 'rootMapViews'),
       )),
     # jokbo_mark 한 줄 = 족보 한 문항을 푼 사람(마지막으로 푼 때). 같은 문항을 다시 풀어도 한 줄이다.
     Action('jokbo_answer', '족보 퀴즈 풀이', 'quizzes', ('jokboAnswers',),
@@ -50,14 +57,24 @@ ACTIONS = (
     # bank_feedback 한 줄 = 「문제 수정·제보」 저장 한 번(기존 은행·Main-Quiz 공통). 되돌리기는 줄을 남기지 않는다.
     Action('question_report', '문제 수정·제보 저장', 'quizzes', ('questionReports',),
            ('questionReports', 'count'), ('questionReports', 'lastAt'), '건', '건'),
-    Action("personal_preview_create", "개인 링크 만들기 시도", "personal", ("previewCreates",),
+    # 만들기는 버튼을 누른 시도다. 확장이 첨부·전송을 끝냈는지는 모른다(링크 저장이 따로 있다).
+    Action("personal_preview_create", "개인 예습 대화 만들기 시도", "personal", ("previewCreates",),
            ("previewCreates", "count"), ("previewCreates", "lastAt"), preview_kind="create"),
+    Action("shared_preview_create", "공통 예습 대화 만들기 시도 (관리자)", "personal", ("sharedCreates",),
+           ("sharedCreates", "count"), ("sharedCreates", "lastAt"), preview_kind="screate"),
+    Action("personal_review_create", "개인 복습 대화 만들기 시도", "personal", ("reviewCreates",),
+           ("reviewCreates", "count"), ("reviewCreates", "lastAt"), preview_kind="rcreate"),
+    # 관리자가 공통 대화를 만들면 그 대화 주소가 만든 사람의 개인 예습 링크로도 저장된다(UserPreview).
     Action("personal_preview_saved", "개인 예습 링크 저장", "personal", ("previewSaves",),
            ("preview",), ("previewSavedAt",), detail_unit="개"),
-    Action("shared_preview_open", "공용 링크 열기", "links", ("opens", "share"),
+    Action("personal_review_saved", "개인 복습 링크 저장", "personal", ("reviewSaves",),
+           ("review",), ("reviewSavedAt",), detail_unit="개"),
+    Action("shared_preview_open", "공통 예습 링크 열기", "links", ("opens", "share"),
            ("opens", "share"), ("opensAt", "share"), preview_kind="share"),
-    Action("personal_preview_open", "개인 링크 열기", "links", ("opens", "mine"),
+    Action("personal_preview_open", "개인 예습 링크 열기", "links", ("opens", "mine"),
            ("opens", "mine"), ("opensAt", "mine"), preview_kind="mine"),
+    Action("personal_review_open", "개인 복습 링크 열기", "links", ("reviewOpens",),
+           ("reviewOpens", "count"), ("reviewOpens", "lastAt"), preview_kind="rmine"),
     Action("pre_quiz_answer", "예습 퀴즈 풀이", "quizzes", ("quizzes", "pre"),
            ("pre", "cards"), ("quizLastAt", "pre"), "문항", "문항", grades_path=("pre", "grades")),
     Action("main_quiz_answer", "복습 퀴즈 풀이 (기존)", "quizzes", ("quizzes", "main"),
@@ -72,9 +89,12 @@ ACTIONS = (
            ("memo", "count"), ("memo", "lastAt"), detail_unit="개"),
     *(Action(f"file_{purpose}", label, "files", ("fileRequests", purpose), file_purpose=purpose)
       for purpose, label in (
-          ("download", "직접 다운로드 요청"), ("view", "브라우저 열기 요청"),
-          ("preview_attach", "예습 자동 첨부 요청"), ("review_attach", "복습 자동 첨부 요청"),
-          ("quiz_attach", "문제 생성 자동 첨부 요청"), ("unknown", "미상 · 파일 요청 목적 미상"),
+          ("download", "자료 직접 받기"), ("view", "자료 브라우저로 열기"),
+          # 대화 만들기를 누르면 화면이 자료마다 서명 링크를 받아 확장에 넘긴다. 그 받은 기록이다.
+          ("preview_attach", "예습 대화 만들기 — 작년 필기·족보 첨부"),
+          ("review_attach", "복습 대화 만들기 — 올해 필기·족보 첨부"),
+          ("quiz_attach", "퀴즈 만들기 — 자료 첨부"),
+          ("unknown", "목적 기록 전 요청 (2026-11-02 이전)"),
       )),
 )
 

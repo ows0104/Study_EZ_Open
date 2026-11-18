@@ -1,0 +1,134 @@
+{
+  "id": "2026-11-18-usage-attach-labels",
+  "title": "이용현황 자료 첨부 칸 정리와 빠진 행동 기록",
+  "area": "site",
+  "created_at": "2026-11-18T12:30:25.430822+00:00",
+  "required_checks": [
+    "server",
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-18T12:31:22.648694+00:00",
+      "evidence": "2026-11-18 채팅 사용자 요청 원문: 「지금 관리 기록에 예습 자동 첨부 요청 52강의 복습 자동 첨부 요청 24강의 같은게 미상으로 되어있어. 이거 뭔지 제대로 정리해서 기록해주고, 다른 기록할만한 행동 새는 거 없는지 확인해줘.」",
+      "scope": "plan.md 범위: 이용현황 칸·행동 이름, preview_open kind 3개(screate·rcreate·rmine), user_review·root_event 갈래 집계, 관련 server tests, web usage.ts·PreviewAction·ReviewAction·UsageTab, usage-actions.md. 로컬 구현·검사·PR까지. DB 스키마 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "ef55e31cea3b1e5f6ba9d7d781d66f7fe16026b5323566fb0dd83bf736292aaa",
+      "plan_hash": "702813d14cba638cb2d9ced2f384a9e782c811156662fe8d7bc3b439b26e461e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "0de85e78769898a19f2251f73e522b03d4404833fd82411e5c0281c61a7be7c2"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-18T12:32:08.893000+00:00",
+      "command": [
+        "bash",
+        "-c",
+        "cd server && PYTHONPATH=.. '/c/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe' -m tests usage && PYTHONPATH=.. '/c/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe' -m tests route_contract && PYTHONPATH=.. '/c/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe' -m tests smoke"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ef55e31cea3b1e5f6ba9d7d781d66f7fe16026b5323566fb0dd83bf736292aaa",
+      "plan_hash": "702813d14cba638cb2d9ced2f384a9e782c811156662fe8d7bc3b439b26e461e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-usage-attach-labels/1795005108551643800-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-18T12:32:31.273429+00:00",
+      "command": [
+        "bash",
+        "-c",
+        "cd web && npm run typecheck && npm run build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ef55e31cea3b1e5f6ba9d7d781d66f7fe16026b5323566fb0dd83bf736292aaa",
+      "plan_hash": "702813d14cba638cb2d9ced2f384a9e782c811156662fe8d7bc3b439b26e461e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-18-usage-attach-labels/1795005129281294700-web.log",
+      "web_artifact": "cdacfdc9aa9891e441047e820671c34cc5139b29146da22ba8a8f6a2d303a632",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-18T12:33:05.971943+00:00",
+    "summary": "경계: 이용현황 카탈로그·집계·기록 호출부. preview_open kind 8자 확인, 옛 서버는 새 kind를 무시(누락만). root_event 중 publication·focus·optional·map 제외 확인. 개인 URL 비노출 검사. 남은 위험: 실제 관리 화면 육안 확인 안 함(운영 DB 필요)",
+    "evidence_version": 2,
+    "source_hash": "ef55e31cea3b1e5f6ba9d7d781d66f7fe16026b5323566fb0dd83bf736292aaa",
+    "plan_hash": "702813d14cba638cb2d9ced2f384a9e782c811156662fe8d7bc3b439b26e461e",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-18T12:33:06.309035+00:00"
+}

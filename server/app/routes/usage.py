@@ -73,6 +73,7 @@ from app.auth import CurrentUser, require_admin
 from app.database import get_db
 from app.file_requests import FILE_PURPOSES, request_stats
 from app.usage_actions import ACTION_GROUPS, catalog, collect
+from app.models.previews import UserReview
 from app.models import (
     APP_STUDYEZ,
     PREVIEW_OPEN_KINDS,
@@ -95,13 +96,23 @@ from app.models import (
 
 router = APIRouter()
 
-ROOT_FIELDS = ('rootStarts', 'rootAttempts', 'rootRatings', 'rootUndos', 'rootTiers', 'rootGenerations', 'rootGenerated')
+ROOT_FIELDS = ('rootStarts', 'rootAttempts', 'rootRatings', 'rootUndos', 'rootTiers', 'rootGenerations', 'rootGenerated',
+               'rootSkips', 'rootExcludes', 'rootMine', 'rootMemos', 'rootMapViews')
+
+# root_event 중 사람이 한 일로 세는 것. 세지 않는 것: publication(러너 게시)·focus/optional(과목 설정, 강의 없음)·
+# map(풀이 중 지도 펼침 — 같은 화면의 map_view와 겹친다).
+ROOT_KINDS = {'start':'rootStarts', 'rate':'rootRatings', 'undo':'rootUndos', 'tier':'rootTiers',
+              'generation':'rootGenerations', 'generated':'rootGenerated', 'skip':'rootSkips',
+              'exclude':'rootExcludes', 'mine':'rootMine', 'memo':'rootMemos', 'map_view':'rootMapViews'}
 
 def _root_field(event):
     if event.kind == 'reveal' and event.payload.get('attempted'):
         return 'rootAttempts'
-    return {'start':'rootStarts', 'rate':'rootRatings', 'undo':'rootUndos', 'tier':'rootTiers',
-            'generation':'rootGenerations', 'generated':'rootGenerated'}.get(event.kind)
+    return ROOT_KINDS.get(event.kind)
+
+# preview_open 의 만들기·복습 갈래 → 이용현황 칸. 열기(share/mine)는 `opens` 에 따로 둔다.
+PREVIEW_FIELDS = {'create': 'previewCreates', 'screate': 'sharedCreates',
+                  'rcreate': 'reviewCreates', 'rmine': 'reviewOpens'}
 
 
 #: 「최근」 창의 크기. 블럭이 아직 없을 때의 기본이기도 하다.
@@ -341,16 +352,23 @@ def usage(
         ),
     )
     opens: dict[str, dict[str, int]] = {}
-    creates: dict[str, int] = {}
+    creates: dict[str, dict[str, int]] = {}
     for uid, kind, lectures in db.execute(
         select(PreviewOpen.user_id, PreviewOpen.kind, func.count())
         .where(*_within(PreviewOpen.last_at, span))
         .group_by(PreviewOpen.user_id, PreviewOpen.kind)
     ).all():
-        if kind == "create":
-            creates[uid] = int(lectures)
+        if kind in PREVIEW_FIELDS:
+            creates.setdefault(uid, {})[PREVIEW_FIELDS[kind]] = int(lectures)
         elif kind in PREVIEW_OPEN_KINDS:
             opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(lectures)
+    review_saves = {
+        uid: int(count) for uid, count in db.execute(
+            select(UserReview.user_id, func.count()).where(
+                UserReview.conversation_url != "", *_within(UserReview.updated_at, span)
+            ).group_by(UserReview.user_id)
+        )
+    }
 
     # ── 여기부터는 창을 안 탄다. 「마지막으로 무엇이든 한 때」와 사람의 설정이다.
     last_seen: dict[str, datetime | None] = dict(bank_last)
@@ -362,6 +380,7 @@ def usage(
         (AssetGrab, AssetGrab.last_at),
         (PreviewOpen, PreviewOpen.last_at),
         (UserPreview, UserPreview.updated_at),
+        (UserReview, UserReview.updated_at),
         (ConnectionEvent, ConnectionEvent.created_at),
         (RootEvent, RootEvent.created_at),
         (BankFeedback, BankFeedback.created_at),
@@ -406,7 +425,8 @@ def usage(
                 "quizzes": {"pre": pre_cards.get(uid, 0), "main": main_cards.get(uid, 0),
                             "bank": bank_cards.get(uid, 0)},
                 "previewSaves": preview_saves.get(uid, 0),
-                "previewCreates": creates.get(uid, 0),
+                **{field: creates.get(uid, {}).get(field, 0) for field in PREVIEW_FIELDS.values()},
+                "reviewSaves": review_saves.get(uid, 0),
                 "fileRequests": {purpose: len(file_lectures.get((uid, purpose), set()))
                                  for purpose in FILE_PURPOSES},
                 "decks": grab_lectures.get(uid, 0),
@@ -480,7 +500,9 @@ def usage_detail(
             "noteReads": {"count": 0, "lastAt": None},
             "memo": {"count": 0, "lastAt": None},
             **{field: {"count":0,"lastAt":None} for field in ROOT_FIELDS},
-            "previewCreates": {"count": 0, "lastAt": None},
+            **{field: {"count": 0, "lastAt": None} for field in PREVIEW_FIELDS.values()},
+            "review": False,
+            "reviewSavedAt": None,
             "quizLastAt": {"pre": None, "main": None, "bank": None},
             # 우리 화면에서 이 편의 링크를 누른 횟수. 갈래로 갈라 둔다.
             "opens": dict.fromkeys(PREVIEW_OPEN_KINDS, 0),
@@ -599,8 +621,8 @@ def usage_detail(
         ).where(PreviewOpen.user_id == user_id)
     ).all():
         row = slot(subject, run_id)
-        if kind == "create":
-            row["previewCreates"] = {"count": int(times or 0), "lastAt": _iso(last)}
+        if kind in PREVIEW_FIELDS:
+            row[PREVIEW_FIELDS[kind]] = {"count": int(times or 0), "lastAt": _iso(last)}
         elif kind in PREVIEW_OPEN_KINDS:
             row["opens"][kind] = int(times or 0)
             row["opensAt"][kind] = _iso(last)
@@ -614,6 +636,16 @@ def usage_detail(
         row = slot(subject, run_id)
         row["preview"] = True
         row["previewSavedAt"] = _iso(last)
+        row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
+
+    for subject, run_id, last in db.execute(
+        select(UserReview.subject, UserReview.run_id, UserReview.updated_at).where(
+            UserReview.user_id == user_id, UserReview.conversation_url != ""
+        )
+    ).all():
+        row = slot(subject, run_id)
+        row["review"] = True
+        row["reviewSavedAt"] = _iso(last)
         row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
     titles = {

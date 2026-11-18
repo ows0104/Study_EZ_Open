@@ -9,3 +9,18 @@
 5. `server/.venv/Scripts/python.exe -m tests usage_actions`, 관련 기록 경로 검사와 `usage`, 웹 typecheck/build를 실행한다. 신규 행동의 사용자/강의/기간/실패·취소 의미와 개인정보 비노출을 확인한다. API를 먼저 배포하고 웹을 배포한다.
 
 `개인 링크 만들기 시도`는 버튼에서 새 대화를 시작한 요청이다. `개인 예습 링크 저장`은 현재 계정에 주소가 남아 있다는 뜻이다. 외부 AI 생성 완료나 실제 학습 완료를 증명하지 않는다. 도입 전 시도 기록은 소급해서 만들지 않는다.
+
+## 지금 세는 것과 안 세는 것 (2026-11-18 점검)
+
+「자료 첨부·받기」 칸은 화면이 자료 서명 링크를 받은 목적별 기록이다. 「예습/복습 대화 만들기 — 첨부」는
+대화 만들기 버튼이 필기·족보를 확장에 넘긴 강의이고, 목적을 모르는 것은 2026-11-02 목적 구분 전 요청뿐이다.
+칸 이름에 「미상」을 쓰지 않는다 — 한 줄의 사정이 칸 전체의 이름이 되면 다른 줄까지 미상으로 읽힌다.
+
+`preview_open.kind`는 8자 칸이다: share·mine(예습 링크 열기), create(개인 예습 대화 만들기), screate(공통 예습 대화 만들기),
+rcreate(개인 복습 대화 만들기), rmine(개인 복습 링크 열기). screate·rcreate·rmine은 2026-11-18부터 쌓인다.
+`root_event`는 start·reveal(시도)·rate·undo·tier·generation·generated·skip·exclude·mine·memo·map_view를 센다.
+publication(러너 게시)·focus·optional(과목 설정, 강의 없음)·map(풀이 중 지도 펼침)은 세지 않는다.
+
+서버에 쓰이지만 아직 이용현황에 없는 사용자 행동: 족보 회독 시작(`jokbo_round`), 플로팅 노트(`user_note`),
+Quiz Bank 내 문제·중요도·보류(은행 상태 JSON), 예습·복습 프롬프트 수정, 숨긴 강의(`study_hidden_lecture`),
+사이트 피드백(`site_feedback`, 관리 피드백 탭). 더하려면 위 1~5를 따른다.
