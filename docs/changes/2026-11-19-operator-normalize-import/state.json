@@ -1,0 +1,91 @@
+{
+  "id": "2026-11-19-operator-normalize-import",
+  "title": "Main-Quiz 운영자 제공 normalize 가져오기(operator-stage-result/1)와 261109_02 이어 하기",
+  "area": "integration",
+  "created_at": "2026-11-19T07:18:04.886080+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-19T07:22:26.160720+00:00",
+      "evidence": "2026-11-19 사용자: 「이걸로 돌려줘」(result_바실루스포함_깨짐수정.json), 질문 답 「가져오기 + 뒤 단계 GPT」·「가린 쪽 풀기」. 공개판 교체는 11-18 「교체한다」",
+      "scope": "plan.md 범위: runner/operator_stage_results.py(신규)·runner/root_native_json.py(NativeJson.file 앞머리·imported·validate_stage 갈래)·tests/runner/test_operator_stage_results.py·runner/CLAUDE.md. 구현·검사·PR·병합·러너 재설치. 운영: 261109_02 page-exclusions 행 삭제·job 700 사이드카 보관·operator-stage-results.json, 운영 DB 쓰기는 job 700 이어 하기 요청 하나",
+      "evidence_version": 2,
+      "source_hash": "06902e2105d9f05b3439e40e98d2f30ad298444dae00a027213cc3f0047d769e",
+      "plan_hash": "ac9cb14d02184130c3741471ed141e7ae5d256febcb3ac86e5668edae8ac13a4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "f774b7153a47cb77f5c1947c4c1faff4847de00e19f498c39a5593f49444a0ab"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-19T07:36:11.751330+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_operator_stage_results.py",
+        "tests/runner/test_root_native_json.py",
+        "tests/runner/test_root_native_v3.py",
+        "tests/runner/test_root_claude_provider.py",
+        "tests/runner/test_root_content_restriction.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "06902e2105d9f05b3439e40e98d2f30ad298444dae00a027213cc3f0047d769e",
+      "plan_hash": "ac9cb14d02184130c3741471ed141e7ae5d256febcb3ac86e5668edae8ac13a4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-19-operator-normalize-import/1795073668571379000-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-19T07:36:11.752850+00:00"
+}

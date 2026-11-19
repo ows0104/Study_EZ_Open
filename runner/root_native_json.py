@@ -505,6 +505,10 @@ class NativeJson:
         return self.file(stage,ctx,material,model,state)
 
     def file(self,stage,ctx,material,model,state=None):
+        # operator-stage-result/1 (docs/changes/2026-11-19-operator-normalize-import): a result a person brought from
+        # outside takes the model's place; the same seat, contract and checks, and a receipt that says who produced it.
+        from . import operator_stage_results as ops
+        imported=ops.entry(self.out,stage)
         schema=schema_for(stage,ctx);seat=self.out/'.native'/stage
         seat.mkdir(parents=True,exist_ok=False);work=seat/'work';work.mkdir()
         if 'bank'in ctx:visual.paths(ctx['bank'],material)
@@ -520,13 +524,14 @@ class NativeJson:
         if ctx.get('rejectedAuthoring'):
             task+='\nThis is the explicitly authorized repair of a completed but structurally rejected brief. Copy previousAuthoring.bank, visual_stimuli and clinical_conflicts EXACTLY using local code. Correct only the brief findings and their complete structural implications, preserve original points/source boundaries, set derived and explain the correction. The rejected brief is not a valid prior accepted map. Do not create or rewrite clinical questions in this recovery step.\n'
         # A Claude session runs check_result.py outside Codex's sandbox: the host interpreter works there as it is.
-        python=sys.executable if self.invoke is not None or g.codex.provider(model)=='claude' else sandbox_python(work)
+        python=sys.executable if imported is not None or self.invoke is not None or g.codex.provider(model)=='claude' else sandbox_python(work)
         (work/'task.md').write_text(task+check_instruction(python),encoding='utf-8')
         protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py','host-check.json')if(work/name).exists()}
         (seat/'adapter.py').write_bytes(Path(__file__).read_bytes())
         proof={'policy':POLICY,'stage':stage,'inputHash':document_hash(ctx),'cleanInputHash':document_hash(clean(ctx)),
             'schemaHash':document_hash(schema),'model':g.codex.model_name(model),'materialHashes':source_inventory,
             'protectedFiles':protected,'adapterSha256':sha(__file__)}
+        if imported is not None:return self.imported(stage,schema,seat,work,proof,imported)
         images=review_images(stage,work,ctx)
         if images:proof['attachedImages']=[{'file':p.name,'sha256':sha(p)}for p in images]
         g.write(seat/'journal.json',{'status':'started','proof':proof})
@@ -583,6 +588,30 @@ class NativeJson:
                 g.write(seat/'failure.json',summary)
             g.write(seat/'journal.json',{'status':'failed','proof':proof,'failure':summary});raise
 
+    def imported(self,stage,schema,seat,work,proof,imported):
+        """The operator's file is the stage answer: no model call, no session evidence, no follow-up. It passes the
+        same check_file as a model's file or the stage fails (the person brings a corrected file and resumes)."""
+        from . import operator_stage_results as ops
+        row,body,record_sha=imported
+        proof['operatorImport']={'policy':ops.POLICY,'entry':row,'recordSha256':record_sha}
+        g.write(seat/'journal.json',{'status':'started','proof':proof})
+        print('── 연결 파일 실행 '+stage+' · 운영자 제공 결과('+row['producer']+') — 모델을 부르지 않는다',flush=True)
+        try:
+            (work/'result.json').write_bytes(body);(seat/'output.json').write_bytes(body)
+            check_file(stage,work)
+            raw,projection=decode_for(stage,read_model(work/'result.json'),schema);jsonschema.validate(raw,schema)
+            if projection is not None:proof['tierProjection']=projection
+            proof.update(outputSha256=row['sha256'],rawHash=document_hash(raw))
+            receipt={'proof':proof,'proofHash':document_hash(proof)}
+            g.write(seat/'receipt.json',receipt);g.write(seat/'journal.json',{'status':'completed','proofHash':receipt['proofHash']})
+            return raw,{**IMPORTED_USAGE,'operatorImport':proof['operatorImport'],'fileReceipt':receipt}
+        except BaseException as error:
+            summary=failure(seat,error)
+            g.write(seat/'journal.json',{'status':'failed','proof':proof,'failure':summary});raise
+
+# A stage a person brought from outside carries no model usage (operator-stage-result/1).
+IMPORTED_USAGE={'usage':{},'cost_usd':0,'duration_ms':0,'models':[]}
+
 def validate_stage(out,entry,*,model):
     out=Path(out);name=entry['name'];usage=read(out/(name+'.usage.json'));row=usage.get('fileReceipt')
     require(entry.get('usageHash')==document_hash(usage),'Changed stage usage evidence')
@@ -599,10 +628,20 @@ def validate_stage(out,entry,*,model):
     require(sha(seat/'adapter.py')==proof['adapterSha256']and all(sha(work/k)==v for k,v in proof['protectedFiles'].items()),'Changed native adapter/input archive')
     require(read(work/'input.json')==clean(ctx)and read(work/'acceptance.schema.json')==schema,'Native archived inputs differ')
     require(inventory(work/'material')==proof['materialHashes']and all(sha(out/'material'/k)==v for k,v in proof['materialHashes'].items()),'Native original material differs')
-    response=read(seat/'provider.json');require(document_hash(response)==proof['providerHash']and response['session_id']==proof['nativeSessionId']
-        and type(response.get('turns'))is int and response['turns']>0,'Native provider completion differs')
-    follow=proof.get('followup')
-    if follow:
+    imported=proof.get('operatorImport');follow=proof.get('followup')
+    if imported is not None:
+        # operator-stage-result/1: the record and the file it names stand where the provider's answer would.
+        from . import operator_stage_results as ops
+        current=ops.entry(out,name)
+        require(imported.get('policy')==ops.POLICY and current is not None and current[0]==imported['entry']
+            and current[2]==imported['recordSha256']and imported['entry']['sha256']==proof['outputSha256']
+            and not(seat/'provider.json').exists()and not follow and usage.get('operatorImport')==imported,'Changed operator stage record')
+        merged=IMPORTED_USAGE
+    else:
+        response=read(seat/'provider.json');require(document_hash(response)==proof['providerHash']and response['session_id']==proof['nativeSessionId']
+            and type(response.get('turns'))is int and response['turns']>0,'Native provider completion differs')
+    if imported is not None:pass
+    elif follow:
         second=read(seat/'provider-followup.json')
         require(document_hash(second)==follow['providerHash']and second['session_id']==proof['nativeSessionId']
             and loads(response['text'])=={'path':'result.json','sha256':follow['firstOutputSha256']}

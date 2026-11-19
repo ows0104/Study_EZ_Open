@@ -37,6 +37,8 @@ Main-Quiz 요청(generationId)마다 모델·이유·승인 발언·시각을 �
 
 강의별 제외 쪽(2026-11-18, `docs/changes/2026-11-18-root-exclude-pages/`, page-withhold/1): `runs/page-exclusions.json`에 「과목/runId」마다 자료(자산 ID+원본 SHA-256)·뺄 쪽(원본 쪽 번호)·이유·승인 발언·시각을 적으면, 그 강의의 Main-Quiz 요청을 내려받을 때 러너가 사본 옆에 `<사본>.withheld-pages.json`으로 굳힌다(`page_exclusions.py`). 앞 단계·생성기·근거 보강은 `quizbank.withheld_pages`로 사본을 열어 그 쪽을 같은 크기의 빈 안내 쪽으로 읽는다. 쪽 수·번호·원본 지문·서버 packet은 그대로라 인용·그림·근거 지면이 원본 쪽 번호와 맞는다. 앞 단계 검사는 제외 쪽 인용을 거절하고, 생성 결과의 제외 쪽 인용은 `withheld-citations.json`에 세어 경고만 한다. 기록이 없으면 지금과 같다. 형식 오류·자료 불일치·이미 자료를 만든 실행이면 그 일감을 보류한다. 강의 자료를 덜 보내는 쪽의 기록이지만, 쪽을 고르는 것은 사용자 결정이다.
 
+운영자 제공 단계 결과(2026-11-19, `docs/changes/2026-11-19-operator-normalize-import/`, operator-stage-result/1): 생성 폴더 옆 `runs/_root-generation/<gid>/operator-stage-results.json`에 단계(지금은 `normalize`만)마다 같은 폴더의 결과 파일 이름·SHA-256·만든 곳(producer)·이유·승인 발언·시각을 적으면, 그 단계 차례에 모델을 부르지 않고 그 파일을 받는다(`operator_stage_results.py`, `NativeJson.imported`). 단계 자리·입력·스키마와 `check_file` 검사는 모델 단계와 같고 실패하면 되돌려 보내지 않고 그 단계가 실패한다. 영수증에는 모델 세션 증거 대신 `operatorImport`(기록 항목·기록 파일 SHA)가 남고 사용량은 0이다. 완료 결과 재검증은 기록과 파일이 그대로인지 본다. 기록이 없으면 지금과 같다. 웹 결과를 실행에 넣는 일이므로 사용자 확인을 받고 쓴다.
+
 `root_native_json.py`는 `v3-`로 시작하는 root-generation/3 단계도 실행한다(스키마·프롬프트·단계 검사는 `studyez_contracts.roots.generation_v3`). 그 단계는 입력의 `pages`와 그 문항의 자극 그림만 첨부한다. /2 단계 이름의 동작은 그대로다. `pipeline: map-tree/2`(형식 `source-assessment/2-map-tree/2`)는 앞 단계에서 지도·포인트와 함께 독립 문제은행(`bank/`, 지시문 `parallel/bank.md` + `map-tree/bank-task.md`)을 동시에 뽑고, 파생 packet이 root-generation/3으로 돈다. 셋 중 하나만 다시 돌아도 다른 둘은 다시 돌리지 않는다. 마지막 포인트 대조에 남은 지적의 포인트는 `openPoints`로 결과까지 간다.
 
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
