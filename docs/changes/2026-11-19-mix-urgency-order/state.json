@@ -1,0 +1,328 @@
+{
+  "id": "2026-11-19-mix-urgency-order",
+  "title": "모아풀기 복습 주기 이전 문제도 보기",
+  "area": "site",
+  "created_at": "2026-11-19T13:29:06.253321+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-19T15:44:22.115083+00:00",
+      "evidence": "2026-11-19 채팅: 계획 제시 후 사용자 「Approve, build it」",
+      "scope": "plan.md 범위: mix.py·routes/root_learning.py mix 구역, test_root_mix*.py, RootBatch.tsx·types/rootLearning.ts, root-batch.test.cjs. 로컬 구현·검사·PR까지, master 병합 제외",
+      "evidence_version": 2,
+      "source_hash": "06fb8ec9c34cd67f674c65bdcd246ed4593839af1671556e27f1660292e32570",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "e2e8f9ecc90c15b3cf9abe7e02535ccbba9dd182fbbaf073f8cb2bf99905002f"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-19T15:47:57.840164+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_mix'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103271583897700-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-19T15:48:06.790087+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_prereq'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103278225872100-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-19T15:48:10.803979+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_api'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103287172553400-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-19T15:48:15.743479+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','root_focus'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103291162739400-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-19T15:48:18.518697+00:00",
+      "command": [
+        "python",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([os.path.abspath('server/.venv/Scripts/python.exe'),'-m','tests','route_contract'],cwd='server').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103296126105400-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-19T15:48:25.458898+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103298913971500-web.log",
+      "web_artifact": "32d32b2f2d6e09c4271a88cb0e9fbca91bd6f2d29dd6455edfc6eda17e9c5dbd",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-19T15:48:40.494163+00:00",
+      "command": [
+        "python",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-batch"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103309806604000-web.log",
+      "web_artifact": "32d32b2f2d6e09c4271a88cb0e9fbca91bd6f2d29dd6455edfc6eda17e9c5dbd",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-19T15:49:21.882214+00:00",
+      "command": [
+        "python",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+      "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-mix-urgency-order/1795103321066341700-web.log",
+      "web_artifact": "32d32b2f2d6e09c4271a88cb0e9fbca91bd6f2d29dd6455edfc6eda17e9c5dbd",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-19T15:49:57.400846+00:00",
+    "summary": "경계: 분류·기록 불변, 회차 과제 순서만 묶음(복습 대상→미열람→복습 주기 이전 급한 순)으로, 재개 조건(state.mix) 불변, 옛 회차는 phases 없이 예전 규칙. 확인: 선행이 묶음을 넘어 앞이면 그 자리 묶음으로 세어 웹의 묶음 경계가 어긋나지 않음. 남은 위험: 없음(데이터 변경 없음).",
+    "evidence_version": 2,
+    "source_hash": "12cba2f738c9aeaf910fa6f332e1538874c8c32cf8167fed375b68df6b33c4a6",
+    "plan_hash": "b83227beb1751bdf5c1528f3ddc2e72fc080a570269c107e2e327d63727288c0",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-19T15:49:58.556268+00:00"
+}

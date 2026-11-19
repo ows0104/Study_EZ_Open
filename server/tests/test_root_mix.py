@@ -56,13 +56,13 @@ assert view(client, sid)['position'] == 1
 after = counts()
 assert after['counts']['Core'] == {'unseen': 2, 'due': 0, 'later': 1}, after
 assert after['open'] == [{'sessionId': sid, 'options': {'tiers': ALL, 'unseen': True, 'ignoreSchedule': False,
-                                                        'order': 'ordered'}, 'left': 2}], after
+                                                        'order': 'ordered'}, 'left': 2, 'phases': {'due': 0, 'unseen': 3, 'urgency': []}}], after
 # The lecture screen's plan sees the rating (task1 left today's recommendation).
 assert 'task1' not in [t['task_id'] for t in client.get(BASE).json()['plan']['tasks']]
 
 # ── R6: same options resume; other options open their own session ──
 r = begin('m2', unseen=True); assert r.status_code == 200
-assert r.json() == {'sessionId': sid, 'version': view(client, sid)['version'], 'count': 3}
+assert r.json() == {'sessionId': sid, 'version': view(client, sid)['version'], 'count': 3, 'phases': {'due': 0, 'unseen': 3, 'urgency': []}}
 r = begin('m3', ignore=True); assert r.status_code == 200, r.text   # 나중(오늘 푼 task1)만
 assert r.json()['sessionId'] != sid and task_ids(r.json()['sessionId']) == ['task1']
 # 다 푼 회차는 closed로 남는다(마침 화면용).
@@ -82,6 +82,9 @@ r = begin('m5'); assert r.status_code == 200, r.text
 assert task_ids(r.json()['sessionId']) == ['task1']
 r = begin('m6', unseen=True, ignore=True); assert r.status_code == 200
 assert r.json()['count'] == 3
+# 묶음(2026-11-19-mix-urgency-order): 복습 대상 → 미열람 → 복습 주기 이전.
+assert task_ids(r.json()['sessionId']) == ['task1', 'task2', 'task3']
+assert r.json()['phases'] == {'due': 1, 'unseen': 2, 'urgency': []}, r.json()
 
 # A task seen but not rated is due, unless touched today.
 root_learning.now = lambda: NOW + timedelta(days=61)
@@ -102,6 +105,10 @@ assert begin('m8', tiers=['Optional'], unseen=True).json()['count'] == 1
 assert begin('m9', tiers=['Core'], unseen=True).status_code in (200, 409)
 r = begin('m10', tiers=['Core'], unseen=True, ignore=True); assert r.status_code == 200
 assert 'task3' not in task_ids(r.json()['sessionId'])
+# 복습 대상(task2, 시도만 함)이 판 순서로 앞인 task1(복습 주기 이전)보다 먼저다.
+assert task_ids(r.json()['sessionId']) == ['task2', 'task1'], task_ids(r.json()['sessionId'])
+phases = r.json()['phases']
+assert phases['due'] == 1 and phases['unseen'] == 0 and len(phases['urgency']) == 1 and phases['urgency'][0] > 0, phases
 # 강의 화면의 중요도 저장값은 그대로다.
 assert client.get(BASE).json()['focus']['tiers'] == ALL
 
@@ -119,5 +126,21 @@ for seed in range(40):
 assert len(orders) > 20
 # 선행 문항이 고르지 않은 쪽이면 끌어오지 않는다.
 assert 't6' not in [t['task_id'] for t in mix.shuffled(doc, [t for t in doc['tasks'] if t['task_id'] != 't6'], 's')]
+
+# ── arrange: 급한 순, 선행 문항은 묶음을 넘어 앞(2026-11-19-mix-urgency-order) ──
+doc8 = {'tasks': [{'task_id': f't{i}', 'question_id': f'q{i}', 'direction_id': f'd{i}'} for i in range(6)],
+        'bank_snapshot': {'questions': [{'question_id': f'q{i}', **({'prerequisites': ['q4']} if i == 0 else {})} for i in range(6)]}}
+cls = {'t0': 'due', 't1': 'due', 't2': 'later', 't3': 'later', 't4': 'unseen', 't5': 'later'}
+urg = {'t2': 5.4, 't3': 1.9, 't5': 1.2}
+listed, ph = mix.arrange(doc8, doc8['tasks'], cls, urg, 'ordered', 's')
+# t0(due)의 선행 t4(unseen)가 앞으로 와 ① 묶음에 센다. ③은 급한 순 t5 → t3 → t2.
+assert [t['task_id'] for t in listed] == ['t4', 't0', 't1', 't5', 't3', 't2'], listed
+assert ph == {'due': 3, 'unseen': 0, 'urgency': [1.2, 1.9, 5.4]}, ph
+listed, ph = mix.arrange(doc8, doc8['tasks'], cls, urg, 'random', 'x')
+assert [t['task_id'] for t in listed][-3:] == ['t5', 't3', 't2'] and ph['urgency'] == [1.2, 1.9, 5.4]
+order = [t['task_id'] for t in listed]
+assert order.index('t4') < order.index('t0')
+assert mix.urgency_of({'effectiveDue': '2026-11-25', 'mastery': 0.8, 'lastAt': '2026-11-20T00:00:00+00:00', 'ratingDays': 3},
+                      __import__('datetime').date(2026, 11, 20), NOW) >= 5
 
 print('root mix: ok')

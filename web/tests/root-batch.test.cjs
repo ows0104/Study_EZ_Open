@@ -112,14 +112,14 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     assert.match(await page.locator('.mq-done-card').innerText(),/2개 강의 · 6문항/);
     await shot(page,'done');
 
-    // 기존 학습률 무시: today's six are counted again; 미열람은 없다.
+    // 복습 주기 이전 문제도 보기(예전 이름 「기존 학습률 무시」): today's six are counted again; 미열람은 없다.
     await page.getByRole('button',{name:'강의 목록으로'}).waitFor();
     await page.goto(url+'?l=test/demo&l=test/demo2');
     await counted(page);
     assert.equal(await startCount(page),'0');
     await page.getByLabel('미열람 문항 보기').check();
     assert.equal(await startCount(page),'0');
-    await page.getByLabel('기존 학습률 무시').check();
+    await page.getByLabel('복습 주기 이전 문제도 보기').check();
     assert.equal(await startCount(page),'6');
 
     const sessions=new Set(events.map(e=>e.session));
@@ -157,5 +157,36 @@ test('모아풀기 섞어서: 강의 사이·강의 안을 모두 섞고 모든 
     console.log('섞어서 순서:',seen.join(' → '));
     assert.deepEqual(errors,[]);
   }catch(error){await shot(page,'failure-random');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
+  finally{await browser.close();}
+});
+
+test('모아풀기 묶음: 강의를 건너 미열람을 먼저, 복습 주기 이전 문항은 그 뒤(2026-11-19-mix-urgency-order)',async()=>{
+  const {browser,page}=await launch('c');const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  try{
+    await page.goto(url+'?l=test/demo&l=test/demo2');
+    await counted(page);
+    await page.getByLabel('미열람 문항 보기').check();
+    await page.getByRole('button',{name:/^모아풀기 시작/}).click();
+    // 순서대로: lecture A first. Solve two, then leave.
+    assert.equal((await where(page)).question,'Synthetic question 1?');await revealAndRate(page);
+    assert.equal((await where(page)).question,'Synthetic question 2?');await revealAndRate(page);
+    await where(page);
+    await page.waitForFunction(()=>!Object.keys(localStorage).some(k=>k.startsWith('studyez:root-write:')));
+    await page.reload();
+    await counted(page);
+    // A1·A2 are now not yet due; A3 and B1–B3 are unseen. Other options → a new mixed session.
+    await page.getByLabel('미열람 문항 보기').check();
+    await page.getByLabel('복습 주기 이전 문제도 보기').check();
+    await page.getByRole('radio',{name:'섞어서'}).click();
+    assert.equal(await startCount(page),'6');
+    await page.getByRole('button',{name:/^모아풀기 시작/}).click();
+    const seen=[];
+    for(let i=0;i<6;i++){seen.push((await where(page)).question);await revealAndRate(page);}
+    await page.getByRole('heading',{name:'오늘 모아풀기를 마쳤어요'}).waitFor();
+    console.log('묶음 순서:',seen.join(' → '));
+    assert.deepEqual(seen.slice(0,4).sort(),['Second question 1?','Second question 2?','Second question 3?','Synthetic question 3?']);
+    assert.deepEqual(seen.slice(4).sort(),['Synthetic question 1?','Synthetic question 2?']);
+    assert.deepEqual(errors,[]);
+  }catch(error){await shot(page,'failure-phases');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
   finally{await browser.close();}
 });
