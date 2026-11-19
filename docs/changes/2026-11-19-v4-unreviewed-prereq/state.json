@@ -45,12 +45,61 @@
       "release_hash": "2c982449b3baac849bf3b2b60c04c0b209a51a08bd9e86ea03aa940ae33230be"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-19T11:21:51.421305+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts/test_generation_v4.py",
+        "tests/contracts/test_generation_v3.py",
+        "tests/contracts/test_review_placement.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0e37f3792454380a012b8e96fdebf9c32f844f16ea3204bd7e84ca6340468b3b",
+      "plan_hash": "2d6f10ad837068f128cb4ae26be445c1fb58af110da67cfd82bd316b12e5ae81",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-19-v4-unreviewed-prereq/1795087307837164100-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-19T11:16:27.704847+00:00"
+  "updated_at": "2026-11-19T11:21:51.421953+00:00"
 }

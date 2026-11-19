@@ -6,6 +6,7 @@
   - `supported`면 남는다.
   - 고치기 전 같은 합성 입력은 같은 오류로 멈췄다.
 - 서버 `python -m tests root_generation`: 전부 통과(5개).
+- `tests/contracts tests/quizbank`: 1543 통과·1 건너뜀.
 - job 700 사본 재생(`C:\sez\rp\a700_replay.py`, 모델 호출 막음):
   - 멈추던 조립을 지나 다음 단계 `v4-supplement-late`(한 번도 안 돈 단계)에서 모델 호출을 요청했다.
   - 실제 실행은 여기서부터 GPT를 부른다.
