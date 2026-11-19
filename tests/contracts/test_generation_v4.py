@@ -174,6 +174,33 @@ def test_an_unreviewed_relation_still_cannot_be_tested():
     assert [u['question_id'] for u in placed['unplacedQuestions']] == ['Q2']
 
 
+def two_targets_with_a_prerequisite(status):
+    """T1 → T2 on prerequisite relation R9, judged `status` by the map check (261109_02: normalize proposed two)."""
+    b, bank = scenario()
+    t2 = copy.deepcopy(b['targets'][0])
+    t2.update(target_id='T2', concept_ids=['C', 'D'])
+    for d in t2['directions']:
+        d['direction_id'] += 'x'
+    b['targets'].append(t2)
+    b['points'][0]['target_ids'].append('T2')
+    b['relations'].append({'relation_id': 'R9', 'from_id': 'A', 'to_id': 'C', 'kind': 'prerequisite', 'condition': 'synthetic',
+                           'evidence': [{'source_id': 'S1', 'locator': 'synthetic paragraph', 'pages': []}],
+                           'review_status': 'unreviewed', 'reason': 'synthetic'})
+    b['prerequisites'] = [{'before_target': 'T1', 'after_target': 'T2', 'relation_id': 'R9'}]
+    coverage = rows() + [{'direction_id': d['direction_id'], 'status': 'missing', 'reason': 'Synthetic', 'duplicates': [], 'evidence': []}
+                         for d in t2['directions']]
+    m = map_ok(b)
+    m['relation_checks'][-1]['status'] = status
+    return build(b, bank, coverage, mapcheck=m)
+
+
+def test_a_prerequisite_the_map_check_left_unconfirmed_is_dropped_not_fatal():
+    doc, _ = two_targets_with_a_prerequisite('unknown')
+    assert doc['prerequisites'] == []
+    doc, _ = two_targets_with_a_prerequisite('supported')
+    assert doc['prerequisites'] == [{'before_target': 'T1', 'after_target': 'T2', 'relation_id': 'R9'}]
+
+
 def test_the_document_validator_keeps_the_whole_goal_rule_for_older_policies():
     b, bank = scenario()
     b['targets'][0]['directions'][0]['relation_ids'] = ['R1', 'R2']   # D1 spans two relations; each question tests one

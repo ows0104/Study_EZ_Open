@@ -776,6 +776,10 @@ def _compile(brief, bank, raw, placement):
     projected = v2.legacy_brief(brief)
     for r in projected['relations']:
         r['review_status'] = 'reviewed' if rels[r['relation_id']]['status'] == 'supported' else 'unreviewed'
+    # A prerequisite edge stands only on a relation the map check supported, as the task order keeps it (assemble).
+    # normalize may propose one on an unreviewed relation; one left unconfirmed is not an order the review adopted
+    # (docs/changes/2026-11-19-v4-unreviewed-prereq: 261109_02 stopped here after every stage had completed).
+    projected['prerequisites'] = [e for e in projected['prerequisites'] if rels[e['relation_id']]['status'] == 'supported']
     rows = copy.deepcopy(a['question_reviews'])
     for row in rows:
         qid, kept = row['question_id'], []
