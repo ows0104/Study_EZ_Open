@@ -125,7 +125,7 @@ test('족보 모아풀기 섞어풀기: 모든 문항을 한 번씩',async()=>{
   finally{await browser.close();}
 });
 
-test('족보 모아풀기: 24시간 안에 푼 문제 빼기 — 새로고침 뒤 이미 푼 문제를 다시 내지 않는다',async()=>{
+test('족보 모아풀기: 5시간 안에 푼 문제 빼기 — 새로고침 뒤 이미 푼 문제를 다시 내지 않는다',async()=>{
   const {browser,page}=await launch('recent');const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
     await page.goto(url+'?e=evA&e=evB&e=evC');
@@ -138,7 +138,7 @@ test('족보 모아풀기: 24시간 안에 푼 문제 빼기 — 새로고침 �
     await page.waitForTimeout(500);
     await page.reload();
     await counted(page);
-    const skip=page.getByRole('button',{name:'24시간 안에 푼 문제 빼기'});
+    const skip=page.getByRole('button',{name:'5시간 안에 푼 문제 빼기'});
     assert.equal(await skip.getAttribute('aria-pressed'),'false');
     assert.equal(await startCount(page),'9');
     await skip.click();

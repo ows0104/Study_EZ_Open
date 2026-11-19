@@ -20,7 +20,7 @@ import "./jokbo.css";
  * 풀이·끝 화면은 강의 하나 족보(`JokboSolve`)를 그대로 쓴다. 채점·오답노트 표시·회독은 그 문항의 시간표 칸으로 간다.
  */
 
-const RECENT_MS = 24 * 60 * 60 * 1000;
+const RECENT_MS = 5 * 60 * 60 * 1000;
 
 type Lane = { eventId: string; data?: JokboResponse; error?: string };
 
@@ -37,7 +37,7 @@ function Mix({ eventIds }: { eventIds: string[] }) {
   const [scopes, setScopes] = useState<Record<string, JokboScope>>({});
   const [order, setOrder] = useState<MixOrder>("spread");
   const [perLecture, setPerLecture] = useState(false);
-  // 2026-11-20 사용자 「최근 24시간 안에 푼 거 제외」: 새로고침으로 판이 끊겨도 이미 푼 문제를 다시 넘기지 않게.
+  // 2026-11-20 사용자 「최근 24시간 안에 푼 거 제외」 → 11-20 「5시간정도로」: 새로고침으로 판이 끊겨도 이미 푼 문제를 다시 넘기지 않게.
   const [skipRecent, setSkipRecent] = useState(false);
   const [solvedAt, setSolvedAt] = useState<Record<string, number>>({});
   const [queue, setQueue] = useState<JokboItem[] | null>(null);
@@ -179,7 +179,7 @@ function Mix({ eventIds }: { eventIds: string[] }) {
                 </div>
                 <div className="mq-focus" role="group" aria-label="최근 푼 문제">
                   <button type="button" aria-pressed={skipRecent} disabled={loading} onClick={() => setSkipRecent(v => !v)}>
-                    {skipRecent && <Icon.check />}24시간 안에 푼 문제 빼기</button>
+                    {skipRecent && <Icon.check />}5시간 안에 푼 문제 빼기</button>
                 </div>
               </div>
             </div>
