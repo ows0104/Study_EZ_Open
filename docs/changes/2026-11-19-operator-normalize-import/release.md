@@ -11,7 +11,9 @@
   - 가리지 않은 PDF로 다시 만든 normalize 입력 지문이 job 700 원장 값과 같다.
   - S1 36쪽이 원본 글이다.
   - 웹 결과 `result_바실루스포함_깨짐수정.json`을 가져오면 검사를 통과한다(개념 196·목표 108·포인트 83, 사용량 0).
-- 전체 묶음(`tests/runner tests/quizbank tests/contracts`): 아래 「전체 검사」에 적는다.
+- 전체 묶음(`tests/runner tests/quizbank tests/contracts`, 11-19 로컬): 2434 통과·1 건너뜀·1 실패.
+  실패는 알려진 환경 실패 `test_desktop_control::test_shortcut_installer_supports_korean_filename_in_windows_powershell`이다(11-18 기록과 같음).
+- `development.py verify --check regression`: 새 검사와 native·v3·Claude 공급자·콘텐츠 제한 검사 묶음, 종료 0.
 - 리뷰에서 본 경계:
   - 모델 단계의 영수증과 검사는 그대로다. provider 갈래는 들여쓰기만 바뀌었다.
   - 가져온 단계에는 모델 세션 증거를 만들지 않는다.

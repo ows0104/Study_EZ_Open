@@ -37,12 +37,55 @@
       "release_hash": "f774b7153a47cb77f5c1947c4c1faff4847de00e19f498c39a5593f49444a0ab"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-19T07:36:11.751330+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_operator_stage_results.py",
+        "tests/runner/test_root_native_json.py",
+        "tests/runner/test_root_native_v3.py",
+        "tests/runner/test_root_claude_provider.py",
+        "tests/runner/test_root_content_restriction.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "06902e2105d9f05b3439e40e98d2f30ad298444dae00a027213cc3f0047d769e",
+      "plan_hash": "ac9cb14d02184130c3741471ed141e7ae5d256febcb3ac86e5668edae8ac13a4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-19-operator-normalize-import/1795073668571379000-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-19T07:22:28.438066+00:00"
+  "updated_at": "2026-11-19T07:36:11.752850+00:00"
 }
