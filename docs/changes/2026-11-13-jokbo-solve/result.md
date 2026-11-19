@@ -3,6 +3,7 @@
 `python -m runner.jokbo_solve build` → `runs/_materials/감염과 면역/jokbo-solve/2026-1/` (git 밖)
 
 - 45세트·519문항을 강의 49칸에 붙였다: 1~48 중 44강의, CBL 1~3, TBL 1, 실습 1. 붙지 않은 세트 없음. 그림 155개.
+  (2026-11-20: CBL 3 세트에 CBL 4·5 문항 29개가 섞여 있었다 → [CBL 4·5 붙이기](../2026-11-20-cbl45-jokbo/intent.md))
 - **해설 519/519.** 처음 220문항은 Opus 5.5가 썼다. 나머지 299문항은 Opus가 `[bio]` 안전장치로 멈춰 Sonnet이 썼다.
   220문항은 Sonnet이 다시 점검했다. 근거는 2026 필기, 없으면 2025 필기, 둘 다 없으면 일반 지식(`basis.kind`)이다.
 - 원천 교정 49문항(`fixes/`). 모두 원본 족보 PDF 쪽을 `evidence`에 적었다. 원래 답은 `originalAnswers`로 남는다.
