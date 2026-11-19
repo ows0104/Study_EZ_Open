@@ -1234,9 +1234,9 @@ def mix_inputs(db, row, user, when):
     # 복습일은 시험일에 맞춰 당겨진다(overview_data와 같다). 사본은 가벼운 문서의 지문 속성을 그대로 들고 간다.
     document = copy.copy(row.document)
     document['exam_date'] = current_exam_date(db, row)
-    classes = mix.classify(document, events, available, when, configured)
+    classes, urgency = mix.classify_urgency(document, events, available, when, configured)
     tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
-    return configured, classes, tiers
+    return configured, classes, tiers, urgency
 
 
 def mix_sessions(db, row, user, when, configured):
@@ -1258,11 +1258,13 @@ def mix_overview(subject: str, run_id: str, user: CurrentUser = Depends(require_
     from app.root_learning import mix
     row = active(db, subject, run_id, user)
     when = now()
-    configured, classes, tiers = mix_inputs(db, row, user, when)
+    configured, classes, tiers, _ = mix_inputs(db, row, user, when)
     sessions = mix_sessions(db, row, user, when, configured)
     # closed: 오늘 다 푼 모아풀기 회차. 새로고침 전에 끝낸 강의도 마침 화면에 결과로 남긴다(#219 e198b5c8와 같은 뜻).
     return {'revision': row.revision, 'title': row.document['title'], 'counts': mix.counts(classes, tiers),
-            'open': [{'sessionId': s.id, 'options': s.state['mix'], 'left': len(s.tasks) - s.state['index']}
+            # phases: 복습 대상·미열람·복습 주기 이전 묶음(2026-11-19-mix-urgency-order). 옛 회차는 없다.
+            'open': [{'sessionId': s.id, 'options': s.state['mix'], 'left': len(s.tasks) - s.state['index'],
+                      **({'phases': s.state['mixPhases']} if s.state.get('mixPhases') else {})}
                      for s in sessions if s.state['index'] < len(s.tasks)],
             'closed': [{'sessionId': s.id, 'options': s.state['mix'], 'count': len(s.tasks)}
                        for s in sessions if s.state['index'] >= len(s.tasks)]}
@@ -1284,7 +1286,7 @@ def mix_start(subject: str, run_id: str, payload: MixStart, user: CurrentUser = 
             raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
         return previous.result
     when = now()
-    configured, classes, tiers = mix_inputs(db, row, user, when)
+    configured, classes, tiers, urgency = mix_inputs(db, row, user, when)
     options = {'tiers': [t for t in policy.TIERS if t in payload.tiers], 'unseen': payload.unseen,
                'ignoreSchedule': payload.ignoreSchedule, 'order': payload.order}
     if payload.prereqs:
@@ -1297,16 +1299,19 @@ def mix_start(subject: str, run_id: str, payload: MixStart, user: CurrentUser = 
                            prereqs=payload.prereqs, links=content.existence_links(db, row) if payload.prereqs else None)
         if not tasks:
             raise HTTPException(409, '고른 조건에 맞는 문항이 없습니다.')
-        if payload.order == 'random':
-            tasks = mix.shuffled(row.document, tasks, document_hash([user.id, row.revision, day, payload.requestId]))
+        # 복습 대상 → 미열람 → 복습 주기 이전(급한 순) 묶음(2026-11-19-mix-urgency-order). 웹이 강의를 건너 같은 묶음 순으로 낸다.
+        tasks, phases = mix.arrange(row.document, tasks, classes, urgency, payload.order,
+                                    document_hash([user.id, row.revision, day, payload.requestId]))
         seen = db.get(RootEvent, (user.id, map_view_id(subject, run_id, row.revision, day))) is not None
-        fresh = {'index': 0, 'reveals': {}, 'mapSeen': seen, 'undo': None, 'exposedRelations': [], 'mix': options}
+        fresh = {'index': 0, 'reveals': {}, 'mapSeen': seen, 'undo': None, 'exposedRelations': [], 'mix': options,
+                 'mixPhases': phases}
         identity = document_hash([user.id, subject, run_id, row.revision, day, configured, tasks,
                                   {'mix': options, 'request': payload.requestId}])
         session = RootSession(id=identity, user_id=user.id, subject=subject, run_id=run_id, revision=row.revision,
                               day=day, policy=configured, tasks=tasks, state=fresh, version=0)
         db.add(session)
-    result = {'sessionId': session.id, 'version': session.version, 'count': len(session.tasks)}
+    result = {'sessionId': session.id, 'version': session.version, 'count': len(session.tasks),
+              **({'phases': session.state['mixPhases']} if session.state.get('mixPhases') else {})}
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id=session.id, subject=subject,
         run_id=run_id, revision=row.revision, kind='start', payload={'_request': request}, result=result, created_at=when))
     try:

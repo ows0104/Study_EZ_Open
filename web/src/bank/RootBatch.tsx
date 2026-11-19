@@ -4,7 +4,7 @@ import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { SlidePreloader } from '../slidePreload';
 import { ROOT_TIERS } from '../types/rootLearning';
-import type { RootAction, RootFrame, RootMixInfo, RootMixOptions, RootMixOrder, RootSummary, RootTierName, RootView } from '../types/rootLearning';
+import type { RootAction, RootFrame, RootMixInfo, RootMixOptions, RootMixOrder, RootMixPhases, RootSummary, RootTierName, RootView } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
 import { useRootStudyWrites } from './useRootStudyWrites';
 import { warm } from './useRootFrames';
@@ -19,7 +19,7 @@ import './root-batch.css';
  * Main-Quiz 모아풀기(2026-11-18 사용자 「강의 목록형에서 선택해서 섞어서 풀 수 있게」).
  *
  * 서버 회차는 강의 단위 그대로다. 고른 강의마다 모아풀기 회차를 열고, 이 화면이 문항을 번갈아 낸다.
- * 시작 화면 선택지(docs/changes/2026-11-18-mix-options): 중요도(전체 + 강의별), 순서대로/섞어서, 기존 학습률 무시, 미열람 문항 보기.
+ * 시작 화면 선택지(docs/changes/2026-11-18-mix-options): 중요도(전체 + 강의별), 순서대로/섞어서, 복습 주기 이전 문제도 보기, 미열람 문항 보기.
  * 강의 안 순서는 서버가 회차를 열 때 정한다(순서대로 = 판 순서, 섞어서 = 선행 문항을 지킨 무작위). 기록·복습일은 강의별로 쌓인다.
  * 되돌리기(Z)는 강의를 가리지 않고 방금 한 행동부터 거꾸로 돌린다.
  */
@@ -29,6 +29,8 @@ const keyOf=(l:MixLecture)=>`${l.subject}/${l.runId}`;
 const sessionPath=(id:string)=>`/api/root-learning/sessions/${encodeURIComponent(id)}`;
 
 type Lane = MixLecture & {key:string; base:string; title?:string;
+  /** 풀이 중 회차의 묶음(복습 대상 → 미열람 → 복습 주기 이전). 옛 회차는 없다. */
+  phases?:RootMixPhases;
   /** 시작 화면: 중요도별 미열람·복습 대상·나중 수와 오늘 안 끝난 모아풀기 회차. */
   mix?:RootMixInfo; error?:string;
   /** 같은 조건으로 오늘 이미 다 푼 강의. 섞을 문항은 없지만 마침 화면에 그 강의의 결과로 남는다. */
@@ -67,7 +69,7 @@ function useLaneFrames() {
   return {ensure,get,forget};
 }
 
-/** 고른 조건의 문항 수: 고른 중요도마다 복습 대상 + (기존 학습률 무시면 나중) + (미열람 문항 보기면 미열람). */
+/** 고른 조건의 문항 수: 고른 중요도마다 복습 대상 + (복습 주기 이전 문제도 보기면 나중) + (미열람 문항 보기면 미열람). */
 export function mixCount(mix:RootMixInfo|undefined,tiers:readonly RootTierName[],unseen:boolean,ignoreSchedule:boolean):number {
   if(!mix)return 0;
   return tiers.reduce((sum,t)=>{const c=mix.counts[t];return c?sum+c.due+(ignoreSchedule?c.later:0)+(unseen?c.unseen:0):sum;},0);
@@ -91,17 +93,44 @@ function spread(text:string) {
  * 섞어서: 남은 문항 수에 비례한 확률로 강의를 고른다 — 모든 번갈아 놓기가 같은 확률이다. 값은 회차들·지금까지 푼 수로 정해
  * 새로고침해도 같은 순서다.
  */
-export function nextLane(lanes:Pick<Lane,'key'|'view'>[],order:RootMixOrder='ordered'):string|null {
+/** 회차의 지금 자리가 어느 묶음인가: 0 복습 대상 · 1 미열람 · 2 복습 주기 이전. 묶음이 없는 옛 회차는 0. */
+function phaseAt(lane:Pick<Lane,'view'|'phases'>):number {
+  const v=lane.view!,p=lane.phases;
+  if(!p)return 0;
+  return v.position<p.due?0:v.position<p.due+p.unseen?1:2;
+}
+
+/** 지금 묶음에서 그 회차에 남은 칸 수. */
+function leftInPhase(lane:Pick<Lane,'view'|'phases'>,phase:number):number {
+  const v=lane.view!,p=lane.phases;
+  const end=!p?v.count:phase===0?p.due:phase===1?p.due+p.unseen:v.count;
+  return Math.max(0,Math.min(end,v.count)-v.position);
+}
+
+/**
+ * 다음 문항을 낼 강의. 다 끝났으면 null.
+ * 묶음(2026-11-19-mix-urgency-order): 모든 강의의 복습 대상이 끝나야 미열람, 그 뒤가 복습 주기 이전이다.
+ * 복습 대상·미열람: 순서대로 = 고른 순서(강의 번호 순)로 한 강의씩, 섞어서 = 그 묶음에 남은 수에 비례한 추첨
+ * (회차들·지금까지 푼 수로 정해 새로고침해도 같다). 복습 주기 이전: 강의마다 다음 칸 중 가장 급한 것(같으면 강의 순서).
+ */
+export function nextLane(lanes:Pick<Lane,'key'|'view'|'phases'>[],order:RootMixOrder='ordered'):string|null {
   const open=lanes.filter(l=>l.view&&!l.view.finished&&l.view.count>0&&l.view.position<l.view.count);
   if(!open.length)return null;
-  if(order==='ordered')return open[0].key;
+  const phase=Math.min(...open.map(phaseAt));
+  const here=open.filter(l=>phaseAt(l)===phase);
+  if(phase===2){
+    let best=here[0],score=Infinity;
+    for(const l of here){const p=l.phases!;const u=p.urgency[l.view!.position-p.due-p.unseen]??Infinity;if(u<score){score=u;best=l;}}
+    return best.key;
+  }
+  if(order==='ordered')return here[0].key;
   const views=lanes.flatMap(l=>l.view?[l.view]:[]);
   const done=views.reduce((sum,v)=>sum+Math.min(v.position,v.count),0);
   const seed=views.map(v=>v.sessionId).sort().join(',');
-  const left=open.map(l=>l.view!.count-l.view!.position);
-  let pick=spread(`${seed}:${done}`)%left.reduce((a,b)=>a+b,0);
-  for(const [i,l] of open.entries()){if(pick<left[i])return l.key;pick-=left[i];}
-  return open[open.length-1].key;
+  const left=here.map(l=>leftInPhase(l,phase));
+  let pick=spread(`${seed}:${done}`)%Math.max(1,left.reduce((a,b)=>a+b,0));
+  for(const [i,l] of here.entries()){if(pick<left[i])return l.key;pick-=left[i];}
+  return here[here.length-1].key;
 }
 
 export function RootBatchPage() {
@@ -198,7 +227,7 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
       // 같은 조건의 안 끝난 회차는 그대로 잇고, 없으면 모아풀기 회차를 연다. 요청은 한 줄로 순서대로 간다.
       orderRef.current=order;
       const started=eligible.map(l=>{const open=openOf(l);
-        return open?Promise.resolve({sessionId:open.sessionId}):writes.run(l.base+'/mix-sessions',optionsOf(l.key));});
+        return open?Promise.resolve({sessionId:open.sessionId,phases:open.phases}):writes.run(l.base+'/mix-sessions',optionsOf(l.key));});
       if(started.some(p=>!p))return;
       // 같은 조건으로 오늘 이미 다 푼 강의: 섞을 문항은 없지만 마침 화면에 결과로 남긴다(#219 e198b5c8).
       const finished=live.filter(l=>!eligible.includes(l)).flatMap(l=>{
@@ -206,10 +235,10 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
       const closedViews=await Promise.all(finished.map(f=>api<RootView>(sessionPath(f.closed.sessionId)).catch(()=>null)));
       setLanes(all=>all.map(l=>{const i=finished.findIndex(f=>f.key===l.key);const v=i<0?null:closedViews[i];
         return {...l,closed:v?{count:v.count,summary:v.summary}:undefined};}));
-      const ids=await Promise.all(started as Promise<{sessionId:string}>[]);
+      const ids=await Promise.all(started as Promise<{sessionId:string;phases?:RootMixPhases}>[]);
       const views=await Promise.all(ids.map(r=>api<RootView>(sessionPath(r.sessionId))));
       stack.current=[];
-      setLanes(all=>all.map(l=>{const i=eligible.findIndex(e=>e.key===l.key);return i<0?{...l,view:undefined}:{...l,view:views[i]};}));
+      setLanes(all=>all.map(l=>{const i=eligible.findIndex(e=>e.key===l.key);return i<0?{...l,view:undefined,phases:undefined}:{...l,view:views[i],phases:ids[i].phases};}));
       choose();setPhase('solve');
     }catch(e){setError((e as Error).message);}
     finally{setAdvancing(false);}
@@ -358,7 +387,7 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
             </div>
             <div className="mq-mix-checks">
               <label><input type="checkbox" checked={ignoreSchedule} disabled={advancing}
-                onChange={e=>setIgnoreSchedule(e.target.checked)}/>기존 학습률 무시</label>
+                onChange={e=>setIgnoreSchedule(e.target.checked)}/>복습 주기 이전 문제도 보기</label>
               <label><input type="checkbox" checked={unseen} disabled={advancing}
                 onChange={e=>setUnseen(e.target.checked)}/>미열람 문항 보기</label>
               <label><input type="checkbox" checked={prereqs} disabled={advancing}
