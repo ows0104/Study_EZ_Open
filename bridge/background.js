@@ -531,31 +531,104 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+/** 한 번에 넘기는 조각 크기와, 탭이 조각을 받았다고 답하기를 기다리는 시한. */
+const STREAM_BATCH_BYTES = 1024 * 1024;
+const STREAM_ACK_TIMEOUT_MS = 60_000;
+
+function joinBytes(parts, size) {
+  if (parts.length === 1) return parts[0];
+  const joined = new Uint8Array(size);
+  let offset = 0;
+  for (const part of parts) {
+    joined.set(part, offset);
+    offset += part.length;
+  }
+  return joined;
+}
+
 /**
  * 자료 전달.
  *
  * 콘텐츠 스크립트는 R2에 직접 못 간다(교차 출처). 배경이 받아서 조각내 넘긴다.
+ * 조각마다 탭의 FILE_ACK를 기다린다. 배경이 보내기만 하면 Chrome이 30초 뒤 서비스 워커를
+ * 끝낼 수 있다(2026-11-15 「받는 중」 뒤 연결 끊김). 받는 메시지는 확실히 워커를 살려 둔다.
  */
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "studyez-file-stream") return;
+  let closed = false;
+  let started = false;
+  let reader = null;
+  let waiting = null;
+  const stopWaiting = (error) => {
+    if (!waiting) return;
+    const current = waiting;
+    waiting = null;
+    clearTimeout(current.timer);
+    if (error) current.reject(error);
+    else current.resolve();
+  };
+  const send = (message) => {
+    if (closed) return;
+    try {
+      port.postMessage(message);
+    } catch (error) {
+      closed = true;
+      stopWaiting(error);
+    }
+  };
+  const waitForAck = () => new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => stopWaiting(new Error("탭이 자료 조각을 받았다는 응답이 없습니다.")),
+      STREAM_ACK_TIMEOUT_MS,
+    );
+    waiting = { resolve, reject, timer };
+  });
+  port.onDisconnect.addListener(() => {
+    closed = true;
+    stopWaiting(new Error("탭 연결이 끊겼습니다."));
+    void reader?.cancel().catch(() => {});
+  });
   port.onMessage.addListener(async (message) => {
-    if (message?.type !== "DOWNLOAD_FILE" || !allowedDownload(message.downloadUrl)) {
-      port.postMessage({ type: "FILE_ERROR", fileId: message?.fileId || "", error: "허용되지 않은 다운로드 주소입니다." });
+    if (message?.type === "FILE_ACK") {
+      stopWaiting();
       return;
     }
+    if (message?.type !== "DOWNLOAD_FILE" || !allowedDownload(message.downloadUrl)) {
+      send({ type: "FILE_ERROR", fileId: message?.fileId || "", error: "허용되지 않은 다운로드 주소입니다." });
+      return;
+    }
+    if (started) return;
+    started = true;
+    const fileId = message.fileId;
     try {
       const response = await fetch(message.downloadUrl);
       if (!response.ok || !response.body) throw new Error(`자료를 받지 못했습니다 (HTTP ${response.status})`);
-      port.postMessage({ type: "FILE_START", fileId: message.fileId, filename: message.filename });
-      const reader = response.body.getReader();
+      send({ type: "FILE_START", fileId, filename: message.filename });
+      reader = response.body.getReader();
+      let parts = [];
+      let size = 0;
+      const flush = async () => {
+        if (!size) return;
+        const bytes = joinBytes(parts, size);
+        parts = [];
+        size = 0;
+        const ack = waitForAck();
+        send({ type: "FILE_CHUNK", fileId, chunk: bytesToBase64(bytes) });
+        await ack;
+      };
       for (;;) {
         const { done, value } = await reader.read();
+        if (closed) return;
         if (done) break;
-        port.postMessage({ type: "FILE_CHUNK", fileId: message.fileId, chunk: bytesToBase64(value) });
+        parts.push(value);
+        size += value.length;
+        if (size >= STREAM_BATCH_BYTES) await flush();
       }
-      port.postMessage({ type: "FILE_END", fileId: message.fileId });
+      await flush();
+      send({ type: "FILE_END", fileId });
     } catch (error) {
-      port.postMessage({ type: "FILE_ERROR", fileId: message.fileId, error: String(error) });
+      void reader?.cancel().catch(() => {});
+      send({ type: "FILE_ERROR", fileId, error: String(error) });
     }
   });
 });
