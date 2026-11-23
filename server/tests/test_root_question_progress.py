@@ -47,7 +47,10 @@ doc['tasks'].append({'task_id': 'task4', 'question_id': 'Q1', 'direction_id': 'D
 available = {'task1', 'task2', 'task3', 'task4'}
 
 empty = progress(doc, [], available, NOW)
-assert empty == {'total': 3, 'unseen': 3, 'recognized': 0, 'retrieving': 0, 'retained': 0, 'reviewDue': 0}, empty
+fresh_plan = plan(doc, [], available, NOW, POLICY)['tasks']
+assert empty == {'total': 3, 'unseen': 3, 'recognized': 0, 'retrieving': 0, 'retained': 0, 'reviewDue': 0,
+                 'newToday': len(fresh_plan)}, empty
+assert len(fresh_plan) > 0
 assert progress(doc, [], {'task1', 'task2'}, NOW)['total'] == 2  # not prepared: left out like suspended cards
 
 events = [reveal('task1', 'D1', NOW)]
@@ -95,6 +98,14 @@ expected = sum(t['reason'] == '복습 확인' for t in plan(doc, day2, available
 assert review['reviewDue'] == expected == 1 and review['unseen'] == 2, review
 assert progress(doc, day2, available, NOW + timedelta(days=1, hours=1))['reviewDue'] == 0  # assessed today
 
+# 「새 카드」(2026-11-24-lecture-list-block-scope) = today's plan tasks still unseen. Seen ones never count,
+# so new + review never double-count a card.
+for when, history in ((NOW + timedelta(minutes=1), [reveal('task1', 'D1', NOW)]), (due_at, day2)):
+    tasks = plan(doc, history, available, when, POLICY)['tasks']
+    got = progress(doc, history, available, when)
+    assert got['newToday'] == sum(t['direction_id'] != 'D1' for t in tasks), (got, tasks)  # D1 was seen
+    assert got['newToday'] + got['reviewDue'] <= len(tasks)
+
 # --- root-generation/4: every prepared task is its own question ------------------------------------
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures/root_generation_v2_import.json').read_text(encoding='utf-8'))
 v4 = copy.deepcopy(FIXTURE['result']['document'])
@@ -126,6 +137,7 @@ publish(client, user)
 response = client.get('/api/root-learning')
 assert response.status_code == 200, response.text
 row = response.json()['lectures'][0]
-assert row['questionProgress'] == {'total': 3, 'unseen': 3, 'recognized': 0, 'retrieving': 0, 'retained': 0, 'reviewDue': 0}, row
+assert row['questionProgress'] == {'total': 3, 'unseen': 3, 'recognized': 0, 'retrieving': 0, 'retained': 0, 'reviewDue': 0,
+                                   'newToday': len(row['plan']['tasks'])}, row
 assert row['summary']['total'] == 3
 print('PASS: per-question stages, two-day and target rule, forgetting, undo/help/legacy, plan review count, v4 tasks, catalog field')

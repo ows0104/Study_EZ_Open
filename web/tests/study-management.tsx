@@ -11,7 +11,8 @@ const requests: string[] = [];
 const progressRequests: { subject: string; runId: string }[][] = [];
 const releases: (() => void)[] = [];
 // Main-Quiz 요약(/api/root-learning). ?lazy에서는 releaseRoot()까지 붙잡는다 — 운영에서 가장 느린 요청.
-const rootRequests: string[] = [];
+// 요청마다 물은 강의 키(`lecture=과목/runId`, 2026-11-24-lecture-list-block-scope)를 남긴다.
+const rootRequests: string[][] = [];
 const rootReleases: (() => void)[] = [];
 Object.assign(window, { studyTest: { requests, progressRequests, release: () => releases.shift()?.(),
   rootRequests, releaseRoot: () => rootReleases.shift()?.() } });
@@ -61,13 +62,15 @@ window.fetch = async (input, init) => {
     const ids: string[] = JSON.parse(String(init?.body ?? "{}")).eventIds ?? [];
     result = { summaries: ids.filter(id => id === "0" || id === "j").map(eventId => ({ eventId, audience: "all", items: 5, sameItems: 3, otherItems: 2, unknownItems: 0 })) };
   } else if (path === "/api/root-learning") {
-    rootRequests.push(path);
+    const asked = url.searchParams.getAll("lecture");
+    rootRequests.push(asked);
     if (options.has("lazy")) await new Promise<void>(resolve => rootReleases.push(resolve));
     if (options.has("rootError")) return new Response(JSON.stringify({ detail: "요약 실패" }), { status: 500 });
-    result = { canManage: false, lectures: lazyEvents().flatMap(e => e.lectures).map(l => ({
+    result = { canManage: false, lectures: lazyEvents().flatMap(e => e.lectures)
+      .filter(l => !asked.length || asked.includes(`${l.subject}/${l.runId}`)).map(l => ({
       subject: l.subject, runId: l.runId, revision: "r1", title: l.title, policyReady: true, plan: null, sessionId: null,
       summary: { score: 50 },
-      questionProgress: { total: 100, unseen: 20, recognized: 15, retrieving: 40, retained: 25, reviewDue: 12 } })) };
+      questionProgress: { total: 100, unseen: 20, recognized: 15, retrieving: 40, retained: 25, reviewDue: 12, newToday: 7 } })) };
   } else if (path === "/api/timetable/study-progress") {
     const lectures = JSON.parse(String(init?.body)).lectures as { subject: string; runId: string }[];
     progressRequests.push(lectures);

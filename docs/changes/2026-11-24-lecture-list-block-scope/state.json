@@ -1,0 +1,140 @@
+{
+  "id": "2026-11-24-lecture-list-block-scope",
+  "title": "강의 목록 숫자 칸: 고른 블럭의 강의만 계산",
+  "area": "site",
+  "created_at": "2026-11-23T16:03:36.656822+00:00",
+  "required_checks": [
+    "server",
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T16:23:51.419826+00:00",
+      "evidence": "사용자 2026-11-24 이 세션: 「응, 고쳐줘」(고른 블럭의 강의만 계산하도록 고칠까요? 에 대한 답) · 이어서 「그리고 여기에 왼쪽에 새로운 카드 수도 넣어줘. 그래야 얼마나 해야하는지 보이니까. 그리기고 퀴즈로 들어가서도 기준을 학습 목표 개수로 표기하지 말고 카드 수로 해줘.」",
+      "scope": "server catalog(lecture 인자)·state.question_progress(newToday), web 강의 목록 요청 범위·요약 칸 「오늘 새 카드」·Main-Quiz 시작 화면 카드 기준, 관련 검사, 이 변경 폴더. 로컬 구현·검사·Draft PR까지. 병합(자동 배포)은 따로 묻는다",
+      "evidence_version": 2,
+      "source_hash": "d811591052efa218d65a1177fc1e1809f3e118bea10c84d96ee21a33b4ce4944",
+      "plan_hash": "c978f5c20e874e4a7d05fe5a8a5f2b375210b842abc66bb3979cd839504b0aa7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "b249791cead8aad9fe336ad7bd602bfffc2401788de2efe62ede8049629dbc4e"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-23T16:24:02.794292+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-m",
+        "tests.test_root_catalog_scope"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "d811591052efa218d65a1177fc1e1809f3e118bea10c84d96ee21a33b4ce4944",
+      "plan_hash": "c978f5c20e874e4a7d05fe5a8a5f2b375210b842abc66bb3979cd839504b0aa7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-lecture-list-block-scope/1795451042562348800-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-23T16:24:32.506215+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; env=dict(os.environ, PYTHONPATH='..'); names=['test_root_catalog_scope','test_root_question_progress','test_root_focus','test_root_light','test_root_optional_exclusion','test_root_prereq_closure']; codes=[subprocess.call([sys.executable,'-m','tests.'+n],cwd='server',env=env) for n in names]; print(dict(zip(names,codes))); sys.exit(max(codes))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d811591052efa218d65a1177fc1e1809f3e118bea10c84d96ee21a33b4ce4944",
+      "plan_hash": "c978f5c20e874e4a7d05fe5a8a5f2b375210b842abc66bb3979cd839504b0aa7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-lecture-list-block-scope/1795451052477079100-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-23T16:24:42.134987+00:00",
+      "command": [
+        "node",
+        "-e",
+        "const r=require('child_process').spawnSync('npm',['--prefix','web','run','typecheck'],{stdio:'inherit',shell:true});process.exit(r.status)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d811591052efa218d65a1177fc1e1809f3e118bea10c84d96ee21a33b4ce4944",
+      "plan_hash": "c978f5c20e874e4a7d05fe5a8a5f2b375210b842abc66bb3979cd839504b0aa7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-lecture-list-block-scope/1795451072916165600-web.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T16:24:42.135986+00:00"
+}

@@ -155,7 +155,8 @@ function Check({ checked, label, disabled, onChange }: { checked: boolean; label
  * 학습률은 서버가 계산한 Main-Quiz 학습률(`summary.score`)이다 — 캘린더·패널·시험 계획과 같은 값.
  */
 function fromRoot(q: RootQuestionProgress | undefined): CardProgress | null {
-  return q ? { ...empty, ...q, seen: q.total - q.unseen } : null;
+  // 오늘 새 카드(2026-11-24): 오늘 계획의 아직 안 본 카드. Quiz Bank `newRemaining`과 같은 자리.
+  return q ? { ...empty, ...q, seen: q.total - q.unseen, newRemaining: q.newToday ?? 0 } : null;
 }
 
 type ListView = "type" | "order";
@@ -173,8 +174,6 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const navigate = useNavigate();
   const rows = useMemo(() => lectureRows(events), [events]);
   const hasMainQuiz = rows.some(l => l.mainQuiz);
-  // 행·제목·▶는 시간표만으로 바로 그린다. 숫자 칸만 Main-Quiz 요약(느린 요청)을 기다린다(2026-11-12).
-  const { rates: roots, progress: rootProgress, loaded: rootsLoaded } = useRootSummaries(hasMainQuiz);
   const entries = useMemo(() => toCalendarEntries(events), [events]);
   const infos = useMemo(() => displayInfo(events), [events]);
   const [view, changeView] = usePreference<ListView>(VIEW_KEY, "type", VIEWS);
@@ -213,6 +212,11 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
 
   const inCourse = rows.filter(l => !course || l.course === course);
   const scoped = inCourse.filter(l => !isHidden(l));
+  // 행·제목·▶는 시간표만으로 바로 그린다. 숫자 칸만 Main-Quiz 요약(느린 요청)을 기다린다(2026-11-12).
+  // 고른 블럭의 Main-Quiz 강의만 묻는다. 전부 물으면 강의 수만큼 느렸다(2026-11-24-lecture-list-block-scope).
+  // 숨긴 강의도 넣는다 — 숨김 관리 화면에서 숫자가 보이고, 숨기거나 풀 때 다시 묻지 않는다.
+  const { rates: roots, progress: rootProgress, loaded: rootsLoaded } =
+    useRootSummaries(inCourse.flatMap(l => l.mainQuiz ? [l.key] : []));
   const loading = !rootsLoaded && scoped.some(l => l.mainQuiz);
   // 복습이 열린 강의만 센다. 아직 열리지 않은 강의까지 넣으면 미열람이 늘 대부분을 덮는다.
   const openedRows = scoped.filter(l => l.ready && progressOf(l));
@@ -275,6 +279,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
     </header>
 
     <div className="list-stats" aria-busy={loading}>
+      {/* 오늘 할 양(2026-11-24 사용자 「왼쪽에 새로운 카드 수도… 얼마나 해야하는지 보이니까」). */}
+      <div><span>오늘 새 카드</span><b className="is-new">{display(totals.newRemaining)}<small>장</small></b></div>
       <div><span>오늘 복습</span><b className="is-review">{display(totals.reviewDue)}<small>장</small></b></div>
       <div><span>학습률 평균</span><b>{loading ? "…" : score === null ? "—" : `${score}%`}</b></div>
       <div><span>전체 카드</span><b>{display(totals.total)}<small>장</small></b></div>

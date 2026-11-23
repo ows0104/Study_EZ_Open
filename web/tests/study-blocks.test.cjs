@@ -177,7 +177,7 @@ test('actual overview first render selects the new block and displays classes wi
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
     // Its `?raw` prompt imports need Vite; the static first render only needs the overview itself.
-    'useRootCatalog.ts': { useRootCatalog: () => new Map(), useRootProgress: () => new Map(), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
+    'useRootCatalog.ts': { useRootSummaries: () => ({ rates: new Map(), progress: new Map(), loaded: true }), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
   });
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
@@ -209,7 +209,7 @@ function overviewWith({ progress = new Map(), summaries = new Map(), globals = {
     'useQuizPublication.ts': { useQuizPublication: () => ({ values: [] }) },
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
-    'useRootCatalog.ts': { useRootCatalog: () => summaries, useRootProgress: () => progress,
+    'useRootCatalog.ts': { useRootSummaries: () => ({ rates: summaries, progress, loaded: true }),
       rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
   }, globals);
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));

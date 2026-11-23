@@ -34,7 +34,8 @@ export type RootMixInfo={revision:string; title:string; counts:Record<RootTierNa
   /** 오늘 다 푼 모아풀기 회차. 새로고침 전에 끝낸 강의를 마침 화면에 남긴다. 옛 서버는 보내지 않는다. */
   closed?:{sessionId:string; options:RootMixOptions; count:number}[]};
 /** 강의 목록 카드 열(문항 단위). Quiz Bank `CardProgress`와 같은 단계 이름. */
-export type RootQuestionProgress = {total:number; unseen:number; recognized:number; retrieving:number; retained:number; reviewDue:number};
+/** 카드(문항) 단위 단계 수. newToday: 오늘 계획의 아직 안 본 카드(2026-11-24, 옛 API는 없을 수 있다). */
+export type RootQuestionProgress = {total:number; unseen:number; recognized:number; retrieving:number; retained:number; reviewDue:number; newToday?:number};
 export type RootOverview = {revision:string; title:string; policyReady:boolean; message?:string;
   policy?:RootPolicy; summary:RootSummary|null; plan:RootPlan|null; sessionId:string|null; preparationProblems?:number;
   questionProgress?:RootQuestionProgress;
