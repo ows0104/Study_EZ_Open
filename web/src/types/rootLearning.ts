@@ -76,3 +76,9 @@ export type RootMapData = {concepts:{concept_id:string;label:string;parent_ids:s
   points?:{point_id:string;text:string;target_ids:string[];scope_status:string;reason:string}[];
   coverage?:{point_id:string;status:string;reason:string;confirmed_direction_ids:string[];missing_direction_ids:string[];unknown_direction_ids:string[];partial_direction_ids:string[]}[];
   scope:{label:string;limitations:string[]}};
+/** 강의 문항 전체 보기(2026-11-23-lecture-question-list). 목록은 그림·슬라이드 없이 쪽 번호만, 상세는 풀이 화면과 같은 앞면·답면. */
+export type RootListPage = {sourceId:string; page:number; exam:boolean};
+export type RootListRow = {question:BankQuestion&{figures:number}; answer:BankAnswer; pages:RootListPage[]; planned:boolean};
+export type RootQuestionList = {revision:string; title:string; editable:boolean;
+  sources:{sourceId:string; exam:boolean; label:string}[]; questions:RootListRow[]};
+export type RootQuestionDetail = {question:BankQuestion; answer:RootAnswer};

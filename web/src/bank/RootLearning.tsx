@@ -263,7 +263,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
     </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo={mapEntry.current?'back':'today'} onBack={mapBack}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
     :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={order=>{if(!focusing)void begin(order);}} onMap={()=>void showMap()}
-      onFocus={(tiers,prereqs)=>void changeFocus(tiers,prereqs)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}
+      onFocus={(tiers,prereqs)=>void changeFocus(tiers,prereqs)} focusing={focusing} lectureLink={lectureHref({subject,runId})} questionsLink={`${href(subject,runId)}/roots/questions`} admin={adminTools}
       resumeCount={info.sessionId&&openLeft?.id===info.sessionId?openLeft.left:undefined} onBack={leave}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
 }

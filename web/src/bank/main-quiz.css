@@ -139,7 +139,9 @@
 .mq-kicker a{color:var(--ink-3);text-decoration:none}
 .mq-kicker a:hover{color:var(--ink);text-decoration:underline}
 .mq-badge{font-size:11.5px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;padding:2px 10px}
-.main-quiz-learning .mq-map-button{display:inline-flex;align-items:center;gap:6px;min-height:0;height:34px;padding:0 14px}
+.main-quiz-learning .mq-map-button,.main-quiz-learning .mq-list-button{display:inline-flex;align-items:center;gap:6px;min-height:0;height:34px;padding:0 14px}
+.mq-head-actions{display:flex;flex-wrap:wrap;gap:8px}
+.main-quiz-learning .mq-list-button{color:var(--ink);text-decoration:none}
 .mq-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .mq-stats>div{background:var(--surface);padding:14px 18px;display:flex;flex-direction:column;gap:4px}
 .mq-stats span{font-size:12.5px;color:var(--ink-3)}
