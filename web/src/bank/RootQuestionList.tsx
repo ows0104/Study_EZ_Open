@@ -55,7 +55,8 @@ function QuestionList({subject,runId}:{subject:string;runId:string}) {
     return (list?.questions ?? []).map((row,index) => ({row,number:index+1})).filter(({row}) => {
       const q = row.question;
       if(format!=='all'&&q.format!==format)return false;
-      if(tier!=='all'&&q.tier!==tier)return false;
+      // 「Core 이상」 = Essential·Core. TIER_ORDER는 높은 중요도부터다.
+      if(tier!=='all'&&TIER_ORDER.indexOf(q.tier)>TIER_ORDER.indexOf(tier as BankTier))return false;
       if(mineOnly&&!q.personalEdited&&!q.personalTier)return false;
       return !needle||normalize(`${q.question_id} ${q.question} ${row.answer.answer} ${row.answer.explanation??''}`).includes(needle);
     });
@@ -81,7 +82,7 @@ function QuestionList({subject,runId}:{subject:string;runId:string}) {
           <label>형식 <select value={format} onChange={e => setFormat(e.target.value)}>
             <option value="all">전체</option>{formats.map(f => <option key={f} value={f}>{FORMATS[f]??f}</option>)}</select></label>
           <label>중요도 <select value={tier} onChange={e => setTier(e.target.value)}>
-            <option value="all">전체</option>{TIER_ORDER.map(t => <option key={t} value={t}>{TIERS[t]}</option>)}</select></label>
+            <option value="all">전체</option>{TIER_ORDER.slice(0,-1).map(t => <option key={t} value={t}>{TIERS[t]} 이상</option>)}</select></label>
           <label><input type="checkbox" checked={mineOnly} onChange={e => setMineOnly(e.target.checked)}/>내가 고친 문항만</label>
           <label><input type="checkbox" checked={hideAnswers} onChange={e => setHideAnswers(e.target.checked)}/>정답 가리기</label>
           <span role="status">{rows.length} / {list.questions.length}문항</span>
