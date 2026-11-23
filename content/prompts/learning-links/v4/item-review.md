@@ -4,6 +4,11 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 - verdict: 정답·답 단위·해설이 원본과 맞는가(ok/doubt/wrong). 원본/기출의 잘못된 그림·정답·수치 자체를 올바른 의학 답으로 승인하지 않는다. 현재 의학과의 차이는 마지막 의학 검토가 따로 본다.
 - design: 아래 옮긴 design_checks 규칙의 판정(ok/doubt/wrong)이다.
 - note: 지적의 근거. fix: 고칠 방향. suggested_answer: 원본에 맞는 정답이 다를 때만, 아니면 빈 문자열.
+  - **fix는 그 문항이 묻는 것 안에서 고칠 방향이다.** 형식·발문·정답·채점 단위를 어떻게 고칠지 쓴다. 묻는 대상·범주를 바꾸라고(다른 대상을 묻게, 판단·이유·기전 문항을 목록·수치 문항으로, 「존재 문항으로」) 쓰지 않는다. 고치기는 같은 문항 ID로 다른 물음을 쓰지 않는다.
+  - 같은 범주 목록의 빠진 원소를 채우라, 틀린 정답을 원본 정답으로 바꾸라, input.existence의 존재 문항에 빠진 components를 채우라는 것은 같은 물음 안이다.
+  - 「지식 없이 문구로 풀린다」는 지적도 같은 물음을 지식이 있어야 풀리는 형식·발문으로 바꾸는 방향으로 쓴다.
+  - 따로 물을 것이 있으면 note에 「별도 문항: …」으로 적는다.
+  - 그 이유만으로 design을 doubt·wrong으로 하지 않는다. 이 문항이 묻는 것에 결함이 있을 때만 판정한다.
 - prerequisite_checks: 문항의 prerequisites마다 정확히 한 번. 내용상 필요한 최소 기초와 과도한 전체 표/목록 잠금을 구별한다.
 - importance_note: 보통은 빈 문자열이다. 문항의 중요도 근거(importance_basis)가 입력에 있고 그 근거가 원본과 다르다고 보이면(예: 그 쪽에 스탬프가 없다, 교수 발언이 아니라 필기자 첨언이다) 한 줄로 적는다. 관리자에게 보이는 기록일 뿐 판정이 아니다. verdict·design·note·fix에 반영하지 않고, 이 이유로 문항을 고치라고 하지 않는다.
 - evidence: input.json에 evidence_source가 있을 때만 쓴다(없으면 출력 스키마에도 없다). 정답의 핵심을 직접 증명하는 그 필기(evidence_source.source_id)의 최소 물리쪽이다.

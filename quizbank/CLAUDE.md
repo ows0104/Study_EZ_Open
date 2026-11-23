@@ -48,6 +48,7 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
 - **역방향 목표의 빈자리는 범위 점검이 아니라 `discriminate.gaps`(그 목표로 쓴 문항이 있는가)로 정한다.** 정방향 문항이 같은 내용을 이미 답해서 범위 점검은 covered로 본다. 새 목표에 add 전 범위 점검을 부르지 않고 `blank_rows`를 쓴다.
 - 발문이 답 쪽을 흘리지 않는 규칙은 add·검토·고치기 프롬프트가 지키고, 어긴 문항은 막지 않고 `report`의 `answerInStem`으로 센다. 학습 순서는 정방향 목표 → 역방향 목표(`REV-` 간선).
 - 보강(presuppose-only/1)도 같은 실행에서 존재 목표와 역방향 목표를 함께 만든다. 검사: `tests/quizbank/test_discriminate.py`.
+/4 고치기는 같은 question_id로 다른 물음을 쓰지 않는다(`docs/changes/2026-11-23-fix-same-question/`). ID에 학습 기록이 이어지기 때문이다. 같은 물음 안의 셋(정답 교체·같은 범주 목록의 빠진 원소·줄이거나 나누기)만 답을 바꾸고, 검토는 다른 물음을 note의 「별도 문항: …」으로 남긴다. 지시문 규칙이며 코드는 막지 않는다. 검사: `tests/quizbank/test_fix_same_question.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
 새 실행 정책(2026-11-09 사용자 설계 결정, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)은 새 ledger가 `runPolicies`로 적는다.
