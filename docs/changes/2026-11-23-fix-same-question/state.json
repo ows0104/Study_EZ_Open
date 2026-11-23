@@ -1,0 +1,102 @@
+{
+  "id": "2026-11-23-fix-same-question",
+  "title": "Main-Quiz /4 고치기는 같은 물음 안에서만",
+  "area": "generation",
+  "created_at": "2026-11-23T10:19:26.786536+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T10:22:16.961780+00:00",
+      "evidence": "사용자 2026-11-23 이 세션: 「R3/R4만 넣어줘」, 이어서 「저 세션은 닫아주고 이 세션에서 하자. 답 강조는 지금 말고 나중에 하자.」",
+      "scope": "v4 fix.md·item-review.md·PROVENANCE.md, quizbank/CLAUDE.md, tests/quizbank/test_fix_same_question.py, 이 변경 폴더. 로컬 구현·검사·Draft PR까지. 병합·러너 재설치·운영 재출제 제외",
+      "evidence_version": 2,
+      "source_hash": "9ebbd87d20063495331d878e1f764f735e87b95ec7769b2c7e7f7de25718dc9c",
+      "plan_hash": "1e277756dbd2cb01a7e33c3760fe1dbc62e44d0c94b7839b6dd1d2379e2964fb",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "fbf57ecbaf4b5ec63c458e7467402cdbd1d214e72554789ad66b7790aca1e5eb"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-23T10:29:21.726725+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "studyez_contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "9ebbd87d20063495331d878e1f764f735e87b95ec7769b2c7e7f7de25718dc9c",
+      "plan_hash": "1e277756dbd2cb01a7e33c3760fe1dbc62e44d0c94b7839b6dd1d2379e2964fb",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-23-fix-same-question/1795429348944275500-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-23T10:29:56.768537+00:00",
+    "summary": "지시문 두 곳만 바뀐 것을 diff로 확인했다. fix.md의 새 규칙은 existence·discrimination 규칙과 충돌하지 않는다. 존재 문항의 빠진 components 채우기를 같은 물음으로 명시했다. 사용자가 좋다고 한 고치기(Q006 정답 후보·Q156·Q011 목록 채우기·Q081 한 층·Q034 발문 줄이기·CLI Q038 형식 변경)는 셋과 형식·발문 고치기 안에 든다. 막히는 것은 Q038 Work판·Q075·Q087·Q019 모양이다. 남은 위험: 모델이 셋을 좁게 읽어 정당한 정답 교체를 멈출 수 있다. 첫 새 강의에서 비교한다. 코드로 막지 않으니 어기면 그대로 조립된다.",
+    "evidence_version": 2,
+    "source_hash": "9ebbd87d20063495331d878e1f764f735e87b95ec7769b2c7e7f7de25718dc9c",
+    "plan_hash": "1e277756dbd2cb01a7e33c3760fe1dbc62e44d0c94b7839b6dd1d2379e2964fb",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T10:29:56.832789+00:00"
+}

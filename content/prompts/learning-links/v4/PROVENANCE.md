@@ -23,3 +23,7 @@ docs/changes/2026-11-12-goal-dedupe(피코르나 261111_02에서 같은 답의 �
 
 docs/changes/2026-11-23-normalize-grouping(레오·코로나·노로 261118_05에서 같은 지시문으로 CLI는 포인트마다 목표 하나, Work는 강의 뼈대로 묶은 것)이 바꾼 곳:
 - normalize.md: 「목표의 뼈대」 문단 추가 — 포인트와 목표는 1:1이 아님, 큰 축 root·갈래 branch·세부 leaf, 원본이 말하는 관계 kind, 답 조각마다 개념 금지, 포인트 순서로 찍어내기 금지(R1). 지도 관계 방향 중복 금지 문장을 「다른 목표(묶은 root·branch 포함)가 회상시키면」으로 넓힘(R2).
+
+docs/changes/2026-11-23-fix-same-question(고치기가 같은 question_id로 다른 물음을 쓴 것, 레오 Q038·신종 Q075)이 바꾼 곳:
+- fix.md: 고친 문항은 원래 문항이 묻던 것을 묻는다. 같은 물음 안의 셋(정답 교체·같은 범주 목록의 빠진 원소·줄이거나 나누기)을 적고, 다른 물음을 요구하는 지적은 이 ID에 적용하지 않고 이유를 exam_rationale에(R1).
+- item-review.md: fix는 그 문항이 묻는 것 안에서 고칠 방향. 다른 물음은 note의 「별도 문항: …」, 그 이유만으로 design을 낮추지 않음(R2).
