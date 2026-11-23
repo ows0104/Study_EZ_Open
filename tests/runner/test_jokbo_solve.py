@@ -191,3 +191,44 @@ def test_duplicate_key_conflict_is_flagged():
     b = {**a, "id": "x2", "yearLabel": "2023", "answers": [3]}
     out, review = js.merge_duplicates([(a, ["갑"]), (b, ["갑"])], ["갑"])
     assert out[0][0]["keyConflict"] is True and review[0]["kind"] == "key-conflict"
+
+
+def test_second_edition_reads_its_own_source_and_keeps_first(env, tmp_path):
+    """2차 판(2026-11-23): 원천은 root/source-2(amgi 꼴), 산출은 root/2026-2. 1차 산출물은 그대로."""
+    amgi, root, tt, notes = env
+    js.build(amgi, root, tt, notes)
+    first = (root / "2026-1" / "lectures" / "ev18.json").read_bytes()
+    src = js.edition_source(root, "2026-2", amgi)
+    assert src == root / "source-2"
+    assert js.edition_source(root, "2026-1", amgi) == amgi
+    px = src / "data" / "pastexam"
+    s = {"id": "pes_c_49", "ref": "49", "lectures": [49], "title": "면역약리학",
+         "groups": [{"professors": ["이창한"], "years": ["2025"], "from": 0, "count": 1},
+                    {"professors": ["예상규"], "years": ["2022"], "from": 1, "count": 1}],
+         "items": [_item("pe_2025_49_018", 2025, answers=(3,)), _item("pe_2022_49_010", 2022, answers=(3,))]}
+    _w(px / "pes_c_49.json", s)
+    _w(px / "index.json", {"sets": [{"file": "pes_c_49.json"}]})
+    _w(src / "data" / "lecture-map.json", {"lectures": []})
+    _w(src / "webapp" / "public" / "pastexam-figures" / "index.json", {})
+    tt2 = tmp_path / "tt2.json"
+    _w(tt2, json.loads(tt.read_text(encoding="utf-8")) + [
+        {"id": "ev49", "date": "2026-11-23", "startTime": "09:00", "title": "감염과 면역 49",
+         "details": "면역약리학\n이창한", "professor": "이창한"}])
+    summary = js.build(src, root, tt2, notes, "2026-2")
+    assert summary["edition"] == "2026-2" and summary["block"] == "감염과 면역 2차"
+    doc = json.loads((root / "2026-2" / "lectures" / "ev49.json").read_text(encoding="utf-8"))
+    validate_lecture(doc)
+    assert (doc["edition"], doc["block"]) == ("2026-2", "감염과 면역 2차")
+    assert doc["lecture"]["runId"] == "261123_01" and doc["lecture"]["professorSource"] == "timetable"
+    assert [s["kind"] for s in doc["sections"]] == ["same", "other"]
+    assert (root / "2026-1" / "lectures" / "ev18.json").read_bytes() == first
+
+
+def test_default_root_follows_sibling_worktree_to_main_repo(tmp_path, monkeypatch):
+    main = tmp_path / "Study_EZ_Open"
+    (main / ".git" / "worktrees" / "wt").mkdir(parents=True)
+    wt = tmp_path / "Study_EZ_wt"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {(main / '.git' / 'worktrees' / 'wt').as_posix()}\n", encoding="utf-8")
+    monkeypatch.setattr(js, "REPO", wt)
+    assert js.default_root() == main.resolve() / "runs" / "_materials" / js.SUBJECT / "jokbo-solve"

@@ -17,6 +17,7 @@ git 밖(`runs/_materials/<과목>/jokbo-solve/`)에만 쓴다.
     python -m runner.jokbo_solve pack <setId>  # 해설 작성용 입력 한 세트
     python -m runner.jokbo_solve check <setId> # 그 세트의 해설·소속만 검사
     python -m runner.jokbo_solve upload [--audience admin|all] [--only 18 "CBL 1"]
+    (모든 명령에 --edition 2026-2 를 붙이면 감염과 면역 2차 판)
 """
 
 from __future__ import annotations
@@ -43,6 +44,12 @@ SUBJECT = "감염과 면역"
 EDITION = "2026-1"
 BLOCK = "감염과 면역 1차"
 AMGI = Path.home() / "amgi"
+# 판 → 블럭 이름 · 원천 폴더. 2차(2026-11-23)는 같은 족보 책의 2차 구역(119~183쪽)을 amgi 도구로 읽어
+# amgi와 같은 꼴로 `jokbo-solve/source-2/`에 둔다(docs/changes/2026-11-23-infection-jokbo-2nd/build_source.py).
+EDITIONS = {
+    "2026-1": {"block": "감염과 면역 1차", "source": None},
+    "2026-2": {"block": "감염과 면역 2차", "source": "source-2"},
+}
 TIMETABLE = REPO / "data" / "timetable" / "2026_본1_2학기_시간표.json"
 NOTES = Path.home() / "SynologyDrive" / SUBJECT / "필기" / "2026"
 
@@ -54,6 +61,14 @@ def default_root() -> Path:
         if parent.name == "worktrees" and parent.parent.name == ".claude":
             repo = parent.parent.parent
             break
+    else:
+        # 저장소 옆 폴더 worktree(../Study_EZ_<작업>)도 원래 저장소로: .git 파일이 가리키는 공용 git 폴더의 부모.
+        dotgit = REPO / ".git"
+        if dotgit.is_file():
+            m = re.match(r"gitdir:\s*(.+)", dotgit.read_text(encoding="utf-8").strip())
+            common = Path(m.group(1)).resolve().parents[1] if m else None
+            if common is not None and common.name == ".git":
+                repo = common.parent
     return repo / "runs" / "_materials" / SUBJECT / "jokbo-solve"
 
 
@@ -551,7 +566,14 @@ def merge_duplicates(entries: list[tuple[dict, list[str]]], current: list[str],
 
 # ─────────────────────────────────────────────── 빌드
 
-def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None) -> dict:
+def edition_source(root: Path, edition: str, amgi: Path) -> Path:
+    """그 판의 원천(amgi 꼴) 폴더. 1차는 amgi 저장소, 2차는 jokbo-solve/source-2."""
+    sub = EDITIONS[edition]["source"]
+    return root / sub if sub else amgi
+
+
+def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None, edition: str = EDITION) -> dict:
+    block = EDITIONS[edition]["block"]
     src = amgi / "data" / "pastexam"
     fig_src = amgi / "webapp" / "public" / "pastexam-figures"
     events = timetable_events(timetable)
@@ -559,7 +581,7 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
     lecture_map = {l["id"]: l for l in read_json(amgi / "data" / "lecture-map.json")["lectures"]}
     figs = figures_index(fig_src)
     explain_dirs = [(root / "explain", "studyez"), (src / "explain", "amgi")]
-    out = root / EDITION
+    out = root / edition
     problems: list[str] = []
 
     sets = [read_json(src / m["file"]) if (src / m["file"]).exists() else read_json(src / Path(m["file"]).name)
@@ -620,7 +642,7 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
         src_sets = [s for s in sets if s["id"] in used]
         shared = [s["id"] for s in src_sets if len(s["lectures"]) > 1]
         doc = {
-            "schema": SCHEMA, "subject": SUBJECT, "block": BLOCK, "edition": EDITION,
+            "schema": SCHEMA, "subject": SUBJECT, "block": block, "edition": edition,
             "lecture": lec,
             "sources": [{"setId": s["id"], "ref": s["ref"], "title": s.get("title"),
                          "lectures": [str(n) for n in s["lectures"]]} for s in src_sets],
@@ -652,7 +674,7 @@ def build(amgi: Path, root: Path, timetable: Path, notes_dir: Path | None = None
 
     items_total = sum(len(s["items"]) for s in sets)
     summary = {
-        "schema": "jokbo-solve-index/1", "subject": SUBJECT, "block": BLOCK, "edition": EDITION,
+        "schema": "jokbo-solve-index/1", "subject": SUBJECT, "block": block, "edition": edition,
         "source": {"amgi": str(src), "timetable": timetable.name},
         "lectures": index,
         "unattachedSets": unattached,
@@ -739,7 +761,8 @@ def pack(amgi: Path, root: Path, set_id: str) -> dict:
     }
 
 
-def upload(root: Path, base: str, token: str, audience: str, only: list[str] | None = None) -> dict:
+def upload(root: Path, base: str, token: str, audience: str, only: list[str] | None = None,
+           edition: str = EDITION) -> dict:
     """빌드 산출물을 서버에 올린다. 그림 먼저(크기가 같으면 건너뜀), 그다음 강의 문서.
 
     서버가 jokbo-solve/1 계약과 그림 존재를 다시 검사한다. `audience=admin`이면 관리자에게만 보인다.
@@ -749,7 +772,7 @@ def upload(root: Path, base: str, token: str, audience: str, only: list[str] | N
 
     from runner.transport import Client
 
-    out = root / EDITION
+    out = root / edition
     index = read_json(out / "index.json")
     client = Client(base, token)
     lectures = [l for l in index["lectures"] if not only or l["eventId"] in only or l["number"] in only]
@@ -790,6 +813,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("command", choices=["build", "status", "pack", "check", "upload"])
     p.add_argument("set_id", nargs="?")
     p.add_argument("--amgi", type=Path, default=AMGI)
+    p.add_argument("--edition", choices=sorted(EDITIONS), default=EDITION,
+                   help="2026-1: 감염과 면역 1차(amgi) · 2026-2: 2차(jokbo-solve/source-2)")
     p.add_argument("--root", type=Path, default=None)
     p.add_argument("--timetable", type=Path, default=TIMETABLE)
     p.add_argument("--notes", type=Path, default=NOTES, help="올해 필기 폴더(파일명으로 교수 확인)")
@@ -800,9 +825,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--only", nargs="*", help="올릴 강의 번호(18, 'CBL 1') 또는 eventId")
     a = p.parse_args(argv)
     root = a.root or default_root()
+    amgi = edition_source(root, a.edition, a.amgi)
     if a.command == "build":
-        r = build(a.amgi, root, a.timetable, a.notes)
-        print(json.dumps({"out": str(root / EDITION), "totals": r["totals"], "lectures": len(r["lectures"]),
+        r = build(amgi, root, a.timetable, a.notes, a.edition)
+        print(json.dumps({"out": str(root / a.edition), "totals": r["totals"], "lectures": len(r["lectures"]),
                           "unattached": r["unattachedSets"], "problems": r["problems"]}, ensure_ascii=False, indent=1))
     elif a.command == "upload":
         import os
@@ -811,13 +837,13 @@ def main(argv: list[str] | None = None) -> int:
         if not token:
             p.error("러너 토큰이 없다: --token, STUDYEZ_RUNNER_TOKEN, 또는 server/.env의 RUNNER_TOKEN")
         base = (a.api or os.getenv("STUDYEZ_API_BASE_URL") or DEFAULT_API_BASE).rstrip("/")
-        print(json.dumps(upload(root, base, token, a.audience, a.only), ensure_ascii=False, indent=1))
+        print(json.dumps(upload(root, base, token, a.audience, a.only, a.edition), ensure_ascii=False, indent=1))
     elif a.command == "status":
-        print(json.dumps(status(a.amgi, root), ensure_ascii=False, indent=1))
+        print(json.dumps(status(amgi, root), ensure_ascii=False, indent=1))
     else:
         if not a.set_id:
             p.error(f"{a.command} 에는 setId가 필요하다")
-        fn = pack(a.amgi, root, a.set_id) if a.command == "pack" else check(a.amgi, root, a.set_id)
+        fn = pack(amgi, root, a.set_id) if a.command == "pack" else check(amgi, root, a.set_id)
         print(json.dumps(fn, ensure_ascii=False, indent=1))
     return 0
 
