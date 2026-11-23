@@ -293,16 +293,21 @@ def main() -> None:
     stale = {r["category"]: r["stale"] for r in group["reports"]}
     check("옛 빌드의 신고는 갈라 둔다", stale == {"content": True, "wording": False}, stale)
     check("열린 묶음 하나", board["open"] == 1 and board["done"] == 0)
+    count = client.get("/api/admin/bank-feedback/count", headers=ADMIN_H).json()
+    check("숫자만 주는 경로도 같은 수", count == {"open": 1, "done": 0}, count)
     ids = [r["id"] for r in group["reports"]]
     done = client.put("/api/admin/bank-feedback", json={"ids": ids, "status": "resolved"}, headers=ADMIN_H)
     check("반영했다로 닫는다", done.status_code == 200 and done.json()["updated"] == 2, done.text)
     board = client.get("/api/admin/bank-feedback", headers=ADMIN_H).json()
     check("닫으면 열린 것 0", board["open"] == 0 and board["done"] == 1)
+    count = client.get("/api/admin/bank-feedback/count", headers=ADMIN_H).json()
+    check("닫은 뒤의 숫자도 같다", count == {"open": 0, "done": 1}, count)
     missing = client.put("/api/admin/bank-feedback", json={"ids": [*ids, 99999], "status": "open"}, headers=ADMIN_H)
     check("없는 신고가 섞이면 404 · 아무것도 안 바꾼다", missing.status_code == 404
           and client.get("/api/admin/bank-feedback", headers=ADMIN_H).json()["open"] == 0)
     as_student()
     check("학생은 못 본다", client.get("/api/admin/bank-feedback").status_code == 403)
+    check("숫자도 학생은 못 본다", client.get("/api/admin/bank-feedback/count").status_code == 403)
 
     print("⑧ 개수 제한 없는 학습과 선택한 상한")
     current = client.get(f"{BASE}/bank").json()["session"]

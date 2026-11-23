@@ -59,7 +59,22 @@ assert client.get(PERSONAL).json()['edited'] is False
 
 # Admin inbox lists the Main-Quiz report with its question text.
 user('admin', True)
-inbox = client.get('/api/admin/bank-feedback').json()['questions']
+# 신고함은 문면만 그린다. 그림이 든 원본(판마다 6–24 MB)을 읽지 않는다(2026-11-23, 운영에서 16판 82 MB를 읽었다).
+from sqlalchemy import event
+from app.database import engine
+statements = []
+def _record(conn, cursor, statement, parameters, context, executemany):
+    statements.append(statement)
+event.listen(engine, 'before_cursor_execute', _record)
+def inbox_reads():
+    statements.clear()
+    board = client.get('/api/admin/bank-feedback').json()
+    return board, [s for s in statements if 'root_content.document' in s]
+board, originals = inbox_reads()
+assert originals == [], originals
+# 탭 이름 옆 숫자만 주는 경로는 목록과 같은 수를 준다.
+assert client.get('/api/admin/bank-feedback/count').json() == {'open': board['open'], 'done': board['done']} == {'open': 1, 'done': 0}
+inbox = board['questions']
 group = next(g for g in inbox if g['questionId'] == 'Q1')
 assert group['question'] and 'Synthetic question 1?' in str(group['question'])
 assert all(isinstance(group['question'][k], list) for k in ('options', 'answer_pairs', 'correct_option_ids', 'correct_order'))
@@ -101,4 +116,22 @@ detail = client.get('/api/admin/usage/a').json()
 row = next(l for l in detail['lectures'] if l['runId'] == 'demo')
 assert row['questionReports']['count'] == 2, row['questionReports']
 assert any(a['key'] == 'question_report' for a in detail['activityCatalog'])
+# 공개 판이 바뀐 뒤의 옛 판 신고: 사본 칸에서 문면을 읽고(원본은 안 읽는다) 「옛 판」으로 가른다.
+from app.models.root_learning import RootControl
+with SessionLocal() as db:
+    db.get(RootControl, ('test', 'demo')).revision = 'v0'; db.commit()
+board, originals = inbox_reads()
+group = next(g for g in board['questions'] if g['questionId'] == 'Q1')
+assert originals == [] and any('root_content.light' in s for s in statements), statements
+assert 'Synthetic question 1?' in str(group['question']) and all(r['stale'] for r in group['reports'])
+assert client.get('/api/admin/bank-feedback/count').json() == {'open': board['open'], 'done': board['done']}
+# 사본 칸을 채우기 전 행만 원본에서 읽는다.
+with SessionLocal() as db:
+    db.get(RootContent, ('test', 'demo', 'v1')).light = None; db.commit()
+board, originals = inbox_reads()
+group = next(g for g in board['questions'] if g['questionId'] == 'Q1')
+assert len(originals) == 1 and 'Synthetic question 1?' in str(group['question'])
+event.remove(engine, 'before_cursor_execute', _record)
+user('a')
+assert client.get('/api/admin/bank-feedback/count').status_code == 403
 print('PASS: Main-Quiz personal edit is private, shown in session and look-ahead, reported to the admin inbox with question text, reset keeps history, linked versions take reports only')
