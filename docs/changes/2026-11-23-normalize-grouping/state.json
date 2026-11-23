@@ -1,0 +1,82 @@
+{
+  "id": "2026-11-23-normalize-grouping",
+  "title": "Main-Quiz /4 정규화: 포인트를 강의 뼈대로 묶어 목표를 짠다",
+  "area": "generation",
+  "created_at": "2026-11-23T01:39:46.805165+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T01:56:04.005182+00:00",
+      "evidence": "2026-11-23 사용자: 「CLI normalize도 Work처럼 묶게 고쳐줘.」",
+      "scope": "plan.md 범위: content/prompts/learning-links/v4/normalize.md·PROVENANCE.md, tests/runner/test_root_native_v3.py, docs/changes/2026-11-23-normalize-grouping. 261118_05 저장 입력 재생 최대 2회(git 밖), Draft PR. master 병합·러너 재설치·운영 재실행·끝까지 돌리는 비교 제외",
+      "evidence_version": 2,
+      "source_hash": "0a3313951f288c7d484975eb9194d5d9630f775b8ca5806d40133131e9b8f057",
+      "plan_hash": "b7daeba883191ecb2167eb31e4d3137598b20649fe0b8c4b65c4b51b4ef81f94",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "e1a4b6377b8172740f2e140209ffeefffcf1d4f8dbbb1cea0227edf8351721a0"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-23T02:02:01.426158+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "studyez_contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0a3313951f288c7d484975eb9194d5d9630f775b8ca5806d40133131e9b8f057",
+      "plan_hash": "b7daeba883191ecb2167eb31e4d3137598b20649fe0b8c4b65c4b51b4ef81f94",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-23-normalize-grouping/1795398979803877000-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T02:02:01.426622+00:00"
+}
