@@ -75,4 +75,7 @@ def test_only_root_generation_4_normalize_reads_the_v4_prompt():
     assert n.task_for('normalize', {'_pipeline_version': 'root-generation/3'}).startswith(v2)
     assert n.task_for('normalize', {'_pipeline_version': 'root-generation/4'}).startswith(v4)
     assert 'component 하나는 따로 물어 채점할 수 있는 내용 하나다' in v4 and v4 != v2
+    # docs/changes/2026-11-23-normalize-grouping: targets follow the lecture's skeleton, not the point list.
+    assert '포인트는 목표의 근거이며 목표와 1:1이 아니다' in v4
+    assert '포인트를 묶은 목표를 만들지 말라는 뜻이 아니다' in v4
     assert n.V4_POLICY == __import__('studyez_contracts.roots.generation_v4', fromlist=['POLICY']).POLICY
