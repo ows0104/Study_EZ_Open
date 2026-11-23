@@ -36,6 +36,7 @@ python -m runner match --all
 확인한 연도별 매칭은 `runs/_pairs/<과목>.json`, 시간표 원본은 `data/timetable/`에 있다.
 족보의 옛 판은 `jokbo --older`, 실습 원본은 `--practical`로 지정한다.
 강의별 족보 풀이 자료는 `python -m runner.jokbo_solve build`(설계: [jokbo-solve](changes/2026-11-13-jokbo-solve/spec.md)).
+감염과 면역 2차는 `--edition 2026-2`(원천 만들기: [2차 기록](changes/2026-11-23-infection-jokbo-2nd/spec.md)).
 
 ## 덱 만들기
 
