@@ -483,11 +483,14 @@ def artifact(work,receipt):
     return body,loads(model_text(body))
 
 # Claude Code CLI reads the attached pages one by one; v4-add-0 of 261109_02 hit 2400s twice
-# (docs/changes/2026-11-15-claude-stage-timeout). Codex stages keep the original limit.
+# (docs/changes/2026-11-15-claude-stage-timeout).
 CLAUDE_TIMEOUT=7200
+# Codex stages: normalize of 261123_01 took 38 min after the OpenAI stream dropped four times and missed 2400s
+# by its final check (docs/changes/2026-11-23-stage-timeout-3600).
+CODEX_TIMEOUT=3600
 
 class NativeJson:
-    def __init__(self,out,*,invoke=None,timeout=2400):self.out=Path(out).resolve();self.invoke=invoke;self.timeout=timeout
+    def __init__(self,out,*,invoke=None,timeout=CODEX_TIMEOUT):self.out=Path(out).resolve();self.invoke=invoke;self.timeout=timeout
 
     def timeout_for(self,model):
         return max(self.timeout,CLAUDE_TIMEOUT)if g.codex.provider(model)=='claude'else self.timeout
