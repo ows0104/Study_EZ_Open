@@ -9,7 +9,7 @@
   화면에서 「참고 쪽」을 누를 때만 부른다.
 - R3 두 API 모두 읽기 전용: root_event·세션·개인 수정 표에 쓰지 않는다.
 - R4 권한은 풀이와 같다(`active()` — 공개 범위의 학습자). 다른 강의·없는 문항은 404.
-- R5 화면 `/bank/:subject/:runId/roots/questions`: 검색·형식·중요도·내 수정본 거르기, 정답 보이기/가리기,
+- R5 화면 `/bank/:subject/:runId/roots/questions`: 검색·형식·중요도(「~ 이상」: Must-Know 이상·Core 이상·Important 이상, 내 중요도 기준)·내 수정본 거르기, 정답 보이기/가리기,
   참고 쪽 버튼(누르면 R2를 읽어 슬라이드를 그린다), 「수정·제보」(PersonalQuestionDialog), 「내 중요도」 선택(PUT …/tier).
   Main-Quiz 시작 화면에 「전체 문항」 링크.
 
