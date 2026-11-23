@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-23T06:41:14.349983+00:00",
-      "evidence": "사용자 2026-11-23: 「A와 B 둘다 해도될듯?」 (plan.md 선택지 A·B; 결정과 B 범위를 plan·spec에 적은 뒤 다시 기록)",
-      "scope": "plan.md A(지시문 R1~R4)·B(fix-splits/1, R5) 구현·로컬 검사·Draft PR까지. 병합·러너 재설치·운영 재출제 제외",
+      "at": "2026-11-23T08:43:36.970161+00:00",
+      "evidence": "사용자 2026-11-23: 「A와 B 둘다 해도될듯?」, 이어서 선택 「그렇게 바꾼다」(강조된 원소를 따로 묻는 문항으로 살림, 처음 문제은행·add·fix, 중복 방지 가·나)와 「모델이 사례마다 판단」(목록 문항)",
+      "scope": "plan.md A·B와 추가 결정 구현·로컬 검사·PR #238 Draft 갱신까지. 병합·러너 재설치·운영 재출제 제외",
       "evidence_version": 2,
-      "source_hash": "cd0e0b15b9c16ab66b40c4a0370ac8c393148bd1efa97eba51dd66d71fc95f7a",
-      "plan_hash": "dc72017752721259a7e3cf2cea3b9818ef54c40daaee4ed0e928d763ce13123a",
+      "source_hash": "8a83128137cfbd74584d7f358f8bb99b2d6afe3c99d166f0ac4d2730d0ee163c",
+      "plan_hash": "5a32ce225aca962efd7f08236ea073df9065cce2191908e56b504faee53df079",
       "inputs": [
         ".github",
         "content",
@@ -30,7 +30,7 @@
         "tests/quizgen",
         "uv.lock"
       ],
-      "release_hash": "06d75bc70278fa128e6d7ede67d3107b0cf7250e4ae74e280ed13be26d65de77"
+      "release_hash": "c7dfa31d8cad833ad39dcf9474c7cd81f04f6f230495d40aa17493cc23847908"
     }
   },
   "checks": [
@@ -68,6 +68,41 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-23-basis-covers-answer/1795416080708391300-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-23T08:48:56.417510+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "studyez_contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "8a83128137cfbd74584d7f358f8bb99b2d6afe3c99d166f0ac4d2730d0ee163c",
+      "plan_hash": "5a32ce225aca962efd7f08236ea073df9065cce2191908e56b504faee53df079",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-23-basis-covers-answer/1795423422328734600-regression.log"
     }
   ],
   "review": null,
@@ -76,5 +111,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-23T06:51:02.366979+00:00"
+  "updated_at": "2026-11-23T08:48:56.417994+00:00"
 }

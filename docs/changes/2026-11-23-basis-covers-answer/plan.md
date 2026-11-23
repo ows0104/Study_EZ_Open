@@ -19,6 +19,12 @@
 **결정(2026-11-23, 사용자 「A와 B 둘다 해도될듯?」)**: A와 B를 둘 다 한다.
 B가 A의 fix.md 문장(「적용하지 않은 이유를 exam_rationale에」)을 바로 다시 고치므로 한 PR에 둔다.
 
+**추가 결정(같은 날, PR #238 Draft 뒤)**:
+- 「강조된 원소는 따로 묻는 문항으로 살린다」(사용자 선택 「그렇게 바꾼다」, 파이프라인 설명 세션이 전한 사용자 원문 「살펴보게 하고 그 원소를 따로 묻는 문항으로 살릴 수 있게하자」).
+  처음의 「목록이면 나누지 않고 그 줄을 버린다」를 바꾼다. 처음 문제은행 지시문(`map-tree/bank-task-v4.md`)에도 넣는다.
+- 목록 문항을 둘지는 「모델이 사례마다 판단」(사용자 선택). 존재 문항과 목표가 요구하는 목록은 남긴다.
+- 중복 방지 (가) 고치기 입력 `asked`, (나) 새 문항의 커버 재확인이 목표의 다른 근거 문항도 읽음(spec R5 아래).
+
 ## 변경 범위·대상 파일·순서 (A)
 
 1. `content/prompts/learning-links/v4/add.md`: 「문항 중요도 근거」 절에 R1과 R2를 쓴다.
@@ -47,6 +53,9 @@ B가 A의 fix.md 문장(「적용하지 않은 이유를 exam_rationale에」)�
     - manifest `fixes` 행에 `split_questions`(그 고치기가 낸 새 ID)를 단다. 결과 계약은 그대로 통과한다(새 문항은 접수 문항이 아니다).
 11. `quizbank/connection_batches.py`: 동시 묶음이 덧붙인 문항을 묶음 순서로 합치고, 그 문항의 검토·근거·그림도 가져온다.
 12. `tests/quizbank/test_root_generation_v4.py`: 합성 모델이 새 입력에 `split_questions: []`를 낸다.
+13. `content/prompts/learning-links/map-tree/bank-task-v4.md`: R1·R2(러너 앞 단계의 처음 문제은행). 이미 끝난 앞 단계는 옛 지시문 그대로 재사용된다.
+14. `quizbank/connection_generate_v4.py`: (가) `already_asked` → 고치기 입력 `asked`, (나) 새 문항이 남은 재확인은 목표의 다른 근거 문항을 함께 읽고 그 근거는 처음 것을 둔다.
+    다른 묶음의 문항은 단계 시작 때 근거로 읽는다(`phase_evidence`). `connection_batches.merge`는 재확인 기록의 넷째 칸(읽은 문항)으로 stale을 찾는다.
 
 `normalize.md`·`importance.py`·서버·DB는 건드리지 않는다.
 

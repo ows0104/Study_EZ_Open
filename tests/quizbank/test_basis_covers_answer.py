@@ -25,7 +25,10 @@ def prompt(name):
 
 
 # ---------------------------------------------------------------- R1-R4: prompt rules
-@pytest.mark.parametrize('name', ['add.md', 'fix.md'])
+INTAKE = PROMPTS.parent / 'map-tree' / 'bank-task-v4.md'
+
+
+@pytest.mark.parametrize('name', ['add.md', 'fix.md', INTAKE])
 def test_a_basis_row_points_at_the_whole_answer(name):
     text = prompt(name)
     assert '근거 한 줄은 그 문항이 답으로 묻는 내용 전체를 원본에서 가리킬 때만 적는다' in text
@@ -33,12 +36,29 @@ def test_a_basis_row_points_at_the_whole_answer(name):
     assert '한 줄의 refs가 여러 쪽에 걸쳐 함께 답 전체를 보여 주면 전체를 가리킨 것이다' in text
 
 
-def test_an_add_splits_another_question_but_not_one_list():
-    text = prompt('add.md')
+@pytest.mark.parametrize('name', ['add.md', INTAKE])
+def test_a_basis_on_some_elements_lives_on_as_their_own_question(name):
+    """User 2026-11-23: the emphasized element gets its own question with the emphasis, and whether the list question
+    stays is judged case by case (existence questions and lists a goal asks for whole stay)."""
+    text = prompt(name)
+    assert '근거가 답 일부만 가리키면 그 근거를 버리지 않고, 그 일부를 묻는 문항으로 살린다' in text
     assert '그 일부가 다른 물음(다른 연결·다른 범주)이면 그 일부를 묻는 문항으로 나누고, 그 근거를 그 문항에 적는다' in text
-    assert '한 범주의 원소 목록이면 나누지 않고 그 줄을 쓰지 않는다' in text
-    assert '「나머지 …」 같은 강의에 없는 묶음을 만들지 않는다' in text
-    assert '근거를 올리려고 문항을 나누지 않는다' in text
+    assert '그 원소를 따로 묻는 문항을 쓰고 그 근거를 그 문항에 적는다. 목록 문항에는 그 줄을 쓰지 않는다' in text
+    assert '「다섯 중 중요한 것은?」처럼 강조 자체를 묻지 않는다' in text
+    assert '목록 문항을 함께 둘지는 사례마다 판단한다' in text
+    assert '근거가 없는 원소를 하나씩 따로 묻지 않는다. 「나머지 …」 같은 강의에 없는 묶음을 만들지 않는다' in text
+    assert '근거가 없는 내용을 근거를 얻으려고 나누지 않는다' in text
+    keep = {'add.md': '존재 문항(input.existence)과, 목표의 components가 그 원소 전부를 답으로 요구하는 목록은 남긴다',
+            INTAKE: '목록 전체를 아는 것이 학습목표이거나 다른 문항이 그 목록을 전제로 하면'}[name]
+    assert keep in text
+
+
+def test_a_fix_keeps_the_emphasis_as_a_split_question():
+    text = prompt('fix.md')
+    assert '고친 문항의 근거가 답 일부만 가리키면 그 근거를 버리지 않는다' in text
+    assert '목록 문항을 그 원소 문항으로 줄일지는 사례마다 판단한다' in text
+    assert '존재 문항(input.existence)과, covered_goals가 그 원소 전부를 답으로 요구하는 목록은 줄이지 않는다' in text
+    assert 'input.asked는 고치는 문항의 covered_goals를 이미 답하는 다른 문항이다' in text
 
 
 def test_a_fix_asks_what_the_question_asked():
@@ -221,5 +241,41 @@ def test_batches_side_by_side_split_into_their_own_id_ranges(tmp_path, monkeypat
     one = Splitter(design_doubt=('Q1', 'Q2', 'Q003'))
     after = g.run(p, tmp_path / 'one', invoke=one)
     assert {s: c['allowed_split_question_ids'] for s, c in one.inputs.items() if s.startswith('v4-fix')} == ranges
+    # A split question's re-check read the goal's other questions as the phase started (Q2 for D1); batch 1 then fixed
+    # Q2, so side by side the goal is judged once more on the merged bank (connection_batches.stale_coverage).
     a, b = comparable(side), comparable(after)
+    assert [n for n in a['manifest']['stages'] if n not in b['manifest']['stages']] == ['v4-coverage-merge-0']
+    a['manifest']['stages'].remove('v4-coverage-merge-0')
     assert a == b
+    # the re-check read the goal's other questions, and kept their first evidence
+    assert {q['question_id'] for q in model.inputs['v4-coverage-fix-0-0']['questions']} == {'Q1', 'Q004', 'Q2'}
+    assert ranges and model.inputs['v4-fix-0-0']['asked'] == [
+        {'question_id': 'Q2', 'question': next(q['question'] for q in model.inputs['v4-review-1-0']['questions']),
+         'answer': next(q['answer'] for q in model.inputs['v4-review-1-0']['questions']), 'direction_ids': ['D1']}]
+
+
+class CopySplitter(Splitter):
+    """The split question asks again what Q2 asks: the re-check after the fix names them duplicates."""
+
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage.startswith('v4-coverage-fix'):
+            qids = {q['question_id'] for q in ctx['questions']}
+            for row in value['rows']:
+                if row['direction_id'] == 'D1' and {'Q004', 'Q2'} <= qids:
+                    row['evidence'] = [e for e in row['evidence'] if e['question_id'] != 'Q004'] + [
+                        {**copy.deepcopy(row['evidence'][0]), 'question_id': 'Q004'}]
+                    row['duplicates'] = [{'question_ids': ['Q2', 'Q004'], 'reason': 'Synthetic: the split asks what Q2 asks'}]
+        return value, info
+
+
+def test_a_split_question_that_repeats_a_goal_question_is_merged(tmp_path):
+    p, model, result = t4.run(tmp_path, CopySplitter())
+    assert consume(result, p) == result['document']
+    # Q2 answered D1 before the fix and was not a duplicate partner of Q1: it is read beside the split question
+    assert {q['question_id'] for q in model.inputs['v4-coverage-fix-0-0']['questions']} == {'Q1', 'Q2', 'Q004'}
+    merged = {(m['question_id'], m['kept']) for m in result['manifest']['mergedDuplicates']}
+    assert merged in ({('Q004', 'Q2')}, {('Q2', 'Q004')})
+    # Q2's first evidence stayed as it was judged before
+    d1 = next(r for r in result['manifest']['coverage'] if r['direction_id'] == 'D1')
+    assert [e['question_id'] for e in d1['evidence']].count('Q2') == 1

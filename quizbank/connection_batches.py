@@ -238,9 +238,11 @@ def merge(st, out, snapshot, batches, copies, apply_coverage):
     result.rows = copy.deepcopy(snapshot.rows)
     result.coverage = []
     for b, mine in enumerate(copies):
-        for got_rows, judged_ids, goal_ids in mine.coverage:
+        for got_rows, judged_ids, goal_ids, *seen in mine.coverage:
+            # (rows, re-judged questions, goals[, every question the judgment read]): fix-splits/1 re-checks read the
+            # goals' other questions too and keep their first evidence (connection_generate_v4.fix_round)
             apply_coverage(result.rows, got_rows, judged_ids)
-            result.coverage.append((b, got_rows, judged_ids, goal_ids))
+            result.coverage.append((b, got_rows, seen[0] if seen else judged_ids, goal_ids))
 
     # ledger: verdicts and fix attempts in batch order, the batches' image copies in the run's material ---------
     with st.lock:

@@ -22,6 +22,7 @@ docs/changes/2026-11-12-goal-dedupe(피코르나 261111_02에서 같은 답의 �
 - normalize.md: 「…하되, …은 아님을 구별한다」 꼴 포인트는 사실만 component에(R2).
 
 docs/changes/2026-11-23-basis-covers-answer(근거 한 줄이 답 일부만 가리켜도 답 전체가 그 tier를 받던 것, 진균 Q087·Norovirus Q156)가 바꾼 곳:
-- add.md·fix.md 「문항 중요도 근거」: 근거 한 줄은 답 전체를 가리킬 때만 적음(R1). add는 일부만 가리키면 다른 물음이면 나누고, 한 범주 목록이면 그 줄을 쓰지 않음(R2).
+- add.md·fix.md·`../map-tree/bank-task-v4.md` 「문항 중요도 근거」: 근거 한 줄은 답 전체를 가리킬 때만 적음(R1). 일부만 가리키면 그 근거를 버리지 않고 그 일부를 묻는 문항으로 살림. 범주 목록이면 근거 있는 원소를 따로 묻고, 목록 문항을 둘지는 사례마다 판단(R2, 사용자 2026-11-23).
+- fix.md: 따로 묻는 문항은 input.asked(목표를 이미 답하는 문항)를 다시 묻지 않음.
 - fix.md: 같은 question_id로 묻는 것을 바꾸거나 넓히지 않음(예외 셋)(R3). fix-splits/1 실행이면 따로 물을 내용을 `split_questions`에 새 문항으로(R5).
 - item-review.md: fix는 그 문항이 묻는 것 안에서. 다른 물음은 note의 「별도 문항: …」(R4).

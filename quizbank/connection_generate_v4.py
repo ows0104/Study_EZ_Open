@@ -516,6 +516,18 @@ def run(packet, out, model, invoke, resume=None):
                 cov.setdefault(q, []).append(did)
         return cov
 
+    def already_asked(S, targets):
+        """fix-splits/1: the other questions that answer some component of the targets' goals (what a split question
+        must not ask again), with the goals they answer."""
+        goals = {did for q in targets for did in covered_by(S).get(q, [])}
+        by_goal = {}
+        for did in sorted(goals):
+            for q in v4.covering(S.rows[did]):
+                if q not in set(targets):
+                    by_goal.setdefault(q, []).append(did)
+        return [{'question_id': q['question_id'], 'question': q['question'], 'answer': q['answer'], 'direction_ids': by_goal[q['question_id']]}
+                for q in S.bank['questions'] if q['question_id'] in by_goal]
+
     def review_batch(S, stages, name, qids):
         got, todo = {}, []
         for q in S.bank['questions']:
@@ -539,11 +551,15 @@ def run(packet, out, model, invoke, resume=None):
         st.save()
         return got
 
-    def fix_round(S, stages, name, review_name, coverage_name, targets, findings, split_allowed=None):
-        """One fix stage, its re-review, reverts and coverage re-check. Returns the split questions kept (fix-splits/1)."""
+    def fix_round(S, stages, name, review_name, coverage_name, targets, findings, split_allowed=None, own=None):
+        """One fix stage, its re-review, reverts and coverage re-check. Returns the split questions kept (fix-splits/1).
+
+        `own`: the questions of the batch this round belongs to (None after the batches: the whole bank). A batch reads
+        the others' coverage evidence as the phase started, so side by side and one after another read the same."""
         ctx = v4.with_importance(v3.fix_input(S.bank, findings, targets, S.conflicts, covered_by(S)), S.basis)
         if split_allowed is not None:
             ctx['allowed_split_question_ids'] = list(split_allowed)
+            ctx['asked'] = already_asked(S, targets)
         if presuppositions:
             pre.mark_review(ctx, brief, presuppositions, S.bank, exclude=intake_ids)
         if discriminations:
@@ -594,10 +610,19 @@ def run(packet, out, model, invoke, resume=None):
             partners = {p for did in goal_ids for grp in S.rows[did].get('duplicates', []) if set(grp['question_ids']) & set(kept)
                         for p in grp['question_ids']}
             judged_ids = [q['question_id'] for q in S.bank['questions'] if q['question_id'] in set(kept) | partners | set(kept_split)]
-            got = judge(coverage_name, v3.coverage_input(brief, S.bank, goal_ids, judged_ids), stages)
-            for r in got['rows']:
+            # ... and beside the goals' other questions, so a split question that asks again what one of them asks is
+            # named its duplicate (as goal-duplicates/1 does after an add round). Their first evidence stays.
+            beside = set()
+            if kept_split:
+                beside = {e['question_id'] for did in goal_ids for e in S.rows[did]['evidence'] if own is None or e['question_id'] in set(own)}
+                beside |= {q for did in goal_ids for q in (phase_evidence.get(did, []) if own is not None else [])}
+                beside -= set(judged_ids)
+            seen_ids = [q['question_id'] for q in S.bank['questions'] if q['question_id'] in set(judged_ids) | beside]
+            got = judge(coverage_name, v3.coverage_input(brief, S.bank, goal_ids, seen_ids), stages)
+            rows_ = [{**r, 'evidence': [e for e in r['evidence'] if e['question_id'] not in beside]} for r in got['rows']]
+            for r in rows_:
                 S.rows[r['direction_id']] = merge_row(S.rows[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
-            S.coverage.append((got['rows'], judged_ids, goal_ids))
+            S.coverage.append((rows_, judged_ids, goal_ids, seen_ids))
         return kept_split
 
     def count_attempts(S, targets):
@@ -627,7 +652,7 @@ def run(packet, out, model, invoke, resume=None):
             count_attempts(S, targets)
             findings = [{**S.reviews[q], 'code_findings': code.get(q, [])} for q in targets]
             batch += fix_round(S, stages, f'{X}fix-{b}-{k}', f'{X}review-{b}-{k + 1}', f'{X}coverage-fix-{b}-{k}', targets, findings,
-                               split_range(b, S.bank, len(targets)) if splits_on else None)
+                               split_range(b, S.bank, len(targets)) if splits_on else None, own=batch)
 
     def apply_coverage(rows_, got_rows, judged_ids):
         for r in got_rows:
@@ -640,6 +665,7 @@ def run(packet, out, model, invoke, resume=None):
     split_base = 1 + max([int(q['question_id'][1:]) for q in [*initial_bank['questions'], *bank['questions'], *off_questions]
                           if q['question_id'][:1] == 'Q' and q['question_id'][1:].isdigit()], default=0)
     split_block = REVIEW_BATCH * v3.FIX_LIMIT
+    phase_evidence = {did: [e['question_id'] for e in r['evidence']] for did, r in rows.items()}
 
     def split_range(b, bank_, count):
         start = split_base + b * split_block
