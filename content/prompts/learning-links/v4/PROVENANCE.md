@@ -20,3 +20,8 @@ docs/changes/2026-11-12-goal-dedupe(피코르나 261111_02에서 같은 답의 �
 - coverage.md: component에 섞인 해석상 주의는 판정에 넣지 않음(R1). 중복 묶음은 새 문항과 기존 문항을 함께, 부분만 답한 문항끼리도 비교(R4).
 - add.md: `goals[].asked`(그 목표를 이미 묻는 문항과 빠진 부분의 판정)를 받아 같은 답을 다시 쓰지 않음. 쓸 문항이 없으면 빈 출력(R3).
 - normalize.md: 「…하되, …은 아님을 구별한다」 꼴 포인트는 사실만 component에(R2).
+
+docs/changes/2026-11-23-basis-covers-answer(근거 한 줄이 답 일부만 가리켜도 답 전체가 그 tier를 받던 것, 진균 Q087·Norovirus Q156)가 바꾼 곳:
+- add.md·fix.md 「문항 중요도 근거」: 근거 한 줄은 답 전체를 가리킬 때만 적음(R1). add는 일부만 가리키면 다른 물음이면 나누고, 한 범주 목록이면 그 줄을 쓰지 않음(R2).
+- fix.md: 같은 question_id로 묻는 것을 바꾸거나 넓히지 않음(예외 셋)(R3). fix-splits/1 실행이면 따로 물을 내용을 `split_questions`에 새 문항으로(R5).
+- item-review.md: fix는 그 문항이 묻는 것 안에서. 다른 물음은 note의 「별도 문항: …」(R4).

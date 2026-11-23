@@ -116,8 +116,11 @@ class Model:
                 fixed = authored(q)
                 fixed['explanation'] = 'Synthetic clearer explanation'
                 qs.append(fixed)
-            return {'questions': qs, 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': [],
-                    'question_importance': copy.deepcopy(ctx['question_importance'])}, {}
+            value = {'questions': qs, 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': [],
+                     'question_importance': copy.deepcopy(ctx['question_importance'])}
+            if 'allowed_split_question_ids' in ctx:   # fix-splits/1: this model splits nothing off
+                value['split_questions'] = []
+            return value, {}
         if stage.startswith('v4-context'):
             return {'conflicts': [{'conflict_id': c['conflict_id'], 'status': 'consistent', 'reason': 'Synthetic'} for c in ctx['conflicts']],
                     'questions': [], 'unrecorded': []}, {}

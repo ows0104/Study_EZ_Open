@@ -109,6 +109,9 @@ def measure(runs):
         style = find_style(m)
         init = {q['question_id']: q for q in m['initialBank']['questions']}
         fixed = {f['question_id'] for f in m.get('fixes', []) if not f.get('reverted')}
+        # fix-splits/1: questions a fix split off (kept with their source, dropped with its revert)
+        for f in m.get('fixes', []):
+            count['split_questions ' + ('dropped' if f.get('reverted') else 'kept')] += len(f.get('split_questions') or [])
         basis = m.get('questionImportance') or {}
         for q in d['document']['bank_snapshot']['questions']:
             key = (title, q['question_id'], q.get('answer'))

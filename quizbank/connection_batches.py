@@ -170,8 +170,15 @@ def merge(st, out, snapshot, batches, copies, apply_coverage):
     replaced = {}
     base_sources = snapshot.bank.get('source_conflicts', [])
     new_sources = []
+    # fix-splits/1 (docs/changes/2026-11-23-basis-covers-answer): a batch may append the questions its fixes split off.
+    # They come after the snapshot's questions, in batch order, as the one-after-another order appends them.
+    added, owned = [], []
     for mine, batch in zip(copies, batches):
-        _require([q['question_id'] for q in mine.bank['questions']] == ids, '묶음이 문항 목록을 바꿨습니다')
+        mine_ids = [q['question_id'] for q in mine.bank['questions']]
+        _require(mine_ids[:len(ids)] == ids, '묶음이 문항 목록을 바꿨습니다')
+        new = mine.bank['questions'][len(ids):]
+        added.extend(new)
+        owned.append([*batch, *(q['question_id'] for q in new)])
         _require(all(mine.bank[k] == snapshot.bank[k] for k in snapshot.bank if k not in ('questions', 'source_conflicts')),
                  '묶음이 문항·충돌 밖의 은행 내용을 바꿨습니다')
         _require(mine.bank.get('source_conflicts', [])[:len(base_sources)] == base_sources, '묶음이 기존 원본 충돌을 바꿨습니다')
@@ -179,7 +186,9 @@ def merge(st, out, snapshot, batches, copies, apply_coverage):
         replaced.update({q: by_id[q] for q in batch})
         new_sources.extend(mine.bank.get('source_conflicts', [])[len(base_sources):])
     _require(len({c['conflict_id'] for c in new_sources}) == len(new_sources), '두 묶음이 같은 새 충돌 ID를 썼습니다')
-    bank['questions'] = [replaced.get(q['question_id'], q) for q in bank['questions']]
+    _require(len({q['question_id'] for q in added}) == len(added) and not {q['question_id'] for q in added} & set(ids),
+             '두 묶음이 같은 새 문항 ID를 썼습니다')
+    bank['questions'] = [*(replaced.get(q['question_id'], q) for q in bank['questions']), *copy.deepcopy(added)]
     if new_sources or 'source_conflicts' in bank:
         bank['source_conflicts'] = [*copy.deepcopy(base_sources), *copy.deepcopy(new_sources)]
     result.bank = bank
@@ -204,7 +213,7 @@ def merge(st, out, snapshot, batches, copies, apply_coverage):
         return [s for s in entries if s['question_id'] == q]
     moved = []
     gone = set()
-    for mine, batch in zip(copies, batches):
+    for mine, batch in zip(copies, owned):
         mine_changed = {q for q in batch if of(mine.stimuli, q) != of(snapshot.stimuli, q)}
         gone |= mine_changed
         moved.extend(s for s in mine.stimuli if s['question_id'] in mine_changed)
@@ -213,13 +222,13 @@ def merge(st, out, snapshot, batches, copies, apply_coverage):
     # per-question records ------------------------------------------------------------------------------------
     if snapshot.basis is not None:
         result.basis = dict(snapshot.basis)
-        for mine, batch in zip(copies, batches):
+        for mine, batch in zip(copies, owned):
             result.basis.update({q: mine.basis[q] for q in batch if q in mine.basis})
     result.reviews = dict(snapshot.reviews)
     result.attempts = dict(snapshot.attempts)
     result.fixes = list(snapshot.fixes)
     result.restated = list(snapshot.restated)
-    for mine, batch in zip(copies, batches):
+    for mine, batch in zip(copies, owned):
         result.reviews.update({q: mine.reviews[q] for q in mine.reviews if q in set(batch)})
         result.attempts.update({q: v for q, v in mine.attempts.items() if q not in snapshot.attempts})
         result.fixes.extend(mine.fixes[len(snapshot.fixes):])
@@ -266,7 +275,7 @@ def stale_coverage(result, batches, snapshot):
     where = {q: b for b, batch in enumerate(batches) for q in batch}
     before = {q['question_id']: q for q in snapshot.bank['questions']}
     after = {q['question_id']: q for q in result.bank['questions']}
-    changed = {q for q in after if after[q] != before[q]}
+    changed = {q for q in after if q in before and after[q] != before[q]}
     goals, judged = set(), set()
     for b, _, judged_ids, goal_ids in result.coverage:
         if any(where.get(q) not in (None, b) and q in changed for q in judged_ids):

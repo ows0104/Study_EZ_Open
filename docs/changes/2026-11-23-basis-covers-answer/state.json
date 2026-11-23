@@ -6,13 +6,75 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
-  "checks": [],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T06:41:14.349983+00:00",
+      "evidence": "사용자 2026-11-23: 「A와 B 둘다 해도될듯?」 (plan.md 선택지 A·B; 결정과 B 범위를 plan·spec에 적은 뒤 다시 기록)",
+      "scope": "plan.md A(지시문 R1~R4)·B(fix-splits/1, R5) 구현·로컬 검사·Draft PR까지. 병합·러너 재설치·운영 재출제 제외",
+      "evidence_version": 2,
+      "source_hash": "cd0e0b15b9c16ab66b40c4a0370ac8c393148bd1efa97eba51dd66d71fc95f7a",
+      "plan_hash": "dc72017752721259a7e3cf2cea3b9818ef54c40daaee4ed0e928d763ce13123a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "06d75bc70278fa128e6d7ede67d3107b0cf7250e4ae74e280ed13be26d65de77"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-23T06:51:02.365791+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "studyez_contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "cd0e0b15b9c16ab66b40c4a0370ac8c393148bd1efa97eba51dd66d71fc95f7a",
+      "plan_hash": "dc72017752721259a7e3cf2cea3b9818ef54c40daaee4ed0e928d763ce13123a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-23-basis-covers-answer/1795416080708391300-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-23T04:28:38.895156+00:00"
+  "updated_at": "2026-11-23T06:51:02.366979+00:00"
 }

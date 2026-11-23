@@ -85,6 +85,25 @@ def shows_asked(ctx):
 def add_schema(ctx):
     return ADD_OUTPUT_OPEN if shows_asked(ctx) else ADD_OUTPUT
 FIX_OUTPUT = _with_basis(v3.FIX_OUTPUT)
+# fix-splits/1 (docs/changes/2026-11-23-basis-covers-answer): a fix that was given new question IDs
+# (`allowed_split_question_ids`) may write what a finding asks apart from the fixed question as new questions,
+# each with its own basis, instead of broadening the fixed question under its ID. The schema follows from the stage
+# input, so a fix receipt made before (and the presuppose fix, which is given none) still validates.
+FIX_SPLITS = 'fix-splits/1'
+SPLIT_QUESTION = copy.deepcopy(v3.AUTHORED_QUESTION)
+SPLIT_QUESTION['properties']['split_from'] = TEXT
+SPLIT_QUESTION['required'].append('split_from')
+FIX_SPLIT_OUTPUT = copy.deepcopy(FIX_OUTPUT)
+FIX_SPLIT_OUTPUT['properties']['split_questions'] = arr(SPLIT_QUESTION)
+FIX_SPLIT_OUTPUT['required'].append('split_questions')
+
+
+def splits_allowed(ctx):
+    return 'allowed_split_question_ids' in (ctx or {})
+
+
+def fix_schema(ctx):
+    return FIX_SPLIT_OUTPUT if splits_allowed(ctx) else FIX_OUTPUT
 SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=v3.SUPPLEMENT_OUTPUT['properties']['rows']['items']['properties']['decision'],
                                      point={'anyOf': [POINT, {'type': 'null'}]}, duplicate_of=v3._NULLABLE, reason=TEXT), 1))
 OUTPUTS = {**v3.OUTPUTS, 'coverage': COVERAGE_OUTPUT, 'item-review': ITEM_REVIEW_OUTPUT, 'supplement': SUPPLEMENT_OUTPUT,
@@ -148,10 +167,87 @@ def check_added(value, ctx, state=None):
 
 
 def check_fixed(value, ctx, state=None):
-    require(type(value) is dict and set(value) == set(FIX_OUTPUT['properties']), 'v4 fix output: fields')
-    collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
-    v3.check_fixed(without_basis(value), ctx, state)
+    schema = fix_schema(ctx)
+    require(type(value) is dict and set(value) == set(schema['properties']), 'v4 fix output: fields')
+    splits = value['split_questions'] if splits_allowed(ctx) else []
+    collect_basis(value['question_importance'], [q['question_id'] for q in [*value['questions'], *splits]])
+    fixed, _ = fix_parts(value)
+    v3.check_fixed(fixed, ctx)
+    if splits_allowed(ctx):
+        check_splits(value, ctx)
+    if state is not None:
+        merge_fix_output(state['bank'], state['clinical_conflicts'], value, [q['question_id'] for q in ctx['questions']],
+                         ctx.get('allowed_split_question_ids', []))
     return value
+
+
+def fix_parts(value):
+    """A /4 fix output as the /3 fix output of its fixed questions and the /3 add output of its split questions."""
+    plain = without_basis(value)
+    splits = plain.pop('split_questions', [])
+    ids = {q['question_id'] for q in splits}
+    fixed = {**plain, 'visual_stimuli': [s for s in plain['visual_stimuli'] if s['question_id'] not in ids]}
+    added = {'questions': [{k: v for k, v in q.items() if k != 'split_from'} for q in splits], 'concepts': [],
+             'retrieval_plan': [], 'source_conflicts': [], 'clinical_conflicts': [],
+             'visual_stimuli': [s for s in plain['visual_stimuli'] if s['question_id'] in ids]}
+    return fixed, added
+
+
+def check_splits(value, ctx):
+    """fix-splits/1: a split question takes a part of the question it is split from, and comes with that question's fix.
+
+    New IDs from the allowed range; the source is a question this output fixes; the split keeps the source's concept,
+    points among the source's, no other conflict than the source's, and prerequisites among the source and its own."""
+    given = {q['question_id']: q for q in ctx['questions']}
+    fixed = {q['question_id']: q for q in value['questions']}
+    ids = [q['question_id'] for q in value['split_questions']]
+    require(len(ids) == len(set(ids)) and set(ids) <= set(ctx['allowed_split_question_ids']),
+            'v4 fix: split question IDs outside input.allowed_split_question_ids')
+    for q in value['split_questions']:
+        qid, src = q['question_id'], q['split_from']
+        require(src in fixed, f'v4 fix: {qid} is split from {src}, which this output does not fix (split_from names a fixed question)')
+        source = fixed[src]
+        require(q.get('concept_id') == given[src].get('concept_id'), f'v4 fix: {qid} takes the concept of {src}')
+        require(q.get('point_ids') and set(q['point_ids']) <= set(given[src].get('point_ids') or []),
+                f'v4 fix: {qid} point_ids are among those of {src}')
+        require(q.get('conflict_id') in (None, source.get('conflict_id')), f'v4 fix: {qid} cites no other conflict than {src}')
+        require(set(q.get('prerequisites') or []) <= {src, *(source.get('prerequisites') or [])},
+                f'v4 fix: {qid} prerequisites are {src} or its own')
+
+
+def merge_fix_output(bank, clinical_conflicts, value, targets, allowed_split=()):
+    """The fixed questions replace theirs (v3.merge_fixes); the split questions are appended (v3.merge_added).
+
+    Returns (bank, clinical_conflicts, changed fixed IDs, split IDs)."""
+    fixed, added = fix_parts(value)
+    merged, facts, changed = v3.merge_fixes(bank, clinical_conflicts, fixed, targets)
+    if not added['questions']:
+        return merged, facts, changed, []
+    merged, facts = v3.merge_added(merged, facts, added, list(allowed_split))
+    return merged, facts, changed, [q['question_id'] for q in added['questions']]
+
+
+def splits_of(value, question_ids):
+    """The split questions of `question_ids` (a fix kept for them), as a fix output; the others are dropped."""
+    keep = set(question_ids)
+    out = copy.deepcopy(value)
+    gone = {q['question_id'] for q in out.get('split_questions', []) if q['split_from'] not in keep}
+    if 'split_questions' in out:
+        out['split_questions'] = [q for q in out['split_questions'] if q['question_id'] not in gone]
+    out['visual_stimuli'] = [s for s in out['visual_stimuli'] if s['question_id'] not in gone]
+    out['question_importance'] = [r for r in out['question_importance'] if r['question_id'] not in gone]
+    return out
+
+
+def split_ids(start, used, count):
+    """`count` question IDs from Q<start> on that `used` does not hold (fix-splits/1 ranges)."""
+    out, n = [], start
+    while len(out) < count:
+        qid = f'Q{n:03d}'
+        if qid not in used:
+            out.append(qid)
+        n += 1
+    return out
 
 
 # review-relations/1 (docs/changes/2026-11-11-place-by-review): the item review also names the map relations a question

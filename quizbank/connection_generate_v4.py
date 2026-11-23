@@ -140,8 +140,9 @@ def check_stage(kind, value, ctx, state, scratch):
         stimuli = [*state['stimuli'], *value['visual_stimuli']]
     else:
         v4.check_fixed(value, ctx)
-        merged, _, changed = v3.merge_fixes(state['bank'], state['clinical_conflicts'], v4.without_basis(value),
-                                            [q['question_id'] for q in ctx['questions']])
+        merged, _, changed, _ = v4.merge_fix_output(state['bank'], state['clinical_conflicts'], value,
+                                                    [q['question_id'] for q in ctx['questions']],
+                                                    ctx.get('allowed_split_question_ids', []))
         stimuli = [s for s in state['stimuli'] if s['question_id'] not in set(changed)] + value['visual_stimuli']
     visual.render(merged, stimuli, {'sources': state['sources']}, scratch)
     return value
@@ -218,8 +219,11 @@ def run(packet, out, model, invoke, resume=None):
     # discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): a new run also judges which named elements a
     # cue alone has to pick out, makes a reverse goal for the ones no question asks that way and orders each after
     # the forward question's goal.
+    # fix-splits/1 (docs/changes/2026-11-23-basis-covers-answer): a new run's fix may write what a finding asks apart
+    # from the fixed question as new questions with their own basis, instead of broadening the question under its ID.
     fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES},
-             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE}}
+             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE},
+             'fixSplits': {'policy': v4.FIX_SPLITS}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
@@ -234,6 +238,7 @@ def run(packet, out, model, invoke, resume=None):
     goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
     presuppose_on = ledger.get('presuppositions') == {'policy': pre.PRESUPPOSE}
     discriminate_on = ledger.get('discriminations') == {'policy': dis.DISCRIMINATE}
+    splits_on = ledger.get('fixSplits') == {'policy': v4.FIX_SPLITS}
 
     def merge_row(old, new, goal, replaced=()):
         return _merge_row(old, new, goal, replaced, by_evidence=goal_dups)
@@ -534,8 +539,11 @@ def run(packet, out, model, invoke, resume=None):
         st.save()
         return got
 
-    def fix_round(S, stages, name, review_name, coverage_name, targets, findings):
+    def fix_round(S, stages, name, review_name, coverage_name, targets, findings, split_allowed=None):
+        """One fix stage, its re-review, reverts and coverage re-check. Returns the split questions kept (fix-splits/1)."""
         ctx = v4.with_importance(v3.fix_input(S.bank, findings, targets, S.conflicts, covered_by(S)), S.basis)
+        if split_allowed is not None:
+            ctx['allowed_split_question_ids'] = list(split_allowed)
         if presuppositions:
             pre.mark_review(ctx, brief, presuppositions, S.bank, exclude=intake_ids)
         if discriminations:
@@ -544,40 +552,53 @@ def run(packet, out, model, invoke, resume=None):
             ctx['conflict_scope'] = S.scope
         state = _state(S.bank, S.conflicts, S.stimuli, packet)
         value = stages.run(name, ctx, lambda raw, ctx=ctx, state=state: check_stage('fix', raw, ctx, state, out / '.check-render' / name), state)
-        plain = v4.without_basis(value)
+        plain, _ = v4.fix_parts(value)
+        allowed_split = ctx.get('allowed_split_question_ids', [])
         before = (copy.deepcopy(S.bank), copy.deepcopy(S.conflicts), copy.deepcopy(S.stimuli), copy.deepcopy(S.basis))
         before_reviews = {q: S.reviews[q] for q in targets}
         cited = {q.get('conflict_id') for q in plain['questions'] if q.get('conflict_id')}
         S.restated.extend({'stage': name, **r} for r in v3.restated(visual.authored(S.bank), S.conflicts, plain, cited))
-        merged, S.conflicts, changed = v3.merge_fixes(visual.authored(S.bank), S.conflicts, plain, targets)
-        fixed_basis = v4.collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
-        S.basis.update({q: fixed_basis[q] for q in changed})
+        merged, S.conflicts, changed, split = v4.merge_fix_output(visual.authored(S.bank), S.conflicts, value, targets, allowed_split)
+        written = [*changed, *split]
+        source = {q['question_id']: q['split_from'] for q in value.get('split_questions', [])}
+        fixed_basis = v4.collect_basis(value['question_importance'], [*(q['question_id'] for q in value['questions']), *source])
+        S.basis.update({q: fixed_basis[q] for q in written})
         S.stimuli = [s for s in S.stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
         S.bank = visual.render(merged, S.stimuli, packet, S.material)
-        again = review_batch(S, stages, review_name, set(changed))
+        # fix-splits/1: a split question is reviewed beside the fixes (its first review) and leaves with its source's revert.
+        again = review_batch(S, stages, review_name, set(written))
         reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
         kept = [q for q in changed if q not in reverted]
+        kept_split = [q for q in split if source[q] in kept]
         if reverted and not kept:
             S.bank, S.conflicts, S.stimuli, S.basis = before
         elif reverted:
-            part = v3.fixes_of(plain, kept)
-            merged, S.conflicts, _ = v3.merge_fixes(visual.authored(before[0]), before[1], part, targets)
+            part = v4.splits_of({**v3.fixes_of(plain, kept), 'question_importance': [],
+                                 'split_questions': value.get('split_questions', [])}, kept)
+            part['visual_stimuli'] += [s for s in value['visual_stimuli'] if s['question_id'] in set(kept_split)]
+            merged, S.conflicts, _, _ = v4.merge_fix_output(visual.authored(before[0]), before[1], part, targets, allowed_split)
             S.stimuli = [s for s in before[2] if s['question_id'] not in set(kept)] + part['visual_stimuli']
             S.bank = visual.render(merged, S.stimuli, packet, S.material)
-            S.basis = {**before[3], **{q: fixed_basis[q] for q in kept}}
+            S.basis = {**before[3], **{q: fixed_basis[q] for q in [*kept, *kept_split]}}
         for q in changed:
             S.reviews[q] = before_reviews[q] if q in reverted else again.get(q, S.reviews[q])
-            S.fixes.append({'question_id': q, 'attempt': S.attempts[q], 'stage': name, 'reverted': q in reverted})
+            mine = [x for x in split if source[x] == q]
+            S.fixes.append({'question_id': q, 'attempt': S.attempts[q], 'stage': name, 'reverted': q in reverted,
+                            **({'split_questions': mine} if mine else {})})
+        for q in kept_split:
+            S.reviews[q] = again[q]
         goal_ids = sorted({did for q in kept for did, r in S.rows.items() if any(e['question_id'] == q for e in r['evidence'])})
         if goal_ids:
             # A fixed question is judged again with its duplicate partners, so the group is decided anew, not dropped.
+            # Its split questions are judged with it: they took a part of what it asked (fix-splits/1).
             partners = {p for did in goal_ids for grp in S.rows[did].get('duplicates', []) if set(grp['question_ids']) & set(kept)
                         for p in grp['question_ids']}
-            judged_ids = [q['question_id'] for q in S.bank['questions'] if q['question_id'] in set(kept) | partners]
+            judged_ids = [q['question_id'] for q in S.bank['questions'] if q['question_id'] in set(kept) | partners | set(kept_split)]
             got = judge(coverage_name, v3.coverage_input(brief, S.bank, goal_ids, judged_ids), stages)
             for r in got['rows']:
                 S.rows[r['direction_id']] = merge_row(S.rows[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
             S.coverage.append((got['rows'], judged_ids, goal_ids))
+        return kept_split
 
     def count_attempts(S, targets):
         with st.lock:
@@ -588,6 +609,7 @@ def run(packet, out, model, invoke, resume=None):
 
     def batch_body(b, batch, S, stages):
         S.reviews.update(review_batch(S, stages, f'{X}review-{b}-0', set(batch)))
+        batch = list(batch)   # a split question joins its batch's later fix rounds (fix-splits/1)
         for k in range(v3.FIX_LIMIT):
             code = _bank_findings(S.bank, source_ids, S.attempts)
             targets = [q for q in batch if (v3.needs_fix(S.reviews[q]) or q in code) and S.attempts.get(q, 0) < v3.FIX_LIMIT]
@@ -604,7 +626,8 @@ def run(packet, out, model, invoke, resume=None):
                 break
             count_attempts(S, targets)
             findings = [{**S.reviews[q], 'code_findings': code.get(q, [])} for q in targets]
-            fix_round(S, stages, f'{X}fix-{b}-{k}', f'{X}review-{b}-{k + 1}', f'{X}coverage-fix-{b}-{k}', targets, findings)
+            batch += fix_round(S, stages, f'{X}fix-{b}-{k}', f'{X}review-{b}-{k + 1}', f'{X}coverage-fix-{b}-{k}', targets, findings,
+                               split_range(b, S.bank, len(targets)) if splits_on else None)
 
     def apply_coverage(rows_, got_rows, judged_ids):
         for r in got_rows:
@@ -612,6 +635,17 @@ def run(packet, out, model, invoke, resume=None):
 
     order = [q['question_id'] for q in bank['questions']]
     batch_ids = chunks(order, REVIEW_BATCH)
+    # fix-splits/1: each batch writes its split questions in its own ID range, so batches side by side never write the
+    # same ID and the one-after-another order gives the same IDs. The ranges start after every ID the run has used.
+    split_base = 1 + max([int(q['question_id'][1:]) for q in [*initial_bank['questions'], *bank['questions'], *off_questions]
+                          if q['question_id'][:1] == 'Q' and q['question_id'][1:].isdigit()], default=0)
+    split_block = REVIEW_BATCH * v3.FIX_LIMIT
+
+    def split_range(b, bank_, count):
+        start = split_base + b * split_block
+        used = {q['question_id'] for q in bank_['questions']}
+        free = [f'Q{n:03d}' for n in range(start, start + split_block) if f'Q{n:03d}' not in used]
+        return free[:count]
     start = batches.Batch(bank=bank, conflicts=conflicts, stimuli=stimuli, basis=basis, rows=rows, reviews={}, fixes=[], attempts={},
                           restated=restated, verdicts=ledger['verdictLedger'])
     S = batches.review_phase(st, out, batch_ids, start, batch_body, apply_coverage)
@@ -682,7 +716,11 @@ def run(packet, out, model, invoke, resume=None):
         code = _bank_findings(bank, source_ids, attempts)
         findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
         S.bank, S.conflicts, S.stimuli, S.basis = bank, conflicts, stimuli, basis
-        fix_round(S, batches.BatchStages(st, S), X + 'fix-context-0', X + 'review-context-1', X + 'coverage-fix-context-0', targets, findings)
+        used = {q['question_id'] for q in [*initial_bank['questions'], *bank['questions'], *off_questions]}
+        after = max([split_base + len(batch_ids) * split_block,
+                     *(int(q[1:]) + 1 for q in used if q[:1] == 'Q' and q[1:].isdigit())])
+        fix_round(S, batches.BatchStages(st, S), X + 'fix-context-0', X + 'review-context-1', X + 'coverage-fix-context-0', targets, findings,
+                  v4.split_ids(after, used, len(targets)) if splits_on else None)
         bank, conflicts, stimuli, basis = S.bank, S.conflicts, S.stimuli, S.basis
         present = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
         cited = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')} | set(intake_conflict_ids)

@@ -4,6 +4,9 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 - verdict: 정답·답 단위·해설이 원본과 맞는가(ok/doubt/wrong). 원본/기출의 잘못된 그림·정답·수치 자체를 올바른 의학 답으로 승인하지 않는다. 현재 의학과의 차이는 마지막 의학 검토가 따로 본다.
 - design: 아래 옮긴 design_checks 규칙의 판정(ok/doubt/wrong)이다.
 - note: 지적의 근거. fix: 고칠 방향. suggested_answer: 원본에 맞는 정답이 다를 때만, 아니면 빈 문자열.
+  - **fix는 그 문항이 묻는 것 안에서 고칠 방향이다.** 문항을 다른 물음으로 바꾸라(존재 문항으로, 모든 항목을 나열하게, 다른 대상을 묻게)고 쓰지 않는다. 같은 ID로 넓힌 문항은 원래 답의 근거로 새 답까지 tier를 얻는다.
+  - 따로 물을 것이 있으면 note에 「별도 문항: …」으로 적는다. 고치기 단계가 그것을 새 문항으로 쓸 수 있다.
+  - 그 이유만으로 design을 doubt·wrong으로 하지 않는다. 이 문항이 묻는 것에 결함이 있을 때만 판정한다.
 - prerequisite_checks: 문항의 prerequisites마다 정확히 한 번. 내용상 필요한 최소 기초와 과도한 전체 표/목록 잠금을 구별한다.
 - importance_note: 보통은 빈 문자열이다. 문항의 중요도 근거(importance_basis)가 입력에 있고 그 근거가 원본과 다르다고 보이면(예: 그 쪽에 스탬프가 없다, 교수 발언이 아니라 필기자 첨언이다) 한 줄로 적는다. 관리자에게 보이는 기록일 뿐 판정이 아니다. verdict·design·note·fix에 반영하지 않고, 이 이유로 문항을 고치라고 하지 않는다.
 - evidence: input.json에 evidence_source가 있을 때만 쓴다(없으면 출력 스키마에도 없다). 정답의 핵심을 직접 증명하는 그 필기(evidence_source.source_id)의 최소 물리쪽이다.
