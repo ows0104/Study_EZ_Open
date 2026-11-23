@@ -8,7 +8,6 @@ import { DeleteQuizDialog } from "./DeleteQuizDialog";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import { useStudyTimetable } from "./useStudyTimetable";
-import { prefetchRootCatalog } from "./useRootCatalog";
 import { jokboMixHref, mixHref } from "./mixLinks";
 import "./batch.css";
 
@@ -37,8 +36,6 @@ export function BankBatchPage() {
   });
   const [done, setDone] = useState(false);
   const { events, setEvents, error: loadError } = useStudyTimetable(refreshKey, !queue);
-  // Main-Quiz 요약은 느리다(운영 6–9 s). 시간표와 같이 출발시켜 행이 그려진 뒤 숫자 칸이 빨리 찬다.
-  useEffect(() => { if (!queue) prefetchRootCatalog(); }, [queue === null, refreshKey]);
   const [paused, setPaused] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");

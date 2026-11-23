@@ -15,7 +15,8 @@ export function RootPolicyNotice({policy}:{policy?:RootPolicy}) {
 export function RootSummaryPanel({summary:s,brief=false}:{summary:RootSummary;brief?:boolean}) {
   const rows:[string,number][]=[['미학습',s.unseen],['중요한 미학습',s.importantUnseen],['준비 전',s.unready],['오늘 새로 접함',s.newToday]];
   return <section className="mq-summary" aria-label="Main Quiz 학습 현황">
-    {!brief&&<p className="mq-summary-line">고유 목표 {s.total}개 · 첫 학습 {s.learned} · 회상 가능 {s.recalled}</p>}
+    {/* 시작 화면 위 숫자 칸은 카드 기준(2026-11-24)이라, 접은 자세히 보기에서는 목표 기준임을 밝힌다. */}
+    <p className="mq-summary-line">{brief?'학습 목표 기준 · ':''}고유 목표 {s.total}개 · 첫 학습 {s.learned} · 회상 가능 {s.recalled}</p>
     <dl>{rows.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     {s.recallLearningChange!==0&&<p className="bank-note">오늘 평가에 따른 회상 변화 {s.recallLearningChange>0?'+':''}{s.recallLearningChange}</p>}
     {s.recallTimeChange!==0&&<p className="bank-note">복습 기한 경과에 따른 변화 {s.recallTimeChange}</p>}
@@ -60,7 +61,11 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
   questionsLink?:string;admin?:ReactNode}) {
   const p=info.plan,s=info.summary;
   const count=info.sessionId?resumeCount:p?.tasks.length;
-  const learned=s&&s.total?s.learned/s.total*100:0,recalled=s&&s.total?s.recalled/s.total*100:0;
+  // 숫자 칸·오늘 추천은 카드(문항) 수로(2026-11-24 사용자 「기준을 학습 목표 개수로 표기하지 말고 카드 수로」).
+  // 강의 목록 열과 같은 서버 값(questionProgress): 본 카드 = 전체 − 미열람, 회상 가능 = 인출 + 저장.
+  const q=info.questionProgress;
+  const seen=q?q.total-q.unseen:0,recall=q?q.retrieving+q.retained:0;
+  const learned=q&&q.total?seen/q.total*100:0,recalled=q&&q.total?recall/q.total*100:0;
   // 주관식/객관식 모드(2026-11-14). 풀이 화면이 같은 저장값을 읽는다.
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
   const choose=(next:QuizMode)=>{saveQuizMode(next);setMode(next);};
@@ -79,13 +84,13 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
       </div>
     </header>
 
-    {s&&<>
+    {q&&<>
       <div className="mq-stats">
-        <Stat label="학습 목표" value={s.total}/>
-        <Stat label="첫 학습" value={s.learned} total={s.total} tone="is-learned"/>
-        <Stat label="회상 가능" value={s.recalled} total={s.total} tone="is-recalled"/>
+        <Stat label="전체 카드" value={q.total}/>
+        <Stat label="본 카드" value={seen} total={q.total} tone="is-learned"/>
+        <Stat label="회상 가능" value={recall} total={q.total} tone="is-recalled"/>
       </div>
-      <div className="mq-progress" role="img" aria-label={`첫 학습 ${s.learned}/${s.total} · 회상 가능 ${s.recalled}/${s.total}`}>
+      <div className="mq-progress" role="img" aria-label={`본 카드 ${seen}/${q.total} · 회상 가능 ${recall}/${q.total}`}>
         <i className="is-recalled" style={{width:`${recalled}%`}}/><i className="is-learned" style={{width:`${Math.max(0,learned-recalled)}%`}}/>
       </div>
     </>}
@@ -94,7 +99,9 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
       {p?<>
         <div className="mq-today-text">
           <h2>오늘 추천</h2>
-          <p>{p.tasks.length?<>새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
+          <p>{!p.tasks.length?'지금 추천할 과제가 없습니다.'
+            :q?.newToday!==undefined?<>새 카드 <b>{q.newToday.toLocaleString('ko-KR')}</b>장 · 복습 <b>{q.reviewDue.toLocaleString('ko-KR')}</b>장</>
+            :<>오늘 카드 <b>{p.tasks.length.toLocaleString('ko-KR')}</b>장</>}</p>
           <small>{p.deadline?`첫 학습 목표일 ${p.deadline}${p.days!==null&&p.days<=0?' · 목표일 지남':''}`:'시험일 미정 · 준비된 새 범위와 필요한 복습을 추천합니다.'}</small>
           {info.focus&&onFocus&&<FocusChips focus={info.focus} disabled={disabled||starting} onChange={onFocus}/>}
           <div className="mq-mode" role="radiogroup" aria-label="풀이 모드">

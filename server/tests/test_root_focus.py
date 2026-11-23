@@ -60,7 +60,10 @@ assert client.put(BASE + '/questions/Q3/tier', json={'requestId': 'f1', 'tier': 
 info = overview()
 assert plan_questions(info) == ['Q1', 'Q2'], info['plan']['tasks']
 assert info['summary']['total'] == base_total
-assert info['questionProgress'] == before['questionProgress']
+# Stage counts stay; 「오늘 새 카드」(newToday, 2026-11-24) is today's load, so it follows the narrowed plan like reviewDue.
+stages = lambda p: {k: v for k, v in p.items() if k != 'newToday'}
+assert stages(info['questionProgress']) == stages(before['questionProgress'])
+assert (before['questionProgress']['newToday'], info['questionProgress']['newToday']) == (3, 2), info['questionProgress']
 
 # ── One stream a day (2026-11-14 continuous-today, replaces 11-12 R5): a tier change keeps the session ──
 def tasks_of(sid):

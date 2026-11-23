@@ -300,6 +300,8 @@ def question_progress(doc, events, available, now, policy, planned=None, skip_op
     - retained: Good/Easy on two study days or more, and mastery now >= the rating's target retention
     - retrieving: last result Good/Easy, not retained
     reviewDue counts today's plan tasks chosen as '복습 확인' (rated, due, not assessed today).
+    newToday counts today's plan tasks whose unit is still unseen — the new cards to do today
+    (docs/changes/2026-11-24-lecture-list-block-scope). Same plan as reviewDue, so the same focus chips apply.
     `skip_optional` (Optional 계산 제외) counts Optional tasks as if absent, reviewDue included."""
     owners = direction_owners(doc)
     exclude = optional_tasks(doc, events, now) if skip_optional else frozenset()
@@ -309,6 +311,7 @@ def question_progress(doc, events, available, now, policy, planned=None, skip_op
         _, _, values = replay_tasks(doc, events, now, policy)
         units = [values.get(t['task_id'], {}) for t in doc['tasks']
                  if t['task_id'] in available and t['direction_id'] in owners]
+        unit_of = lambda task: values.get(task.get('task_id'), {})
     else:
         _, values = replay(doc, events, now, policy)
         served = {}
@@ -316,9 +319,11 @@ def question_progress(doc, events, available, now, policy, planned=None, skip_op
             if task['task_id'] in available and task['direction_id'] in owners:
                 served.setdefault(task['direction_id'], task)
         units = [values.get(did, {}) for did in served]
+        unit_of = lambda task: values.get(task.get('direction_id'), {})
+    unseen = lambda value: not value.get('learned') and value.get('rating') is None
     counts = {'unseen': 0, 'recognized': 0, 'retrieving': 0, 'retained': 0}
     for value in units:
-        if not value.get('learned') and value.get('rating') is None:
+        if unseen(value):
             counts['unseen'] += 1
         elif value.get('rating') != 'independent':
             counts['recognized'] += 1
@@ -327,6 +332,7 @@ def question_progress(doc, events, available, now, policy, planned=None, skip_op
             counts['retained'] += 1
         else:
             counts['retrieving'] += 1
-    due = sum(t.get('reason') == '복습 확인' and t.get('task_id') not in exclude
-              for t in (planned or {}).get('tasks', []))
-    return {'total': len(units), **counts, 'reviewDue': due}
+    today = [t for t in (planned or {}).get('tasks', []) if t.get('task_id') not in exclude]
+    due = sum(t.get('reason') == '복습 확인' for t in today)
+    fresh = sum(t.get('reason') != '복습 확인' and unseen(unit_of(t)) for t in today)
+    return {'total': len(units), **counts, 'reviewDue': due, 'newToday': fresh}

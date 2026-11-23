@@ -244,12 +244,27 @@ def main_quiz_entry(subject: str, run_id: str, user: CurrentUser = Depends(requi
     return {'mode': 'legacy'}
 
 
+def wanted_lectures(values):
+    """`과목/runId` 목록 → 키 집합. runId에는 `/`가 없어 마지막 `/`에서 나눈다. 모양이 틀린 값은 버린다."""
+    keys = set()
+    for value in values:
+        subject, _, run_id = value.rpartition('/')
+        if subject and run_id:
+            keys.add((subject, run_id))
+    return keys
+
+
 @router.get('/root-learning')
-def catalog(user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+def catalog(lecture: list[str] = Query([]), user: CurrentUser = Depends(require_approved_user),
+            db: Session = Depends(get_db)):
+    """열린 Main-Quiz 강의마다 overview_data. 강의 하나에 약 0.2 s라, 전부 세면 강의 수만큼 늘었다
+    (운영 11-23 중앙값 8.1 s, 42편). 강의 목록은 고른 블럭의 강의만 `lecture=과목/runId`로 묻는다
+    (docs/changes/2026-11-24-lecture-list-block-scope). 인자가 없으면 전부다."""
     rows = []
-    if content.globally_enabled():
+    wanted = wanted_lectures(lecture) if lecture else None
+    if content.globally_enabled() and wanted != set():
         keys = [(c.subject, c.run_id) for c in db.scalars(select(RootControl).where(RootControl.enabled.is_(True)))
-                if content.allowed(db, c.subject, c.run_id, user)]
+                if (wanted is None or (c.subject, c.run_id) in wanted) and content.allowed(db, c.subject, c.run_id, user)]
         # 그림 바이트를 뺀 판별 사본(light.py). 요약·계획 계산은 그림을 읽지 않는다.
         docs = light.current_rows(db, keys)
         for key in keys:
