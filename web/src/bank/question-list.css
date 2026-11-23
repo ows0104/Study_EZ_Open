@@ -1,0 +1,24 @@
+/* Main-Quiz 강의 문항 전체 보기(2026-11-23-lecture-question-list). 바탕은 catalog.css(옛 「전체 문제」)와 같다. */
+.root-question-list .catalog-cards { max-width: 980px; }
+.rq-card > header { gap: 8px 10px; }
+.rq-card > header .rq-format { font-weight: 600; color: var(--ink); }
+.rq-card > header .rq-tier select { font-size: 12px; padding: 2px 6px; min-height: 0; height: 26px; }
+.rq-card > header .rq-edit { font-size: 12px; padding: 2px 8px; }
+.rq-card .tag { font-size: 11px; }
+.rq-figures { font-size: 12px; margin-bottom: 8px; }
+.rq-answer { margin-top: 4px; }
+.rq-answer .quiz-answer, .rq-answer .quiz-explanation { margin-inline: 0; max-width: none; }
+.rq-answer .quiz-explanation { padding: 12px 16px; }
+.root-question-list .catalog-toolbar input[type="checkbox"] { width: auto; }
+.rq-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--ink-2); }
+.rq-pages > span:first-child { color: var(--ink-3); }
+.rq-source { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.rq-source > b { font-weight: 600; margin-right: 2px; }
+.rq-page { min-width: 30px; min-height: 0; height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rq-page:hover { background: var(--hover); }
+.rq-page[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.rq-slide { margin-top: 12px; }
+.rq-slide .main-quiz-pdf-slide img { max-height: 70vh; object-fit: contain; }
+@media (max-width: 760px) {
+  .rq-card > header small { margin-left: 0; }
+}

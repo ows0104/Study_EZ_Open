@@ -31,6 +31,7 @@ const WrongNotePage = lazy(() => import("./jokbo/WrongNotePage").then((m) => ({ 
 const RootLearningPage = lazy(() => import("./bank/RootLearning").then((m) => ({ default: m.RootLearningPage })));
 const ConnectionLearningPage = lazy(() => import("./bank/ConnectionLearning").then((m) => ({ default: m.ConnectionLearningPage })));
 const BankCatalogPage = lazy(() => import("./bank/BankCatalog").then((m) => ({ default: m.BankCatalogPage })));
+const RootQuestionListPage = lazy(() => import("./bank/RootQuestionList").then((m) => ({ default: m.RootQuestionListPage })));
 const BankBatchPage = lazy(() => import("./bank/BankBatch").then((m) => ({ default: m.BankBatchPage })));
 const JokboMixPage = lazy(() => import("./jokbo/JokboMix").then((m) => ({ default: m.JokboMixPage })));
 const RootBatchPage = lazy(() => import("./bank/RootBatch").then((m) => ({ default: m.RootBatchPage })));
@@ -153,6 +154,7 @@ function Shell() {
             <Route path="/legacy-mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
             <Route path="/bank/:subject/:runId" element={<BankStudyPage />} />
             <Route path="/bank/:subject/:runId/roots" element={<RootLearningPage />} />
+            <Route path="/bank/:subject/:runId/roots/questions" element={<RootQuestionListPage />} />
             <Route path="/bank/:subject/:runId/connections" element={<ConnectionLearningPage />} />
             <Route path="/bank/:subject/:runId/all" element={<BankCatalogPage />} />
             {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는

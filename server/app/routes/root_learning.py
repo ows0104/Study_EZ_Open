@@ -1320,3 +1320,29 @@ def mix_start(subject: str, run_id: str, payload: MixStart, user: CurrentUser = 
         db.rollback()
         raise HTTPException(409, '다른 탭에서 시작되었습니다. 다시 불러오세요.')
     return result
+
+
+# ── 강의 문항 전체 보기 (2026-11-23) ───────────────────────────────────────
+# docs/changes/2026-11-23-lecture-question-list. 읽기 전용: 세션·root_event·개인 수정 표에 쓰지 않는다.
+# 목록은 가벼운 사본만 읽고(그림·슬라이드 없음, 쪽 번호만), 한 문항을 누르면 상세가 풀이 화면과 같은 앞면·답면을 준다.
+# 편집은 기존 개인 수정(…/personal)·내 중요도(…/tier)를 그대로 쓴다.
+
+@router.get(BASE + '/questions')
+def question_list(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    from app.root_learning import question_list as listing
+    doc = active(db, subject, run_id, user)
+    edits, tiers = personal_edits(db, doc, user.id), content.tiers_for(db, doc, user.id)
+    return {'revision': doc.revision, 'title': doc.document['title'], 'editable': personal_editable(doc),
+            'sources': listing.sources(doc.document),
+            'questions': listing.rows(doc.document, lambda q: content.with_tier(with_personal(q, edits), tiers))}
+
+
+@router.get(BASE + '/questions/{question_id}/detail')
+def question_detail(subject: str, run_id: str, question_id: str, user: CurrentUser = Depends(require_approved_user),
+                    db: Session = Depends(get_db)):
+    doc = active(db, subject, run_id, user)
+    current = content.with_tier(with_personal(snapshot_question(db, doc, question_id), personal_edits(db, doc, user.id)),
+                                content.tiers_for(db, doc, user.id))
+    notes = mine.memos(content.events_for(db, subject, run_id, user.id), doc.revision)
+    return {'question': learner_front(doc, current, db, user.id),
+            'answer': with_memo(revealed_answer(db, doc, current), notes, current)}

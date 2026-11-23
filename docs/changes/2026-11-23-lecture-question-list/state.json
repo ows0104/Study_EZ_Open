@@ -1,0 +1,113 @@
+{
+  "id": "2026-11-23-lecture-question-list",
+  "title": "Main-Quiz 강의 문항 전체 보기",
+  "area": "site",
+  "created_at": "2026-11-23T01:51:23.007668+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T01:59:10.589706+00:00",
+      "evidence": "2026-11-23 채팅: 「한 강의의 퀴즈문제를 쭉 한번에 볼 수 있는 곳이 있으면 좋겠어. 검색, 검토, 편집할때도 쓸 수 있게. 문제, 답, 유형, 중요도, 난이도, 참고슬라이드 등등. 참고슬라이드는 로딩이 오래걸릴 수 있으니까, 페이지 번호만 적어두고 누르면 불러오도록하면 될듯.」 질문 답: 모든 학습자 / 내 계정만 / 내 기록 기준 → 「아 난이도는 뺴도 될듯」",
+      "scope": "plan.md의 파일: 읽기 전용 목록·상세 API, 새 웹 화면, 시작 화면 링크, 검사. DB·프롬프트 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "fe65395ad5fd98364f7a8dc8b955476f653f9834ed9083a929c9c06c303600fa",
+      "plan_hash": "1e55971ac6a19d3363607a1ffb32e707ff7869cef4391b886e6f064d9f53778e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "6118dd22ce51b06c64342ca1e31c7bc5e29126ae18d8b5ecdea254f456393f68"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-23T01:59:41.858314+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys;os.chdir('server');os.environ['PYTHONPATH']='.;..';sys.exit(max(subprocess.call([sys.executable,'-m','tests',f]) for f in ['root_question_list','route_contract','root_personal','root_api','root_mine']))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "fe65395ad5fd98364f7a8dc8b955476f653f9834ed9083a929c9c06c303600fa",
+      "plan_hash": "1e55971ac6a19d3363607a1ffb32e707ff7869cef4391b886e6f064d9f53778e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-lecture-question-list/1795399164504581900-regression.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-23T01:59:48.240850+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "fe65395ad5fd98364f7a8dc8b955476f653f9834ed9083a929c9c06c303600fa",
+      "plan_hash": "1e55971ac6a19d3363607a1ffb32e707ff7869cef4391b886e6f064d9f53778e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-lecture-question-list/1795399182167373400-web.log",
+      "web_artifact": "b867d56e6a99cad5316de0d4b332361b0023aec1641fa1ccd4529f4ba68b1798",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T01:59:51.208390+00:00"
+}
