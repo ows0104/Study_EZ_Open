@@ -136,7 +136,7 @@ def test_codex_거절_표식의_모양은_그대로다(restricted):
 def test_claude_단계만_시한이_길다(tmp_path):
     native = n.NativeJson(tmp_path)
     assert native.timeout_for(CLAUDE) == n.CLAUDE_TIMEOUT == 7200
-    assert native.timeout_for('gpt-6.1-sol') == 2400
+    assert native.timeout_for('gpt-6.1-sol') == n.CODEX_TIMEOUT == 3600
     assert n.NativeJson(tmp_path, timeout=9000).timeout_for(CLAUDE) == 9000
 
 

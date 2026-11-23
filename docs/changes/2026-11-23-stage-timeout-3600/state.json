@@ -1,0 +1,48 @@
+{
+  "id": "2026-11-23-stage-timeout-3600",
+  "title": "/4 Codex 단계 시한 3600초",
+  "area": "integration",
+  "created_at": "2026-11-23T13:01:28.881226+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T13:02:03.539232+00:00",
+      "evidence": "사용자 2026-11-23 이 세션: 「혹시 모르니 타임리밋을 좀 더 올리자.」 (job 728 normalize 시한 초과 보고 직후)",
+      "scope": "runner/root_native_json.py Codex 단계 시한 상수, tests/runner/test_root_claude_provider.py, 이 변경 폴더. 로컬 구현·검사·PR까지. 병합·러너 재설치·운영 재출제 제외",
+      "evidence_version": 2,
+      "source_hash": "b255190de4b830f2e179add6d3f36671e85238f432d682a296615bf795910db2",
+      "plan_hash": "3fc609ea1e32db5505317d76aaf344813e1540e5757ccf190a0057dec9741138",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "252097de058f1ee177f00ec8ed917857095bb21c8afd1e9ea959a3964dd0c430"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T13:02:06.774306+00:00"
+}
