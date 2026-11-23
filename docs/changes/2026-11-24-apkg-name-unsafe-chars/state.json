@@ -1,0 +1,89 @@
+{
+  "id": "2026-11-24-apkg-name-unsafe-chars",
+  "title": "예습 덱 파일 이름에서 Windows 금지 글자를 뺀다",
+  "area": "integration",
+  "created_at": "2026-11-23T15:25:14.166449+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T15:25:43.723098+00:00",
+      "evidence": "사용자 2026-11-24 이 세션: 「Yes, go ahead」 (apkg_name 수정·검사·Draft PR·병합 전 재확인·러너 재설치·251126_15 --resume 계획에 대한 답)",
+      "scope": "runner/deck.py apkg_name, tests/runner/test_apkg_name_unsafe.py, 이 변경 폴더. 로컬 구현·검사·Draft PR까지. 병합(자동 배포)은 따로 묻는다",
+      "evidence_version": 2,
+      "source_hash": "32597279bb171a8c60013dd2ee4f8635d97ccae7df733cfbfd7aadd4110709e2",
+      "plan_hash": "d6a0c682024652dc73f71694e39cf2a6d21318cd4e6069c57f4152228994150b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "454f99d0184105b1928660afd9f42aee48c095221070543aedf133198be210bc"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-23T15:30:07.674357+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_apkg_name_unsafe.py",
+        "tests/runner/test_deck_node_pin.py",
+        "tests/runner/test_deck_slides.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "32597279bb171a8c60013dd2ee4f8635d97ccae7df733cfbfd7aadd4110709e2",
+      "plan_hash": "d6a0c682024652dc73f71694e39cf2a6d21318cd4e6069c57f4152228994150b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-24-apkg-name-unsafe-chars/1795447805820486800-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T15:30:07.674833+00:00"
+}

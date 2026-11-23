@@ -112,8 +112,10 @@ def deck_node(run_id: str, title: str,
 # 예습 자리가 **어느 올해 강의를 위해** 도는지. `prequeue`가 적고 여기가 읽는다.
 TARGET_NAME = "pre_target.json"
 
-# Windows가 파일명에 못 쓰는 글자. 강의 제목에 들어온 적은 아직 없지만, 하나
-# 들어오면 그 편만 조용히 빌드가 깨진다.
+# Windows가 파일명에 못 쓰는 글자. 하나 들어오면 그 편만 덱 빌드가 깨진다.
+# 제목은 `deck_node`가 거르지만 교수 칸은 거르지 않고 붙는다 — CBL·TBL 시간표의
+# 교수 칸은 「(분반) A: 김태민 (분반) B: 김범석」 꼴이라 `:`가 들어온다
+# (2026-11-23 261125_07 암면역 빌드 실패). 그래서 `apkg_name`이 한 번 더 거른다.
 RE_FS_UNSAFE = re.compile(r'[\\/:*?"<>|]')
 
 
@@ -137,9 +139,17 @@ def apkg_name(node: str, kind: str) -> str:
     받아 둔 파일 이름이 다르면 둘을 맞춰 보는 일이 사람 몫이 된다. 그래서 마디를
     여기서 다시 짓지 않고 받아만 온다 — 한동안 이 함수가 따로 짓고 있었고, 그동안
     파일 이름만 옛 규칙으로 남는 자리가 생겼다(`calendar_name`).
+
+    **예외는 파일명에 못 쓰는 글자(`RE_FS_UNSAFE`)뿐이다.** 마디에 남은 그런 글자는
+    여기서만 뺀다. 마디(덱 이름)를 고치지 않는 까닭은 둘이다 — 덱 이름에는 홑 `:`가
+    들어가도 되고(Anki는 `::`로만 나눈다), 덱 이름이 바뀌면 이미 나간 덱 옆에 새
+    마디가 서고 `prequeue`의 재개 판정(`prequiz.config.json`의 `lecture`)이 어긋나
+    모델 단계를 처음부터 다시 돈다. 덱 파일은 이름이 아니라 `*.apkg`로 찾는다
+    (`apkg_of`).
     """
+    safe = " ".join(RE_FS_UNSAFE.sub("", node).split())
     # 예습 덱은 파일에서만 꼬리를 단다. 덱 나무에서는 마지막 마디가 이미 `::예습`이다.
-    return f"{node} 예습" if kind == PRE else node
+    return f"{safe} 예습" if kind == PRE else safe
 
 
 def pre_seat_of(runs_dir: Path, run_id: str, subject: str = "") -> Path | None:
