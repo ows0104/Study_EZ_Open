@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useFlagPreference } from "../preferences";
 import { ApkgNote, CardRow } from "../cards/CardRow";
 import type { CardReview } from "../types/admin";
@@ -17,11 +18,17 @@ import type { CardReview } from "../types/admin";
  * **빈칸 카드는 원문을 고친다.** 답이 질문 안(`{{c1::…}}`)에 있어서 편 문장을
  * 고쳐서는 덱으로 못 되돌린다(`quizgen/site_edits.py`).
  *
- * 목록은 위(`AdminPage`)에서 읽어 내려온다. 안 본 카드 수가 탭 이름 옆에 서야
- * 하기 때문이다 — 탭을 열어야 보이는 수는 없는 수다.
+ * **목록은 이 탭을 처음 열 때 읽는다**(2026-11-23). 탭 이름 옆 숫자는 위(`AdminPage`)가
+ * 숫자만 주는 경로로 따로 읽는다 — 탭을 열어야 보이는 수는 없는 수지만, 그 수 때문에
+ * 관리 화면이 뜰 때마다 카드 문면과 슬라이드 주소까지 읽을 이유는 없다. 읽은 목록은
+ * 위에 남아서, 다른 탭에 다녀와도 다시 읽지 않는다.
  */
 export function CardReviewTab({ review, onChanged }: { review: CardReview | null; onChanged: () => void }) {
   const [showDone, setShowDone] = useFlagPreference("studyez-admin-card-done");
+  // `onChanged` 가 곧 「목록을 (다시) 읽는다」다. 아직 없을 때 한 번 부른다.
+  useEffect(() => {
+    if (!review) onChanged();
+  }, [review, onChanged]);
 
   if (!review) return <p className="notice">불러오는 중…</p>;
   const shown = showDone ? review.cards : review.cards.filter((card) => !card.edit);

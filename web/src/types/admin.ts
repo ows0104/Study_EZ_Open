@@ -91,6 +91,9 @@ export type ReviewCard = {
 
 export type CardReview = { cards: ReviewCard[]; open: number; done: number };
 
+/** 탭 이름 옆 숫자만(`GET /api/admin/card-review/count` · `…/bank-feedback/count`). 목록과 같은 셈이다. */
+export type ReviewTally = { open: number; done: number };
+
 export type LectureCards = {
   subject: string;
   runId: string;

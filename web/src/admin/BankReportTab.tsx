@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFlagPreference } from "../preferences";
 import { Link } from "react-router-dom";
 import { api } from "../api";
@@ -17,10 +17,15 @@ import type { BankReportBoard, BankReportGroup, BankReportStatus } from "../type
  * **보이는 문항은 지금 은행의 것이다.** 신고 줄에 문면이 없어서다. 다시 만들면 ChatGPT 가
  * 같은 ID 에 다른 문항을 낼 수 있으므로, 옛 빌드에서 온 신고는 「옛 판」으로 갈라 적는다.
  *
- * 목록은 위(`AdminPage`)에서 읽어 내려온다 — 열린 수가 탭 이름 옆에 서야 해서다.
+ * **목록은 이 탭을 처음 열 때 읽는다**(2026-11-23). 열린 수는 위(`AdminPage`)가 숫자만 주는
+ * 경로로 따로 읽어 탭 이름 옆에 세운다. 읽은 목록은 위에 남아서, 다른 탭에 다녀와도 다시 읽지 않는다.
  */
 export function BankReportTab({ board, onChanged }: { board: BankReportBoard | null; onChanged: () => void }) {
   const [showDone, setShowDone] = useFlagPreference("studyez-admin-report-done");
+  // `onChanged` 가 곧 「목록을 (다시) 읽는다」다. 아직 없을 때 한 번 부른다.
+  useEffect(() => {
+    if (!board) onChanged();
+  }, [board, onChanged]);
 
   if (!board) return <p className="notice">불러오는 중…</p>;
   const isOpen = (g: BankReportGroup) => g.reports.some((r) => r.status === "open");

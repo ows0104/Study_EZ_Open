@@ -116,6 +116,8 @@ def main() -> None:
           and got["c002"]["flag"]["reproduced"] == "gene reassortment", got["c002"]["flag"])
     check("검토 목록에는 답까지 있다", got["c002"]["answer"] == "morphology alteration")
     check("아직 아무도 안 봤다", (review["open"], review["done"]) == (2, 0))
+    check("숫자만 주는 경로도 같은 수를 준다", client.get("/api/admin/card-review/count", headers=USER).json()
+          == {"open": review["open"], "done": review["done"]} == {"open": 2, "done": 0})
     check("run-meta 가 없는 복습 갈래는 목록에 안 든다",
           all(c["kind"] == "pre" for c in review["cards"]))
 
@@ -152,6 +154,8 @@ def main() -> None:
 
     review = client.get("/api/admin/card-review", headers=USER).json()
     check("둘 다 본 것으로 센다", (review["open"], review["done"]) == (0, 2))
+    check("판정한 뒤의 숫자도 같다", client.get("/api/admin/card-review/count", headers=USER).json()
+          == {"open": review["open"], "done": review["done"]} == {"open": 0, "done": 2})
 
     # ── **다음 쓸기.** 같은 파일을 다시 올린다.
     again = client.put(f"{ADMIN}/pre-items", json={"items": ITEMS}, headers=RUNNER).json()
@@ -176,6 +180,8 @@ def main() -> None:
     check("새 카드는 다시 「안 봄」으로 뜬다",
           [(c["itemId"], c["edit"] is None) for c in review["cards"]]
           == [("c002", True), ("c003", False)], review["cards"])
+    check("뺀 카드(문항 줄 없음)는 본 것, 새 카드는 안 본 것", client.get("/api/admin/card-review/count", headers=USER).json()
+          == {"open": review["open"], "done": review["done"]} == {"open": 1, "done": 1})
 
     # ── 되돌린다.
     undone = client.delete(f"{ADMIN}/cards/pre/c003", headers=USER)

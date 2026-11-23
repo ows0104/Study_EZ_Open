@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
-import type { AdminOverview, CardReview } from "../types/admin";
+import type { AdminOverview, CardReview, ReviewTally } from "../types/admin";
 import type { AppUser } from "../types/account";
 import type { BankReportBoard } from "../types/bank";
 import type { JobBoard } from "../types/jobs";
@@ -50,6 +50,8 @@ export function AdminPage() {
   const [users, setUsers] = useState<AppUser[] | null>(null);
   const [review, setReview] = useState<CardReview | null>(null);
   const [reports, setReports] = useState<BankReportBoard | null>(null);
+  const [cardTally, setCardTally] = useState<ReviewTally | null>(null);
+  const [reportTally, setReportTally] = useState<ReviewTally | null>(null);
   const [error, setError] = useState("");
   const boardRef = useRef<JobBoard | null>(null);
   const loadingJobs = useRef(false);
@@ -96,6 +98,11 @@ export function AdminPage() {
 
   // 걸린 카드도 폴링에서 뺀다. 늘어나는 것은 쓸기가 돌 때뿐이고, 줄어드는 것은
   // 이 화면에서 누를 때뿐이다 — 누른 뒤에 다시 읽는다.
+  //
+  // **목록은 그 탭을 열 때 읽는다**(2026-11-23). 그 전에는 화면이 뜰 때 카드와 신고
+  // 목록을 통째로 읽었고, 신고 목록 하나가 서버를 11초 넘게 붙잡아 같이 뜬 요청
+  // (화면을 막는 overview 포함)이 5–15초로 밀렸다. 화면이 뜰 때 필요한 것은 탭 이름
+  // 옆 숫자뿐이라, 그 숫자만 주는 경로를 따로 읽는다(아래 `loadTallies`).
   const loadReview = useCallback(() => {
     api<CardReview>("/api/admin/card-review")
       .then(setReview)
@@ -110,10 +117,15 @@ export function AdminPage() {
       .catch(() => {});
   }, []);
 
+  // 탭 이름 옆 숫자. 목록을 읽은 뒤에는 목록의 수가 이긴다 — 방금 누른 것이 거기 있다.
+  const loadTallies = useCallback(() => {
+    api<ReviewTally>("/api/admin/card-review/count").then(setCardTally).catch(() => {});
+    api<ReviewTally>("/api/admin/bank-feedback/count").then(setReportTally).catch(() => {});
+  }, []);
+
   useEffect(load, [load]);
   useEffect(loadUsers, [loadUsers]);
-  useEffect(loadReview, [loadReview]);
-  useEffect(loadReports, [loadReports]);
+  useEffect(loadTallies, [loadTallies]);
 
   // 로컬 작업은 화면과 독립적으로 돈다. 마지막 조회 이후 10분 뒤에 상태만 읽는다.
   useEffect(() => {
@@ -142,6 +154,8 @@ export function AdminPage() {
   ).length;
   const queued = overview.lectures.filter((row) => jobOpen(row.prequizJob)).length;
   const asking = (board?.held ?? []).filter((job) => job.ask);
+  const cardsOpen = (review ?? cardTally)?.open ?? 0;
+  const reportsOpen = (reports ?? reportTally)?.open ?? 0;
 
   return (
     <div className="admin">
@@ -192,11 +206,11 @@ export function AdminPage() {
         </NavLink>
         <NavLink to="/admin/cards" className={tabClass} title="재현 검사에 걸린 카드 — 고치거나 뺀다">
           카드 검토
-          {review?.open ? <span className="admin-tab-count">{review.open}</span> : null}
+          {cardsOpen ? <span className="admin-tab-count">{cardsOpen}</span> : null}
         </NavLink>
         <NavLink to="/admin/bank-reports" className={tabClass} title="학생이 Quiz Bank 를 풀다 누른 「문제 있음」 — 문항별로">
           Quiz Bank 신고
-          {reports?.open ? <span className="admin-tab-count">{reports.open}</span> : null}
+          {reportsOpen ? <span className="admin-tab-count">{reportsOpen}</span> : null}
         </NavLink>
         <NavLink to="/admin/bank-cards" className={tabClass}>Main 문항 검토</NavLink>
         <NavLink to="/admin/feedback" className={tabClass}>피드백함</NavLink>

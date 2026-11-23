@@ -57,6 +57,8 @@ def check_bank_schema_identity():
 #
 # 같은 날 둘이 더 — `GET|PUT /api/admin/bank-feedback`. 학생이 누른 「문제 있음」을 관리자가
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
+# 2026-11-23 에 둘이 늘었다 — `GET …/card-review/count` 와 `GET …/bank-feedback/count`. 관리 화면이 뜰 때
+# 탭 이름 옆 숫자만 읽고 목록은 탭을 열 때 읽게 했다(신고 목록이 Main-Quiz 원본 82 MB를 읽어 화면 전체를 늦췄다).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
 # 2026-11-06: Main Quiz 공통 진입에서 기존 공개·계정·중지 조건을 지키며
 # 검토된 새 자료와 기존 은행을 고르는 읽기 전용 경로 하나를 추가한다.
@@ -113,8 +115,10 @@ DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
 DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
 DELETE /api/spotter/comments/{comment_id}
 GET /api/admin/bank-feedback
+GET /api/admin/bank-feedback/count
 GET /api/admin/card-edits
 GET /api/admin/card-review
+GET /api/admin/card-review/count
 GET /api/admin/feedback
 GET /api/admin/feedback/{feedback_id}/screenshots/{index}
 GET /api/admin/lectures/{subject}/{run_id}/bank

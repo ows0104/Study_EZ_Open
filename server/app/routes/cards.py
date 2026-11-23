@@ -9,6 +9,7 @@
 하고, 걸린 카드는 여기 목록에 뜬다.
 
     GET    /card-review                                   걸린 카드 전부 (편을 가로질러)
+    GET    /card-review/count                             그 수만 (탭 이름 옆 숫자)
     GET    /lectures/{s}/{r}/cards/{kind}                 한 편의 카드 전부 (답까지)
     PUT    /lectures/{s}/{r}/cards/{kind}/{item_id}       괜찮다 · 고친다 · 뺀다
     DELETE /lectures/{s}/{r}/cards/{kind}/{item_id}       판정을 거두고 원본으로
@@ -55,7 +56,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_admin, require_runner
@@ -244,6 +245,50 @@ def review_counts(db: Session, lecture: Lecture) -> dict[str, dict[str, int]]:
 # ---------------------------------------------------------------- 경로
 
 
+def _flagged_runs(db: Session) -> list[tuple[Quiz, Lecture, dict[str, dict[str, Any]]]]:
+    """걸린 카드가 있는 (갈래, 편, 걸린 카드). 목록과 숫자 전용 경로가 같은 줄에서 시작한다."""
+    lectures = {(lec.subject, lec.run_id): lec for lec in db.scalars(select(Lecture))}
+    out = []
+    for meta in db.scalars(select(RunMeta)):
+        quiz = QUIZZES.get(meta.quiz_kind)
+        lecture = lectures.get((meta.subject, meta.run_id))
+        marks = flagged(meta.payload)
+        if quiz is not None and lecture is not None and marks:
+            out.append((quiz, lecture, marks))
+    return out
+
+
+@router.get("/card-review/count")
+def card_review_count(
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    """탭 이름 옆 숫자만. 관리 화면이 뜰 때는 이것만 읽고, 목록은 탭을 열 때 읽는다(2026-11-23).
+
+    세는 법은 `card_review` 와 같다 — 판정이 있으면 본 것, 없고 문항이 올라와 있으면 안 본 것.
+    문면·슬라이드 주소는 숫자에 필요 없어서 id 만 읽는다. 걸린 편 수와 무관하게 질의는 갈래당 하나다.
+    """
+    runs = _flagged_runs(db)
+    keys = {(lecture.subject, lecture.run_id) for _, lecture, _ in runs}
+    if not keys:
+        return {"open": 0, "done": 0}
+    edited = set(db.execute(select(
+        CardEdit.subject, CardEdit.run_id, CardEdit.quiz_kind, CardEdit.item_id)).tuples())
+    present = {
+        quiz.name: set(db.execute(select(quiz.item.subject, quiz.item.run_id, quiz.item.item_id).where(
+            tuple_(quiz.item.subject, quiz.item.run_id).in_(keys))).tuples())
+        for quiz in {quiz for quiz, _, _ in runs}
+    }
+    open_count = done = 0
+    for quiz, lecture, marks in runs:
+        for item_id in marks:
+            if (lecture.subject, lecture.run_id, quiz.name, item_id) in edited:
+                done += 1
+            elif (lecture.subject, lecture.run_id, item_id) in present[quiz.name]:
+                open_count += 1
+    return {"open": open_count, "done": done}
+
+
 @router.get("/card-review")
 def card_review(
     user: CurrentUser = Depends(require_admin),
@@ -254,21 +299,15 @@ def card_review(
     run.meta 는 올라왔는데 문항 파일은 아직인 편(또는 2026-08-31 전에 구운 복습
     덱 — 웹 문항이 없다)이 있다. 그 id 를 목록에 올리면 고칠 것이 없는 줄이 선다.
     """
-    lectures = {(lec.subject, lec.run_id): lec for lec in db.scalars(select(Lecture))}
     cards: list[dict[str, Any]] = []
-    for meta in db.scalars(select(RunMeta)):
-        quiz = QUIZZES.get(meta.quiz_kind)
-        lecture = lectures.get((meta.subject, meta.run_id))
-        marks = flagged(meta.payload)
-        if quiz is None or lecture is None or not marks:
-            continue
-        edits = edits_for(db, meta.subject, meta.run_id, quiz.name)
+    for quiz, lecture, marks in _flagged_runs(db):
+        edits = edits_for(db, lecture.subject, lecture.run_id, quiz.name)
         rows = {
             row.item_id: row
             for row in db.scalars(
                 select(quiz.item).where(
-                    quiz.item.subject == meta.subject,
-                    quiz.item.run_id == meta.run_id,
+                    quiz.item.subject == lecture.subject,
+                    quiz.item.run_id == lecture.run_id,
                     quiz.item.item_id.in_(list(marks)),
                 )
             )

@@ -1,0 +1,229 @@
+{
+  "id": "2026-11-23-admin-page-load",
+  "title": "관리 페이지 로딩 속도",
+  "area": "site",
+  "created_at": "2026-11-23T01:27:35.642014+00:00",
+  "required_checks": [
+    "server",
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-23T01:34:21.222716+00:00",
+      "evidence": "2026-11-23 채팅, 사용자 작업 요청 원문: 「관리 페이지 로딩이 너무 오래걸려. 한번에 너무 많은 것을 가져오는 것은 아닐지 생각돼. 고쳐줘.」",
+      "scope": "plan.md 범위: server/app/routes/bank_api/feedback.py·cards.py(숫자 전용 GET 둘, 신고 목록을 사본에서 읽기), server/tests 넷, web/src/admin/AdminPage.tsx·CardReviewTab.tsx·BankReportTab.tsx·types/admin.ts. 로컬 구현·검사·Draft PR까지. DB·스키마·프롬프트 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+      "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "4e9c9e4a762281a5a233d3fbc1ad208f71117221599d35f203ab3e0fdd7a4d4d"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-23T01:34:42.947169+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+      "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-admin-page-load/1795397676960761500-web.log",
+      "web_artifact": "02b0ca4b5c41c8fe83a50959f1ad465a9cfbd01bd793f8d52d2ddde948c08582",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-23T01:35:36.485417+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([r'C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe','-m','tests','card_edits'],cwd='server',env={**os.environ,'PYTHONPATH':'..','PYTHONIOENCODING':'utf-8'}).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+      "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-admin-page-load/1795397733100007200-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-23T01:35:42.639090+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([r'C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe','-m','tests','root_personal'],cwd='server',env={**os.environ,'PYTHONPATH':'..','PYTHONIOENCODING':'utf-8'}).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+      "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-admin-page-load/1795397736879070100-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-23T01:35:45.859358+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([r'C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe','-m','tests','route_contract'],cwd='server',env={**os.environ,'PYTHONPATH':'..','PYTHONIOENCODING':'utf-8'}).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+      "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-admin-page-load/1795397743029024700-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-23T01:36:00.562966+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import subprocess,sys,os;sys.exit(subprocess.run([r'C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe','-m','tests.test_bank'],cwd='server',env={**os.environ,'PYTHONPATH':'..','PYTHONIOENCODING':'utf-8'}).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+      "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-23-admin-page-load/1795397751939289700-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-23T01:36:11.450070+00:00",
+    "summary": "검토: (1) 숫자 전용 경로와 목록의 수 일치 — 신고는 같은 _tally, 카드는 같은 _flagged_runs에서 세고 검사가 세 시점에서 맞대 본다. (2) 신고 탭은 문면·선지·답만 그려 사본에서 빠지는 png_base64를 쓰지 않는다. (3) 사본 캐시는 지금 공개 판에만 쓰고 옛 판은 칸에서 읽고 버려 학습률 캐시를 밀어내지 않는다. (4) 새 경로 둘은 require_admin, 학생 403 검사. 재현 검사는 고치기 전 코드에서 실패 확인. 남은 위험: 운영 시간은 배포 뒤 측정, card-review 목록의 편별 질의는 그대로(탭 열 때만 돈다).",
+    "evidence_version": 2,
+    "source_hash": "8582492d61e695ff87df37c691e9910f66fc08d3cfec8caa12e9aa850d5d32ed",
+    "plan_hash": "98b4e3df72a7dcc0e8bd9d689737f319955ecb90336ef076b17d8376208d6ae4",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-23T01:36:11.635232+00:00"
+}

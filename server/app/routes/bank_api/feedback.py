@@ -28,6 +28,27 @@ FEEDBACK_CATEGORIES = ("good", "wording", "easy", "hard", "leak", "format", "bur
 FEEDBACK_STATUSES = ("open", "resolved", "wontfix")
 
 
+def _tally(rows) -> dict[str, int]:
+    """(묶음 키, 상태) 줄에서 열린 묶음·닫힌 묶음 수. 목록과 숫자 전용 경로가 같은 셈을 쓴다."""
+    groups: dict[tuple, bool] = {}
+    for key, status in rows:
+        groups[key] = groups.get(key, False) or status == "open"
+    open_count = sum(groups.values())
+    return {"open": open_count, "done": len(groups) - open_count}
+
+
+@admin_router.get("/bank-feedback/count")
+def bank_feedback_count(user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict[str, int]:
+    """탭 이름 옆 숫자만. 관리 화면이 뜰 때는 이것만 읽고, 목록은 탭을 열 때 읽는다.
+
+    2026-11-23까지 화면이 뜰 때마다 목록 전체를 읽었고, 그 목록이 Main-Quiz 원본 문서를 통째로 읽어
+    (운영 16판 82 MB) 같이 뜬 다른 요청까지 5–15초로 늦췄다. 문항 문면은 숫자에 필요 없다.
+    """
+    return _tally(((subject, run_id, question_id), status) for subject, run_id, question_id, status in db.execute(
+        select(BankFeedback.subject, BankFeedback.run_id, BankFeedback.question_id, BankFeedback.status)
+        .where(BankFeedback.category != "good")))
+
+
 @admin_router.get("/bank-feedback")
 def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict[str, Any]:
     """학생의 「문제 있음」을 편을 가로질러 **문항별로** 묶는다 — 관리 화면 「Quiz Bank 신고」 탭.
@@ -46,6 +67,29 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
         Profile.id.in_({f.user_id for f in rows})))} if rows else {}
     groups: dict[tuple[str, str, str], dict[str, Any]] = {}
     roots: dict[tuple[str, str], tuple[str | None, dict[str, dict]]] = {}
+    root_questions: dict[tuple[str, str, str], dict[str, dict]] = {}
+
+    def questions_of(subject: str, run_id: str, revision: str, active: str | None) -> dict[str, dict]:
+        """한 판의 문항(ID → 문항). **그림 뺀 사본에서 읽는다** — 신고함은 문면만 그린다.
+
+        원본(`document`)은 판마다 6–24 MB이고 대부분 문항 그림이다. 2026-11-23까지 신고가 걸린 판의
+        원본을 전부 읽었다(운영 16판 82 MB, 요청 하나에 11초 이상). 사본은 같은 16판이 14 MB이고,
+        지금 공개 판은 학습률 계산이 이미 메모리에 들고 있는 것을 그대로 쓴다.
+        """
+        key = (subject, run_id, revision)
+        if key not in root_questions:
+            from app.models.root_learning import RootContent
+            from app.root_learning.light import revision_row
+            where = (RootContent.subject == subject, RootContent.run_id == run_id, RootContent.revision == revision)
+            cached = revision_row(db, subject, run_id, revision) if revision == active else None
+            if cached is not None:
+                document = cached.document
+            else:
+                # 옛 판은 요청 사이에 들고 있지 않는다(사본 캐시는 공개 판 몫이다). 사본 칸이 빈 행만 원본을 읽는다.
+                light = db.scalar(select(RootContent.light).where(*where))
+                document = light["document"] if light is not None else db.scalar(select(RootContent.document).where(*where))
+            root_questions[key] = {q["question_id"]: q for q in document["bank_snapshot"]["questions"]}
+        return root_questions[key]
 
     def root_question(f: BankFeedback) -> tuple[dict | None, bool]:
         """Main-Quiz 제보(build_id `root:<판>`)는 그 판의 문항 문면을 싣는다. 지금 공개 판이 아니면 stale."""
@@ -60,9 +104,7 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
         revision = revisions.get(f.build_id)
         if revision is None:
             return None, True
-        from app.models.root_learning import RootContent
-        doc = db.get(RootContent, (f.subject, f.run_id, revision))
-        q = next((q for q in doc.document["bank_snapshot"]["questions"] if q["question_id"] == f.question_id), None)
+        q = questions_of(f.subject, f.run_id, revision, active).get(f.question_id)
         # Main-Quiz 문항은 빈 목록 칸을 생략한다. 신고함 카드는 기존 은행 문항처럼 모든 칸이 있다고 읽는다.
         empty = {k: [] for k in ("options", "answer_pairs", "correct_option_ids", "correct_order", "answer_units")}
         return ({**empty, "answer": "", **q} if q else None), revision != active
@@ -96,8 +138,7 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
         })
     out = list(groups.values())
     out.sort(key=lambda g: any(r["highlighted"] and r["status"] == "open" for r in g["reports"]), reverse=True)
-    open_count = sum(1 for g in out if any(r["status"] == "open" for r in g["reports"]))
-    return {"questions": out, "open": open_count, "done": len(out) - open_count}
+    return {"questions": out, **_tally(((f.subject, f.run_id, f.question_id), f.status) for f in rows)}
 
 
 class FeedbackStatusIn(BaseModel):
