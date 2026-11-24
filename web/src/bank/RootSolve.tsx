@@ -9,6 +9,7 @@ import { RootSummaryPanel } from './RootToday';
 import { ANSWER_SECONDS, questionSeconds, readTimerOn, saveTimerOn, useQuizTimer } from './quizTimer';
 import { mcqChoices, recallChoices, readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
 import { RootOrder } from './RootOrder';
+import { useLectureNameHidden } from './lectureNameHidden';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
 const JokboSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootJokboSlides})));
@@ -34,7 +35,9 @@ function clearSavedPicks() {
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 const TIER_LABEL: Record<BankTier,string> = {Essential:'★ Must-Know', Core:'Core', Important:'Important', Optional:'Optional'};
 
-export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier,mineBase,onMineChanged,onMemo}:{view:RootView;title?:string;scope:string;disabled:boolean;
+export function RootSolve({view,title,hideableTitle,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier,mineBase,onMineChanged,onMemo}:{view:RootView;title?:string;scope:string;disabled:boolean;
+  /** 모아풀기(2026-11-24): 우상단 「강의명 숨기기」 스위치를 그린다. */
+  hideableTitle?:boolean;
   editPath?:(questionId:string)=>string;onEdited?:(result:PersonalQuestionResult)=>void;
   /** 내 문제·뒷면 메모(2026-11-15) API 기준 주소. 없으면 메뉴·메모를 그리지 않는다. */
   mineBase?:string;onMineChanged?:()=>void;onMemo?:(questionId:string,memo:string)=>void;
@@ -165,6 +168,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     onExpire:()=>{if(task?.answer)rate('Again');else reveal();},
   });
   function toggleTimer(){const on=!timerOn;saveTimerOn(on);setTimerOn(on);heading.current?.focus({preventScroll:true});}
+  const [titleHidden,toggleTitleHidden]=useLectureNameHidden();
+  const hideTitle=hideableTitle&&titleHidden;
   function toggleMode(){const next:QuizMode=mode==='mcq'?'recall':'mcq';saveQuizMode(next);setMode(next);setPicked(new Set());setPlaced([]);heading.current?.focus({preventScroll:true});}
   useEffect(()=>{
     const handler=(event:KeyboardEvent)=>{
@@ -219,8 +224,10 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     <p className="mq-kicker">
       {/* 기록은 평가마다 저장된다. 풀이를 멈추고 시작 화면(오늘 현황)으로 간다. */}
       <button type="button" className="quiz-back" disabled={disabled||advancing} onClick={onToday}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>뒤로</button>
-      <span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
+      <span className="mq-badge">Main-Quiz</span>{title&&!hideTitle&&<span className="mq-solve-title">{title}</span>}</p>
     {!view.finished&&<span className="main-quiz-tools">
+      {hideableTitle&&<button type="button" role="switch" aria-checked={titleHidden} className="mq-timer-switch"
+        onClick={()=>{toggleTitleHidden();heading.current?.focus({preventScroll:true});}}>강의명 숨기기<i aria-hidden="true"/></button>}
       <span className="mq-timer">
         {timerOn&&task&&<span role="timer" aria-label={`${timer.paused?'일시정지 · ':''}남은 시간 ${timer.left}초`}
           className={`mq-timer-left${timer.paused?' is-paused':''}${timer.left<=5?' is-low':''}`}>{timer.paused&&<i aria-hidden="true">멈춤</i>}{timer.left}초</span>}

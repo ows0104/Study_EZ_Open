@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
+import { useLectureNameHidden } from "../bank/lectureNameHidden";
 import { useNoteLecture } from "../notes/noteLecture";
 import { Icon } from "../shell/icons";
 import type { JokboBand, JokboDoc, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
@@ -215,9 +216,11 @@ const BACK_ICON = (
  * 풀이·끝 화면. 강의 하나 족보와 족보 모아풀기(`JokboMix`)가 같이 쓴다(2026-11-18).
  * `titleOf`: 머리줄 강의 제목(문항이 없으면 끝 화면), `whoOf`: 그 문항의 출제 구획·교수.
  */
-export function JokboSolve({ items, titleOf, whoOf, bands, onExit, onLeave, onRetry, onAnswered, onRate, onFinish }: {
+export function JokboSolve({ items, titleOf, hideableTitle, whoOf, bands, onExit, onLeave, onRetry, onAnswered, onRate, onFinish }: {
   items: JokboItem[];
   titleOf: (item?: JokboItem) => string;
+  /** 족보 모아풀기(2026-11-24): 우상단 「강의명 숨기기」 스위치를 그린다. */
+  hideableTitle?: boolean;
   whoOf: (item: JokboItem) => { kind: string; professors: string[] };
   bands: Record<string, JokboBand | null>;
   onExit: () => void; onLeave: () => void; onRetry: (items: JokboItem[]) => void;
@@ -232,6 +235,7 @@ export function JokboSolve({ items, titleOf, whoOf, bands, onExit, onLeave, onRe
   const [results, setResults] = useState<Result[]>([]);
   // z로 직전 표시를 되돌려 그 문제의 답 화면에 와 있다. 한 번 더 고르기 전까지 z를 또 받지 않는다.
   const [undone, setUndone] = useState(false);
+  const [titleHidden, toggleTitleHidden] = useLectureNameHidden();
   const item = items[index] as JokboItem | undefined;
   const verdict = shown ? results[results.length - 1]?.verdict : undefined;
   // 독의 기본값(Enter·Space): 틀렸으면 모르겠음, 그 밖은 괜찮음.
@@ -323,8 +327,12 @@ export function JokboSolve({ items, titleOf, whoOf, bands, onExit, onLeave, onRe
       <p className="pq-kicker">
         <button type="button" className="quiz-back" onClick={onExit}>{BACK_ICON}뒤로</button>
         <span className="pq-badge jokbo-badge">족보</span>
-        <span className="pq-title">{titleOf(item)}</span>
+        {!(item && hideableTitle && titleHidden) && <span className="pq-title">{titleOf(item)}</span>}
       </p>
+      {item && hideableTitle && <span className="main-quiz-tools">
+        <button type="button" role="switch" aria-checked={titleHidden} className="mq-timer-switch"
+          onClick={toggleTitleHidden}>강의명 숨기기<i aria-hidden="true" /></button>
+      </span>}
     </header>
   );
 

@@ -443,7 +443,7 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
       <UndoKey disabled={writes.blocked||!stack.current.length} onUndo={undo}/>
     </section>
     :shown&&cur?<>
-      <RootSolve view={shown} title={cur.title} scope={JSON.stringify([account,cur.subject,cur.runId])} disabled={writes.blocked}
+      <RootSolve view={shown} title={cur.title} hideableTitle scope={JSON.stringify([account,cur.subject,cur.runId])} disabled={writes.blocked}
         editPath={qid=>`${cur.base}/questions/${encodeURIComponent(qid)}/personal`}
         onEdited={result=>patchTask(task=>({...task,question:result.question,answer:task.answer?{...result.answer,memo:task.answer.memo}:null}))}
         mineBase={cur.base}

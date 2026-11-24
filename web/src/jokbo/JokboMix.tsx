@@ -20,8 +20,6 @@ import "./jokbo.css";
  * 풀이·끝 화면은 강의 하나 족보(`JokboSolve`)를 그대로 쓴다. 채점·오답노트 표시·회독은 그 문항의 시간표 칸으로 간다.
  */
 
-const RECENT_MS = 5 * 60 * 60 * 1000;
-
 type Lane = { eventId: string; data?: JokboResponse; error?: string };
 
 export function JokboMixPage() {
@@ -37,9 +35,6 @@ function Mix({ eventIds }: { eventIds: string[] }) {
   const [scopes, setScopes] = useState<Record<string, JokboScope>>({});
   const [order, setOrder] = useState<MixOrder>("spread");
   const [perLecture, setPerLecture] = useState(false);
-  // 2026-11-20 사용자 「최근 24시간 안에 푼 거 제외」 → 11-20 「5시간정도로」: 새로고침으로 판이 끊겨도 이미 푼 문제를 다시 넘기지 않게.
-  const [skipRecent, setSkipRecent] = useState(false);
-  const [solvedAt, setSolvedAt] = useState<Record<string, number>>({});
   const [queue, setQueue] = useState<JokboItem[] | null>(null);
   const [round, setRound] = useState(0);
   // 시작 화면에서 고른 범위 전부. 이것을 통째로 푼 판만 회독으로 센다(강의마다 1).
@@ -58,11 +53,7 @@ function Mix({ eventIds }: { eventIds: string[] }) {
         const data = await api<JokboResponse>(`/api/jokbo/events/${encodeURIComponent(eventId)}`);
         // 표시를 못 읽어도 풀 수는 있다.
         const got = await api<{ marks: JokboMark[] }>(`/api/jokbo/marks?eventId=${encodeURIComponent(eventId)}`).catch(() => ({ marks: [] as JokboMark[] }));
-        if (alive) {
-          setBands(prev => ({ ...Object.fromEntries(got.marks.map(m => [mixKey(eventId, m.itemId), m.band])), ...prev }));
-          setSolvedAt(prev => ({ ...prev, ...Object.fromEntries(got.marks.filter(m => m.answeredAt)
-            .map(m => [mixKey(eventId, m.itemId), Date.parse(m.answeredAt as string)])) }));
-        }
+        if (alive) setBands(prev => ({ ...Object.fromEntries(got.marks.map(m => [mixKey(eventId, m.itemId), m.band])), ...prev }));
         return { eventId, data };
       } catch (cause) {
         return { eventId, error: cause instanceof ApiError && cause.status === 404 ? "족보 없음" : (cause as Error).message };
@@ -73,14 +64,8 @@ function Mix({ eventIds }: { eventIds: string[] }) {
 
   const live = lanes.filter((l): l is Lane & { data: JokboResponse } => Boolean(l.data));
   const scopeOf = (l: Lane & { data: JokboResponse }): JokboScope => scopes[l.eventId] ?? defaultScope(l.data.doc);
-  // 시작 화면을 연 시각 기준. 같은 문제를 합친 사본(mergedFrom)으로 푼 기록도 센다.
-  const since = useMemo(() => Date.now() - RECENT_MS, []);
-  const recent = (eventId: string, it: JokboItem) =>
-    [it.id, ...(it.mergedFrom ?? []).map(m => m.id)].some(id => (solvedAt[mixKey(eventId, id)] ?? 0) > since);
-  const itemsOf = (l: Lane & { data: JokboResponse }, scope = scopeOf(l)) => {
-    const items = laneItems(l.data.doc, scope);
-    return skipRecent ? items.filter(it => !recent(l.eventId, it)) : items;
-  };
+  // 2026-11-24 「5시간 안에 푼 문제 빼기」 제거(사용자 지시): 고른 범위 전부를 낸다.
+  const itemsOf = (l: Lane & { data: JokboResponse }, scope = scopeOf(l)) => laneItems(l.data.doc, scope);
   const total = live.reduce((n, l) => n + itemsOf(l).length, 0);
   // 전체 칩: 「같은 교수만」을 고를 수 있는 강의들 기준. 같은 교수 문항이 없는 강의는 늘 「다른 교수까지」라 세지 않는다.
   const choosable = live.filter(l => canSame(l.data.doc));
@@ -140,7 +125,7 @@ function Mix({ eventIds }: { eventIds: string[] }) {
 
   if (queue) return (
     <main className="main-quiz-learning jokbo-learning">
-      <JokboSolve key={round} items={queue} bands={bands} titleOf={titleOf} whoOf={whoOf}
+      <JokboSolve key={round} items={queue} bands={bands} titleOf={titleOf} hideableTitle whoOf={whoOf}
         onExit={() => setQueue(null)} onLeave={back} onRetry={retry} onAnswered={answered} onRate={rate}
         onFinish={queue === range.current?.items ? finished : undefined} />
     </main>
@@ -176,10 +161,6 @@ function Mix({ eventIds }: { eventIds: string[] }) {
                   {([["spread", "모아풀기"], ["shuffle", "섞어풀기"]] as [MixOrder, string][]).map(([value, label]) =>
                     <button key={value} type="button" role="radio" aria-checked={order === value} className={order === value ? "is-on" : ""}
                       onClick={() => setOrder(value)}>{label}</button>)}
-                </div>
-                <div className="mq-focus" role="group" aria-label="최근 푼 문제">
-                  <button type="button" aria-pressed={skipRecent} disabled={loading} onClick={() => setSkipRecent(v => !v)}>
-                    {skipRecent && <Icon.check />}5시간 안에 푼 문제 빼기</button>
                 </div>
               </div>
             </div>
