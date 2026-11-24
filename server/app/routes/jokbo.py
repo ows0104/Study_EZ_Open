@@ -196,6 +196,19 @@ class MarkIn(BaseModel):
     band: Band | None
 
 
+class MarkBefore(BaseModel):
+    """답을 기록하기 직전 값. 줄이 없었으면 모두 null."""
+    band: Band | None = None
+    markedAt: datetime | None = None
+    lastResult: Literal["correct", "wrong", "ungraded"] | None = None
+    answeredAt: datetime | None = None
+
+
+class AnswerUndoIn(BaseModel):
+    result: Literal["correct", "wrong", "ungraded"]
+    before: MarkBefore
+
+
 def _iso(value: datetime | None) -> str | None:
     if value is None:
         return None
@@ -267,6 +280,9 @@ def jokbo_answer(
     """
     _item_for_write(event_id, item_id, user)
     row = _row(db, user, event_id, item_id)
+    # 족보 풀이 Z로 답을 취소할 때(2026-11-24) 이 값으로 돌린다.
+    before = {"band": row.band, "markedAt": _iso(row.marked_at),
+              "lastResult": row.last_result, "answeredAt": _iso(row.answered_at)}
     now = _now()
     if body.result == "wrong":
         row.wrong_count = (row.wrong_count or 0) + 1
@@ -279,7 +295,41 @@ def jokbo_answer(
     row.answered_at = now
     row.updated_at = now
     db.commit()
-    return mark_json(row)
+    return {**mark_json(row), "before": before}
+
+
+@router.post("/jokbo/events/{event_id}/items/{item_id}/answer/undo")
+def jokbo_answer_undo(
+    event_id: str,
+    item_id: str,
+    body: AnswerUndoIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """족보 풀이에서 Z로 고른 답을 취소한다(2026-11-24 사용자 「체크한 답도 취소」).
+
+    `answer`가 돌려준 `before`로 표시·마지막 결과·풀이 시각을 돌리고 그 답의 횟수를 하나 뺀다.
+    처음 푼 문항이었으면(남는 기록이 없으면) 줄을 지운다.
+    """
+    _item_for_write(event_id, item_id, user)
+    row = db.get(JokboMark, (user.id, item_id))
+    if row is None or row.last_result != body.result:
+        raise HTTPException(status_code=409, detail="취소할 수 있는 마지막 풀이가 아닙니다.")
+    if body.result == "wrong":
+        row.wrong_count = max(0, (row.wrong_count or 0) - 1)
+    elif body.result == "correct":
+        row.right_count = max(0, (row.right_count or 0) - 1)
+    before = body.before
+    row.band = before.band
+    row.marked_at = before.markedAt
+    row.last_result = before.lastResult
+    row.answered_at = before.answeredAt
+    row.updated_at = _now()
+    out = mark_json(row)
+    if not row.wrong_count and not row.right_count and row.band is None and row.answered_at is None:
+        db.delete(row)
+    db.commit()
+    return out
 
 
 @router.put("/jokbo/events/{event_id}/items/{item_id}/mark")

@@ -91,6 +91,24 @@ def main():
     mark = lambda item, band: client.put(f"/api/jokbo/events/ev18/items/{item}/mark", json={"band": band})
     assert ans("zz", "wrong").status_code == 404  # 없는 문항
     assert ans("a", "maybe").status_code == 422
+    # 족보 풀이 Z로 고른 답 취소(2026-11-24): answer가 준 before로 돌리고 횟수를 뺀다
+    undo = lambda item, result, before: client.post(f"/api/jokbo/events/ev18/items/{item}/answer/undo",
+                                                    json={"result": result, "before": before})
+    m = ans("a", "wrong").json()
+    assert m["band"] == "high" and m["before"] == {"band": None, "markedAt": None, "lastResult": None, "answeredAt": None}, m
+    assert undo("a", "correct", m["before"]).status_code == 409  # 마지막 풀이가 아니다
+    assert undo("a", "wrong", {"band": "top"}).status_code == 422
+    u = undo("a", "wrong", m["before"])
+    assert u.status_code == 200 and u.json()["wrongCount"] == 0 and u.json()["band"] is None, u.text
+    assert client.get("/api/jokbo/marks?eventId=ev18").json()["marks"] == []  # 처음 푼 문항은 기록이 없던 상태
+    assert undo("a", "wrong", m["before"]).status_code == 409
+    # 사람이 붙인 표시 위에서 틀렸다가 취소하면 그 표시·시각으로 돌아간다
+    marked = mark("a", "mid").json()
+    m = ans("a", "wrong").json()
+    assert m["band"] == "high" and m["before"]["band"] == "mid"
+    u = undo("a", "wrong", m["before"]).json()
+    assert u["band"] == "mid" and u["markedAt"] == marked["markedAt"] and u["wrongCount"] == 0 and u["answeredAt"] is None, u
+    assert mark("a", None).json()["band"] is None
     # 맞히면 기록만, 표시는 안 붙는다
     m = ans("a", "correct").json()
     assert m["band"] is None and m["rightCount"] == 1 and m["lastResult"] == "correct", m
@@ -99,6 +117,12 @@ def main():
     assert ans("b", "wrong").json()["band"] == "high"
     m = ans("b", "correct").json()
     assert m["band"] == "high" and m["wrongCount"] == 1 and m["rightCount"] == 1, m
+    # 두 번째 풀이만 취소: 앞 풀이의 결과·시각은 남는다
+    u = undo("b", "correct", m["before"]).json()
+    assert (u["rightCount"], u["wrongCount"], u["band"], u["lastResult"]) == (0, 1, "high", "wrong"), u
+    assert u["answeredAt"] == m["before"]["answeredAt"] is not None, u
+    m = ans("b", "correct").json()
+    assert m["wrongCount"] == 1 and m["rightCount"] == 1, m
     # 손으로 표시: a를 「헷갈림」
     assert mark("a", "low").json()["band"] == "low"
     assert mark("a", "top").status_code == 422

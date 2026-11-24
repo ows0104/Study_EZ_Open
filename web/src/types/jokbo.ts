@@ -81,16 +81,24 @@ export type JokboResponse = JokboSummary & { uploadedAt?: string; doc: JokboDoc 
 /** 오답노트 표시(2026-11-14). 화면: high 모르겠음 · mid 주의 · null 괜찮음. low(예전 하 헷갈림)는 주의로 보인다(`jokbo/marks.tsx`). */
 export type JokboBand = "high" | "mid" | "low";
 
+export type JokboResult = "correct" | "wrong" | "ungraded";
+
 export type JokboMark = {
   itemId: string;
   eventId: string;
   band: JokboBand | null;
   wrongCount: number;
   rightCount: number;
-  lastResult: "correct" | "wrong" | "ungraded" | null;
+  lastResult: JokboResult | null;
   answeredAt: string | null;
   markedAt: string | null;
 };
+
+/** 답을 기록하기 직전 값. 족보 풀이 Z로 그 답을 취소할 때 그대로 돌려보낸다(2026-11-24). */
+export type JokboMarkBefore = Pick<JokboMark, "band" | "markedAt" | "lastResult" | "answeredAt">;
+
+/** `POST …/answer` 응답. */
+export type JokboAnswerMark = JokboMark & { before: JokboMarkBefore };
 
 /** 오답노트 한 줄(`GET /api/jokbo/wrong-notes`). 화면이 강의별로 묶는다. */
 export type JokboNoteEntry = {

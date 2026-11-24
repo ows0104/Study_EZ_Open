@@ -1,4 +1,4 @@
-/** 족보 풀이 z 되돌리기(2026-11-15): 직전 표시를 되돌려 그 문제 답 화면으로, 표시는 고르기 전 값으로. 회독은 한 번만. */
+/** 족보 풀이 z 되돌리기(2026-11-15, 2026-11-24 무제한·답 취소): 한 칸씩 판 처음까지. 표시 → 답 화면 → 고르기 전. 회독은 한 번만. */
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -41,6 +41,7 @@ window.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
   calls.push({ method, path, body: init.body ? JSON.parse(String(init.body)) : null });
   const json = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { "Content-Type": "application/json" } });
   if (path.startsWith("/api/jokbo/marks")) return json({ marks: [] });
+  if (path.endsWith("/answer")) return json({ before: { band: null, markedAt: null, lastResult: null, answeredAt: null } });
   if (path === "/api/jokbo/events/E1") return json({ eventId: "E1", audience: "all", items: 3, sameItems: 3, otherItems: 0, unknownItems: 0, doc });
   return json({});
 }) as typeof fetch;
@@ -53,44 +54,54 @@ try {
   for (let i = 0; i < 20 && !document.querySelector(".mq-start-button"); i++) await tick();
   document.querySelector<HTMLButtonElement>(".mq-start-button")!.click();
   await tick();
+  const answers = () => calls.filter(c => c.path.endsWith("/answer")).map(c => `${c.path.split("/").at(-2)}=${(c.body as { result: string }).result}`);
+  const undos = () => calls.filter(c => c.path.endsWith("/answer/undo")).map(c => `${c.path.split("/").at(-3)}=${(c.body as { result: string }).result}`);
+  const picked = () => document.querySelectorAll(".jokbo-solve [aria-pressed='true'], .jokbo-solve .is-picked").length;
   check(count() === "족보 1 / 3" && !revealed(), "starts on question 1");
 
   await press("z");
-  check(count() === "족보 1 / 3" && !revealed(), "z before any rating does nothing");
+  check(count() === "족보 1 / 3" && !revealed() && !undos().length, "z before any answer does nothing");
   await press("1");
   check(revealed(), "wrong pick reveals the answer");
   await press("z");
-  check(count() === "족보 1 / 3" && revealed(), "z on a fresh answer does not take back the graded answer");
+  check(count() === "족보 1 / 3" && !revealed(), "z on the answer screen takes back the checked answer");
+  check(undos().join() === "I1=wrong", "the answer record is undone on the server with its result");
+  check((calls.find(c => c.path.endsWith("/answer/undo"))!.body as { before: { band: null } }).before.band === null,
+    "undo sends the before values the answer returned");
+  check(!picked(), "the choice is cleared to pick again");
   await press("2");
-  check(count() === "족보 2 / 3" && !revealed(), "rating moves to question 2");
-  check(marks().join() === "I1=mid", "rating writes the band");
+  check(revealed() && document.querySelector(".jokbo-rate.is-default")?.classList.contains("is-fine"), "re-answering grades the new choice");
+  await press("2");
+  check(count() === "족보 2 / 3" && !revealed() && marks().join() === "I1=mid", "rating moves to question 2");
 
   await press("z");
   check(count() === "족보 1 / 3" && revealed(), "z returns to question 1's answer screen");
-  check(document.querySelector(".jokbo-rate.is-default")?.classList.contains("is-unknown"), "default stays 모르겠음 for the wrong answer");
-  check(marks().join() === "I1=mid,I1=high", "z restores the band from before the rating (server high after a wrong answer)");
-  check(calls.filter(c => c.path.endsWith("/answer")).length === 1, "z does not re-record the answer");
+  check(marks().join() === "I1=mid,I1=null", "z restores the band from before the rating");
   await press("z");
-  check(count() === "족보 1 / 3" && revealed(), "a second z waits for a new rating");
-  await press("3");
-  check(count() === "족보 2 / 3" && marks().at(-1) === "I1=null", "re-rating after z saves the new band");
+  check(count() === "족보 1 / 3" && !revealed() && undos().join() === "I1=wrong,I1=correct", "a second z takes back that answer too");
+  await press("z");
+  check(count() === "족보 1 / 3" && !revealed() && undos().length === 2, "z stops at the first question");
 
+  await press("3"); await press("Enter");
   await press("2"); await press("Enter");
-  await press("z", { ctrlKey: true });
-  check(count() === "족보 2 / 3" && revealed(), "Ctrl+Z also takes back the last rating");
-  check(!marks().includes("I2=null"), "unchanged band writes nothing");
-  await press("Enter");
   await press("2"); await press("1");
   check(done(), "finishing reaches the done screen");
   const rounds = () => calls.filter(c => c.path.endsWith("/rounds")).length;
   check(rounds() === 1, "the round is recorded once");
 
   await press("z");
-  check(count() === "족보 3 / 3" && revealed(), "z on the done screen returns to the last question");
-  check(marks().at(-1) === "I3=null", "the last band is restored");
-  await press("3");
+  check(count() === "족보 3 / 3" && revealed(), "z on the done screen returns to the last answer screen");
+  await press("z", { ctrlKey: true });
+  check(count() === "족보 3 / 3" && !revealed(), "Ctrl+Z also takes back the answer");
+  await press("z"); await press("z"); await press("z");
+  check(count() === "족보 1 / 3" && revealed(), "z keeps going back across questions");
+  check(undos().join() === "I1=wrong,I1=correct,I3=correct,I2=correct", "each taken-back answer is undone once, newest first");
+  check(answers().length === 5, "z never re-records an answer");
+
+  await press("Enter");
+  await press("2"); await press("Enter");
+  await press("2"); await press("Enter");
   check(done() && rounds() === 1, "finishing again does not record a second round");
-  check(!document.querySelector(".jokbo-kept-list li"), "kept list follows the new rating");
 
   results.push("ALL PASSED");
   document.getElementById("results")!.textContent = results.join("\n");

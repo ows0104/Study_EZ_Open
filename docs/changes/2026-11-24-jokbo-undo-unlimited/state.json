@@ -1,0 +1,134 @@
+{
+  "id": "2026-11-24-jokbo-undo-unlimited",
+  "title": "족보 풀이 Z 무제한·답 선택 취소",
+  "area": "site",
+  "created_at": "2026-11-24T11:47:01.454902+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-24T11:47:53.275628+00:00",
+      "evidence": "사용자(2026-11-24 채팅): 「족보 페이지에서는 왜 최대 한 문제까지만 뒤로 갈 수 있어? 내가 체크한 답은 절대 취소할 수 없어서 너무 불편해. 일반 복습 강의처럼 체크한 답도 취소할 수 있게 해줘.」 계획 제시 후 「이대로 진행」",
+      "scope": "족보 풀이(JokboSolve·JokboMix) Z 무제한·답 취소 웹, routes/jokbo.py 답 취소 API, 테스트·이용방법; DB 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "b385fa43b43baf2c5dc036dabbccb9bfdb1b03d7ede44eb0a0e843964b502fa0",
+      "plan_hash": "515f3fce40276c79f0e3d5b27243ddedcd8c3a2e6268df15ef50ed12950d1c35",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "d6f07edd782b8647aa4b1dab4c45d6c64b71a6236242a6128ae6050b0baae481"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-24T11:56:12.656749+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_quiz-back/server/.venv/Scripts/python.exe",
+        "-c",
+        "import subprocess,sys,os; os.chdir('server'); sys.exit(max(subprocess.call([sys.executable,'-m','tests',f]) for f in ('jokbo','route_contract','usage')))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "1ce678d7e5968698f2b956d21ea8e89f834af87bf1a03212c3622b6c529e0a38",
+      "plan_hash": "515f3fce40276c79f0e3d5b27243ddedcd8c3a2e6268df15ef50ed12950d1c35",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-jokbo-undo-unlimited/1795521352275856700-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-24T11:56:38.061839+00:00",
+      "command": [
+        "node",
+        "-e",
+        "const {execSync}=require('child_process');process.chdir('web');execSync('npm run typecheck',{stdio:'inherit'});execSync('npm run build',{stdio:'inherit'})"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "1ce678d7e5968698f2b956d21ea8e89f834af87bf1a03212c3622b6c529e0a38",
+      "plan_hash": "515f3fce40276c79f0e3d5b27243ddedcd8c3a2e6268df15ef50ed12950d1c35",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-jokbo-undo-unlimited/1795521373054525800-web.log",
+      "web_artifact": "43b82228412271dffa6ae4d0185d171728b0fe2aea8b6e53ac734a8c23bc4d83",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-24T11:57:03.548629+00:00",
+    "summary": "서버 answer/undo 409·삭제·복원 경계, 웹 문항별 쓰기 순서·실패 시 취소 생략, 회독 한 번 유지 확인. 남은 위험: 모아풀기 Playwright 검사 미실행(Playwright 없음), 같은 훅·풀이 컴포넌트를 고정물로 확인",
+    "evidence_version": 2,
+    "source_hash": "1ce678d7e5968698f2b956d21ea8e89f834af87bf1a03212c3622b6c529e0a38",
+    "plan_hash": "515f3fce40276c79f0e3d5b27243ddedcd8c3a2e6268df15ef50ed12950d1c35",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-24T11:57:03.728387+00:00"
+}
