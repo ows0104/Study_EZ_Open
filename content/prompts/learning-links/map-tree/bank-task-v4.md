@@ -1,5 +1,5 @@
 실제 입력은 input.json이다. 대상 강의는 「$title」이다. input.json의 scope를 지키고, material/*.md 전체와 모든 material/*.png의 표·그림·필기를 확인해 실제 강의 전체 문제은행을 작성한다. 개념도와 출제포인트는 따로 만들어지며 이 작업에는 없다.
-이 작업에는 material/figure-index.json이 없다. visual_stimuli에는 image_id를 쓰지 않고 원본 페이지의 crop으로 지정한다.
+이 작업에는 material/figure-index.json이 없다. visual_stimuli에는 image_id를 쓰지 않고 원본 페이지의 crop으로 지정한다. crop은 그 쪽 너비·높이에 대한 0~1 비율의 [left, top, right, bottom]이다. 폭·높이가 아니라 오른쪽·아래 끝 좌표를 쓴다(left<right, top<bottom).
 결과 JSON의 최상위(bank와 나란히) question_importance에 bank의 모든 문항마다 정확히 한 줄 {"question_id": "...", "importance_basis": [...]}를 쓴다. 근거가 없으면 importance_basis는 []다. 문항 객체에는 은행 형식에 이미 있는 칸 외에 중요도 칸을 더하지 않는다. 문항의 tier·importance는 조립 때 이 근거와 notebook_profile로 코드가 다시 계산해 덮으므로 형식에 맞는 값이면 된다.
 근거는 그 문항이 답으로 묻는 내용을 원본(material의 글과 PNG의 표·그림·필기)에서 실제로 확인한 것만 적는다. kind는 아래 중 하나다.
 - exam_forecast: 교수가 이 내용을 시험에 낸다거나 반드시 알아야 한다고 한 것. 「시험에 내기 좋겠죠?」, 「이 정도는 알아야겠죠?」 같은 완곡한 표현도 포함한다. quote에 실제 문장을 옮긴다.

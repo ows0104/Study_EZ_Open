@@ -426,6 +426,13 @@ class Front:
             for s in value['visual_stimuli']:
                 require(s['source_id'] in pages and 1 <= s['page'] <= pages[s['source_id']], 'bank: image page outside the source')
                 require(s['page'] not in withheld.get(s['source_id'], ()), 'bank: image page was withheld by the operator')
+                # The renderer reads crop as [left, top, right, bottom] (quizbank.connection_visuals). gpt-6.2-sol wrote
+                # [x, y, width, height] for every crop of 261124_01·_03 and the lecture stopped at the render, after
+                # the whole front (docs/changes/2026-11-24-front-bank-crop-format). Said here, the model rewrites them.
+                x0, y0, x1, y1 = s['crop']
+                require(0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1,
+                        f"bank: {s['question_id']} crop {s['crop']} is not [left, top, right, bottom] "
+                        '(right must be greater than left and bottom greater than top; not width/height)')
             ids = [q['question_id'] for q in value['bank']['questions']]
             require(ids and len(ids) == len(set(ids)), 'bank: empty or duplicate question IDs')
             # What the generator's intake will do with this bank, here, while the author can still correct it: an
