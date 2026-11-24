@@ -25,6 +25,18 @@ DISABLED_FEATURES = (
 )
 
 
+# 내장 `openai` 공급자는 응답이 300초 동안 조용하면 끊고 처음부터 다시 받는다(`idle timeout waiting for websocket`).
+# 구조화 출력·파일 쓰기 응답은 다 쓸 때까지 조용하고 출력은 초당 45~48토큰이라, 1.3만 토큰쯤부터 그 선에 걸려
+# 같은 호출이 5분에도 40분에도 끝났다(docs/changes/2026-11-24-main-quiz-speed-2). 내장 공급자의 값은 CLI가 못 바꾸게
+# 막으므로 같은 로그인·같은 전송을 쓰는 공급자를 하나 더 정의해 그 선만 늘린다. 단계 시한은 그대로 남는다.
+PROVIDER = "studyez"
+STREAM_IDLE_TIMEOUT_MS = 900_000
+# A session can only be resumed under the provider it was made with (`modelProviderMismatch`): one made before
+# this change, under the built-in provider, is resumed there, with the old 300-second limit.
+BUILT_IN_PROVIDER = "openai"
+PROVIDER_MISMATCH = "modelProviderMismatch"
+
+
 class SessionError(RuntimeError):
     pass
 
@@ -127,12 +139,18 @@ def sandbox_command(args: list[str]) -> list[str]:
 
 
 def command(*, model: str, blind: bool, resume: str | None = None,
-            writable: list[Path] | None = None) -> list[str]:
+            writable: list[Path] | None = None, provider: str = PROVIDER) -> list[str]:
     argv = [executable(), "exec", "--json", "--ignore-user-config", "--ignore-rules",
             "--skip-git-repo-check", "--model", model,
             "--sandbox", "read-only" if blind else "workspace-write"]
     config = {
-        "model_provider": "openai", "approval_policy": "never", "web_search": "disabled",
+        "model_provider": provider,
+        **({f"model_providers.{PROVIDER}.name": "OpenAI",
+            f"model_providers.{PROVIDER}.requires_openai_auth": True,
+            f"model_providers.{PROVIDER}.wire_api": "responses",
+            f"model_providers.{PROVIDER}.supports_websockets": True,
+            f"model_providers.{PROVIDER}.stream_idle_timeout_ms": STREAM_IDLE_TIMEOUT_MS} if provider == PROVIDER else {}),
+        "approval_policy": "never", "web_search": "disabled",
         "project_doc_max_bytes": 0, "mcp_servers": {},
         "sandbox_workspace_write.network_access": False,
         "features.shell_tool": not blind, "features.unified_exec": not blind,
@@ -221,7 +239,7 @@ def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None
     selected = model_name(model)
     if resume and previous_usage is None:
         raise SessionError("Codex 세션 재개에는 이전 응답의 session_usage가 필요하다")
-    argv = command(model=selected, blind=blind, resume=resume, writable=writable)
+    argv = []
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="studyez-codex-", ignore_cleanup_errors=True) as tmp:
         work = Path(tmp) if blind else Path(cwd).resolve()
@@ -238,14 +256,19 @@ def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None
             argv += ["--output-schema", str(schema_file)]
         for image in images or []:argv += ['--image',str(Path(image).resolve())]
         argv += ["-"]
-        try:
-            proc = run_process(argv, input=prompt, cwd=work, timeout=timeout,
-                                  capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), env=child_env())
-        except subprocess.TimeoutExpired as cause:
-            raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
-        except OSError as cause:
-            raise SessionError(f"{label or '세션'}: codex 실행 실패: {cause}") from cause
+        for provider in (PROVIDER, BUILT_IN_PROVIDER):
+            try:
+                proc = run_process(command(model=selected, blind=blind, resume=resume, writable=writable, provider=provider) + argv,
+                                   input=prompt, cwd=work, timeout=timeout,
+                                   capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), env=child_env())
+            except subprocess.TimeoutExpired as cause:
+                raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
+            except OSError as cause:
+                raise SessionError(f"{label or '세션'}: codex 실행 실패: {cause}") from cause
+            # The CLI refuses the resume before any model call; nothing was asked or counted.
+            if not (resume and proc.returncode and PROVIDER_MISMATCH in (proc.stdout or "") + (proc.stderr or "")):
+                break
     if proc.returncode:
         tail = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()[-2000:]
         raise SessionError(f"{label or '세션'}: codex가 {proc.returncode}로 끝났다\n{tail}")

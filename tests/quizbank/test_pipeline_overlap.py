@@ -209,3 +209,84 @@ def test_an_early_failure_is_raised_as_the_same_error_at_the_turn(tmp_path):
     with pytest.raises(Refused):
         st.run('x-0', {'a': 1}, lambda raw: raw)
     assert st.ledger['stages']['x-0']['status'] == 'failed'
+
+
+# ------------------------------------------------------------------ goal stages beside each other (2026-11-24)
+# docs/changes/2026-11-24-main-quiz-speed-2: a stage whose input is final while earlier stages still run starts
+# then, and is taken at its turn. Stage names, inputs, order and the result are those of the one-after-another run.
+
+def _both_ways(tmp_path, monkeypatch, make):
+    """(ledger of the run that starts stages early, names of the stages the other run was asked to start)."""
+    _, _, early = t4.run(tmp_path / 'early', make())
+    row = ledger(tmp_path / 'early')
+    asked = []
+    monkeypatch.setattr(Stages, 'start_early', lambda self, name, *a, **k: asked.append(name) and False)
+    _, _, plain = t4.run(tmp_path / 'plain', make())
+    assert early['document'] == plain['document'] and early['brief'] == plain['brief']
+    # (the accepted medical review carries reviewed_at, the time of the run: its output differs between any two runs)
+    record = lambda result: [(s['name'], s['inputHash'], s['outputHash'] if s['name'] != 'medical-0' else None)   # noqa: E731
+                             for s in result['manifest']['stages']]
+    assert record(early) == record(plain)
+    assert 'earlyCalls' not in ledger(tmp_path / 'plain')
+    return row, asked
+
+
+def _waits_for(first, then):
+    """A model mixin: the call of stage `then` returns only after stage `first` has begun."""
+    began, seen = threading.Event(), {}
+
+    def watch(stage):
+        if stage == first:
+            began.set()
+        if stage == then:
+            seen['began'] = began.wait(20)
+    return watch, seen
+
+
+def test_the_existence_goals_map_check_runs_beside_their_coverage_judgment(tmp_path, monkeypatch):
+    import test_presuppose as tp
+    watch, seen = _waits_for('v4-map-check-presuppose', 'v4-coverage-presuppose')
+
+    class Model(tp.Presupposing):
+        def __call__(self, stage, ctx, material, model):
+            watch(stage)
+            return super().__call__(stage, ctx, material, model)
+    row, asked = _both_ways(tmp_path, monkeypatch, Model)
+    assert seen == {'began': True}
+    assert {'policy': 'early-call/1', 'stage': 'v4-map-check-presuppose', 'used': True} in row['earlyCalls']
+    names = list(row['stages'])
+    assert names.index('v4-coverage-presuppose') < names.index('v4-map-check-presuppose')   # the record keeps the order
+    assert 'v4-map-check-presuppose' in asked
+
+
+def test_the_reverse_goals_normalize_starts_as_soon_as_its_input_is_final(tmp_path, monkeypatch):
+    import test_discriminate as td
+    row, asked = _both_ways(tmp_path, monkeypatch, td.Discriminating)
+    assert {'policy': 'early-call/1', 'stage': 'v4-supplement-normalize-discriminate', 'used': True} in row['earlyCalls']
+    assert asked.count('v4-supplement-normalize-discriminate') == 1
+
+
+def test_the_late_supplements_map_check_and_the_context_judgment_start_beside_it(tmp_path, monkeypatch):
+    from tests.quizbank import test_map_relation_guard as guard
+    watch, seen = _waits_for('v4-context-0', 'v4-supplement-late')
+
+    class Model(guard.LateModel):
+        def __call__(self, stage, ctx, material, model):
+            watch(stage)
+            return super().__call__(stage, ctx, material, model)
+    row, asked = _both_ways(tmp_path, monkeypatch, Model)
+    assert seen == {'began': True}   # the context judgment began before the late round's first call returned
+    used = [r['stage'] for r in row['earlyCalls'] if r['used']]
+    assert 'v4-map-check-late' in used and 'v4-context-0' in used
+    names = list(row['stages'])
+    assert names.index('v4-supplement-late') < names.index('v4-coverage-supplement-late') < names.index('v4-map-check-late') \
+        < names.index('v4-context-0')
+
+
+def test_an_old_ledger_starts_no_goal_stage_early(tmp_path, monkeypatch):
+    import test_discriminate as td
+    started = []
+    monkeypatch.setattr(Stages, 'start_early', lambda self, name, *a, **k: started.append(name) and False)
+    monkeypatch.setattr(gen3.Stages, 'parallel', property(lambda self: False))
+    t4.run(tmp_path, td.Discriminating())
+    assert started == []
