@@ -1,0 +1,194 @@
+{
+  "_": "2026-11-24 목록 검토(사람이 읽음)에서 정한 예외. skip: 이 문항에서 적용하지 않을 치환의 from(앞부분 일치). post: 치환 뒤 그 문항 글·선지에 그대로 적용할 [전, 후]. '*'는 강의 전체.",
+  "261123_02": {
+    "*": {
+      "post": [
+        [
+          "olecrenon",
+          "olecranon"
+        ]
+      ],
+      "why": "슬라이드 오타. 표기가 아니라 철자를 바로잡는다"
+    },
+    "Q012": {
+      "skip": [
+        "renal overload"
+      ],
+      "why": "발문이 「renal overload type 유형」이 된다"
+    },
+    "Q038": {
+      "skip": [
+        "스트레스·식이 변화"
+      ],
+      "why": "「stress·식이 변화」 — 일상어를 영어로 바꿀 이유가 없다"
+    },
+    "Q043": {
+      "post": [
+        [
+          "요산 침착(tophus(통풍결절))",
+          "요산 침착(tophus)"
+        ]
+      ],
+      "why": "괄호 안 괄호"
+    }
+  },
+  "261123_03": {
+    "*": {
+      "post": [
+        [
+          "stomaitis",
+          "stomatitis"
+        ],
+        [
+          "humoral tuberosity",
+          "humeral tuberosity"
+        ]
+      ],
+      "why": "슬라이드 오타"
+    },
+    "Q055": {
+      "skip": [
+        "제균"
+      ],
+      "why": "「선행 감염균의 eradication」 반쪽 영어"
+    },
+    "Q176": {
+      "post": [
+        [
+          "tophus(토푸스)",
+          "tophus"
+        ]
+      ],
+      "why": "음역을 병기로 붙였다"
+    },
+    "Q002": {
+      "post": [
+        [
+          "발목관절",
+          "ankle joint(발목관절)"
+        ]
+      ],
+      "why": "다른 오답 knee joint(무릎관절)와 짝"
+    }
+  },
+  "261123_05": {
+    "RA-Q033": {
+      "skip": [
+        "T-cell large granular lymphocyte leukemia"
+      ],
+      "why": "「T cell-large」는 슬라이드의 줄바꿈 흔적. 원래 표기가 표준"
+    }
+  },
+  "261123_06": {
+    "SLE-Q053": {
+      "skip": [
+        "항히스톤항체",
+        "항중심절항체"
+      ],
+      "why": "정답(항인지질항체)은 한글인데 오답만 영어가 된다. 원래대로 같은 꼴"
+    },
+    "SLE-Q105": {
+      "skip": [
+        "항중심절항체"
+      ],
+      "why": "다른 선지가 모두 「한글항체(약어), 예: …」 꼴이다. 한 선지만 영어가 된다"
+    },
+    "Q075": {
+      "skip": [
+        "Anti-histone"
+      ],
+      "why": "오답에만 한글 병기가 붙어 오답이 드러난다"
+    },
+    "Q079": {
+      "skip": [
+        "Anti-histone"
+      ],
+      "why": "같음"
+    },
+    "Q083": {
+      "skip": [
+        "Anti-histone"
+      ],
+      "why": "같은 목록의 Anti-La 등과 꼴이 달라진다"
+    },
+    "Q084": {
+      "skip": [
+        "Anti-histone"
+      ],
+      "why": "「anti-histone(항히스톤항체) 항체」 중복"
+    },
+    "Q085": {
+      "skip": [
+        "Anti-histone"
+      ],
+      "why": "오답에만 한글 병기"
+    },
+    "Q097": {
+      "skip": [
+        "Anti-histone"
+      ],
+      "why": "오답에만 한글 병기"
+    },
+    "Q089": {
+      "post": [
+        [
+          "anti-histone(항히스톤항체)",
+          "anti-histone antibody"
+        ],
+        [
+          "anti-centromere(항중심절항체)",
+          "anti-centromere antibody"
+        ],
+        [
+          "anti-centromere(ACA)",
+          "anti-centromere antibody(ACA)"
+        ]
+      ],
+      "why": "정답 anti-phospholipid antibodies(aPL)·오답 anti-mitochondrial antibody(AMA)와 같은 꼴"
+    },
+    "SLE-Q070": {
+      "post": [
+        [
+          "anti-platelet 검사",
+          "anti-platelet antibody 검사"
+        ],
+        [
+          "anti-platelet은",
+          "anti-platelet antibody는"
+        ]
+      ],
+      "why": "「anti-platelet」만 쓰면 항혈소판제로 읽힌다"
+    },
+    "Q150": {
+      "post": [
+        [
+          "lupus anticoagulant(루푸스 항응고인자)(LA)",
+          "lupus anticoagulant(LA)"
+        ]
+      ],
+      "why": "괄호 두 개"
+    }
+  },
+  "261123_01": {
+    "Q292": {
+      "post": [
+        [
+          "Leukotriene Receptor Antagonist",
+          "leukotriene receptor antagonist"
+        ]
+      ],
+      "why": "문장 안 소문자"
+    }
+  },
+  "261123_07": {
+    "Q021": {
+      "skip": [
+        "조직 손상과",
+        "항체 동형전환",
+        "친화도 성숙",
+        "케모카인"
+      ],
+      "why": "정답 문장까지 「tissue damage와 mutation accumulation」이 된다. 원래 한글 그대로"
+    }
+  }
+}
