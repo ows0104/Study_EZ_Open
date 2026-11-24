@@ -137,6 +137,30 @@ def test_쓸기는_빌드를_기다리지_않는다(tmp_path):
     thread.join(timeout=5)
 
 
+def test_첫_쓸기는_곧_돌고_그다음은_원래_간격(tmp_path, monkeypatch):
+    """켜기 전에 들어온 필기가 10분을 기다리지 않게(2026-11-24). 그 뒤 간격은 그대로다."""
+    from runner import agent as agent_module
+    assert agent_module.FIRST_SWEEP_SECONDS == 30
+    monkeypatch.setattr(agent_module, "FIRST_SWEEP_SECONDS", 0.2)
+    worker = _agent(tmp_path, FakeClient([]), sweep_seconds=600)
+    calls = []
+    first = threading.Event()
+
+    def sweep():
+        calls.append(time.monotonic())
+        first.set()
+
+    worker.sweep = sweep
+    thread = threading.Thread(target=worker.sweep_loop, daemon=True)
+    thread.start()
+    assert first.wait(5), "첫 쓸기가 곧 돌지 않았다"
+    time.sleep(1)
+    assert len(calls) == 1, "첫 쓸기 뒤에는 원래 간격을 기다려야 한다"
+    worker._stop.set()
+    thread.join(timeout=5)
+    assert not thread.is_alive()
+
+
 def test_일꾼이_넘어져도_러너는_산다(tmp_path):
     """한 일꾼에서 샌 예외 하나가 러너를 통째로 세우면 고친 것이 도로 무너진다."""
     worker = _agent(tmp_path, FakeClient([]))

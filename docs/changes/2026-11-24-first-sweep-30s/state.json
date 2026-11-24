@@ -1,0 +1,89 @@
+{
+  "id": "2026-11-24-first-sweep-30s",
+  "title": "러너 첫 쓸기 켠 뒤 30초",
+  "area": "integration",
+  "created_at": "2026-11-24T08:59:02.668402+00:00",
+  "required_checks": [
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-24T08:59:30.113111+00:00",
+      "evidence": "사용자 2026-11-24: 「러너는 언제 필기를 확인해서 집는거야? 켜지자마자 30초 후 하면 안돼? 그 다음은 원래 간격대로」",
+      "scope": "runner/agent.py 첫 쓸기 대기 30초와 검사, 로컬 구현·Draft PR까지. 병합·재설치 제외",
+      "evidence_version": 2,
+      "source_hash": "77fb3f221ce1a0bab97f36e883196d5954b1c628b0c0cafbeed37f2a13972752",
+      "plan_hash": "575b93fae3366965525072276c964d2e8a47214c7437e6b05169b94f1b28426a",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "73a51a296c31e31c8c8c0bc2c84c2242368fad47f1d6f7910caaf4ebeb62a6f5"
+    }
+  },
+  "checks": [
+    {
+      "name": "runner",
+      "at": "2026-11-24T09:02:44.385583+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "77fb3f221ce1a0bab97f36e883196d5954b1c628b0c0cafbeed37f2a13972752",
+      "plan_hash": "575b93fae3366965525072276c964d2e8a47214c7437e6b05169b94f1b28426a",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-24-first-sweep-30s/1795510777192383000-runner.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-24T09:02:44.386644+00:00"
+}

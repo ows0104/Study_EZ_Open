@@ -60,7 +60,7 @@
 붙는다. 이 값이 서버에서 오는 이유는 노트북이 판정할 수 없기 때문이다 — 여기에
 산출물이 남아 있는 것과 사람이 다시 만들라고 한 것은 다른 사실이다.
 
-일감이 없으면 `SWEEP_SECONDS`마다 `publish`를 한 번 돌린다. 06:00 쓸기가 받던 것들이
+켠 뒤 `FIRST_SWEEP_SECONDS`(30초)에 한 번, 그다음은 `SWEEP_SECONDS`마다 `publish`를 돌린다. 06:00 쓸기가 받던 것들이
 그대로 여기로 온다 — 강의록, 복습 덱, 끊긴 업로드, `release`로 풀린 편.
 
 **한 번에 한 편이다.** 한 편이 이미 빈 세션 넷을 띄운다(`runner.watch.build`와
@@ -131,6 +131,7 @@ BANK_POINTS = "points"
 POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
 SWEEP_SECONDS = 600       # 남은 것을 쓸어 올리는 간격
+FIRST_SWEEP_SECONDS = 30  # 켠 뒤 첫 쓸기까지(2026-11-24 사용자 「켜지자마자 30초 후」)
 BUILD_TIMEOUT = 3 * 3600  # 이 시간을 넘기면 그 편을 버린다
 # Claude로 지정한 Main-Quiz 편은 단계마다 느리다(261109_02가 3시간에 review 중 끊김).
 # docs/changes/2026-11-15-claude-stage-timeout
@@ -873,9 +874,15 @@ class Agent:
                 self._stop.wait(poll)
 
     def sweep_loop(self) -> None:
-        """쓸기. **빌드와 겹쳐 돈다** — 앞의 편이 막혀도 올릴 것은 올라간다."""
+        """쓸기. **빌드와 겹쳐 돈다** — 앞의 편이 막혀도 올릴 것은 올라간다.
+
+        첫 쓸기는 켠 뒤 `FIRST_SWEEP_SECONDS`, 그다음부터 `sweep_seconds`마다(2026-11-24).
+        켜기 전에 들어온 올해 필기가 10분을 기다리지 않고 올라가 Main-Quiz 자동 요청이 바로 선다.
+        """
+        wait = min(FIRST_SWEEP_SECONDS, self.sweep_seconds)
         while not self._stop.is_set():
-            self._stop.wait(self.sweep_seconds)
+            self._stop.wait(wait)
+            wait = self.sweep_seconds
             if self._stop.is_set():
                 return
             try:
