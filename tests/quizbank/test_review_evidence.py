@@ -203,3 +203,23 @@ def test_the_consumer_refuses_review_evidence_that_is_not_a_recorded_judgment(tm
         row['evidence'] = {'mode': 'single', 'reason': 'x', 'slides': [{'page': 3, 'evidence': 'forged'}]}
     with pytest.raises(ValueError, match='not a recorded judgment'):
         consume(tamper(result, forge), p)
+
+
+class LateContextRepair(ContextRepair):
+    """Q2's context re-review names page 3; every earlier review of it names page 2."""
+
+    def __call__(self, stage, ctx, material, model):
+        self.pages = {'Q2': [3] if stage == 'v4-review-context-1' else [2]}
+        return super().__call__(stage, ctx, material, model)
+
+
+def test_a_context_re_review_reaches_assembly_after_reviews_were_rebound(tmp_path):
+    """261124_02 (docs/changes/2026-11-24-late-supplement-stale-reviews): an operator exclusion (or the late supplement)
+    rebinds `reviews`; the context repair's re-review must still be the review assembly reads, not the one before it."""
+    from tests.quizbank.test_root_generation_v4 import exclude
+    exclude(tmp_path, 'Q1')
+    p, model, result = run(tmp_path, LateContextRepair(design_doubt=()))
+    assert 'v4-review-context-1' in model.calls
+    assert consume(result, p) == result['document']
+    final = {q['question_id']: q for q in result['document']['bank_snapshot']['questions']}
+    assert 'Q1' not in final and notes_refs(final['Q2']) == ['PDF 물리 3쪽']

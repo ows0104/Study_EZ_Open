@@ -706,9 +706,11 @@ def run(packet, out, model, invoke, resume=None):
         notes = v3.context_findings(bank, context_judgments[0], targets)
         code = _bank_findings(bank, source_ids, attempts)
         findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
-        S.bank, S.conflicts, S.stimuli, S.basis = bank, conflicts, stimuli, basis
+        # The late supplement and operator exclusions rebind `reviews` to a new dict; fix_round writes the re-reviews
+        # into S.reviews, so both go in and come back with it (261124_02: assembly read DM-Q065's pre-fix review).
+        S.bank, S.conflicts, S.stimuli, S.basis, S.reviews = bank, conflicts, stimuli, basis, reviews
         fix_round(S, batches.BatchStages(st, S), X + 'fix-context-0', X + 'review-context-1', X + 'coverage-fix-context-0', targets, findings)
-        bank, conflicts, stimuli, basis = S.bank, S.conflicts, S.stimuli, S.basis
+        bank, conflicts, stimuli, basis, reviews = S.bank, S.conflicts, S.stimuli, S.basis, S.reviews
         present = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
         cited = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')} | set(intake_conflict_ids)
         again = sorted(({q['conflict_id'] for q in bank['questions'] if q['question_id'] in set(targets) and q.get('conflict_id')}
