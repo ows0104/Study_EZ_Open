@@ -123,11 +123,11 @@ def test_coverage_after_an_add_round_goes_through_the_side_by_side_judgments(tmp
 
 def test_six_calls_run_side_by_side_and_the_ceiling_is_configurable(monkeypatch):
     import threading
-    assert batches.BATCH_WORKERS == 6 and gen4.batches is batches
+    assert batches.BATCH_WORKERS == 8 and gen4.batches is batches
     monkeypatch.setenv(batches.WORKERS_ENV, '4'); assert batches._workers() == 4
     monkeypatch.setenv(batches.WORKERS_ENV, '99'); assert batches._workers() == 12
     monkeypatch.setenv(batches.WORKERS_ENV, '0'); assert batches._workers() == 1
-    monkeypatch.setenv(batches.WORKERS_ENV, 'many'); assert batches._workers() == 6
+    monkeypatch.setenv(batches.WORKERS_ENV, 'many'); assert batches._workers() == 8
     gate, lock, running, peak = threading.Barrier(6, timeout=20), threading.Lock(), [0], [0]
 
     def call(i):

@@ -232,3 +232,57 @@ def test_blind_session_never_gets_extra_writable_folder(monkeypatch, tmp_path):
     monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
     argv = codex.command(model="gpt-test", blind=True, writable=[tmp_path])
     assert "--add-dir" not in argv and "read-only" in argv
+
+
+def test_every_session_uses_the_provider_with_the_longer_idle_limit(monkeypatch):
+    """docs/changes/2026-11-24-main-quiz-speed-2: the built-in `openai` provider drops a response that is silent for
+    300 seconds and starts it over; the CLI refuses to change a built-in provider, so the same login and transport
+    are defined once more under another id with a 900-second limit."""
+    monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
+    for blind in (True, False):
+        argv = codex.command(model="gpt-test", blind=blind)
+        config = dict(a.split("=", 1) for a in argv[argv.index("-c") + 1::2] if "=" in a and argv[argv.index(a) - 1] == "-c")
+        assert config["model_provider"] == '"studyez"' and "model_providers.openai" not in " ".join(argv)
+        assert config["model_providers.studyez.requires_openai_auth"] == "true"
+        assert config["model_providers.studyez.wire_api"] == '"responses"'
+        assert config["model_providers.studyez.supports_websockets"] == "true"
+        assert config["model_providers.studyez.stream_idle_timeout_ms"] == "900000"
+
+
+MISMATCH = ('Error: thread/resume: thread/resume failed: This chat uses openai, but your current provider is studyez. '
+            'Switch to openai to continue. (code -32600), data: {"type":"modelProviderMismatch","modelProvider":"openai",'
+            '"currentModelProvider":"studyez"}')
+
+
+def test_a_session_made_before_the_provider_change_is_resumed_under_the_built_in_one(monkeypatch, tmp_path):
+    """The CLI resumes a session only under the provider it was made with, and refuses before any model call."""
+    monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
+    seen = []
+
+    def fake(argv, **kw):
+        seen.append(argv)
+        return SimpleNamespace(returncode=1, stdout="", stderr=MISMATCH) if len(seen) == 1 else \
+            SimpleNamespace(returncode=0, stdout=events(), stderr="")
+    monkeypatch.setattr(codex, "run_process", fake)
+    old = {"input_tokens": 25, "output_tokens": 3, "cache_read_input_tokens": 50, "cache_creation_input_tokens": 0}
+    result = session.run_agent("continue", cwd=tmp_path, resume="previous", previous_usage=old)
+    assert result["usage"]["output_tokens"] == 4 and len(seen) == 2
+    assert 'model_provider="studyez"' in seen[0] and 'model_provider="openai"' in seen[1]
+    assert not any(a.startswith("model_providers.") for a in seen[1])
+    assert seen[0][seen[0].index("resume"):] == seen[1][seen[1].index("resume"):]   # the same session, schema and prompt
+
+
+def test_a_new_session_or_another_failure_is_not_run_again_under_the_built_in_provider(monkeypatch, tmp_path):
+    monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
+    seen = []
+
+    def fake(argv, **kw):
+        seen.append(argv)
+        return SimpleNamespace(returncode=1, stdout="", stderr=MISMATCH if len(seen) == 1 else "usage limit")
+    monkeypatch.setattr(codex, "run_process", fake)
+    with pytest.raises(codex.SessionError):   # not a resume: the text alone changes nothing
+        session.run_agent("write", cwd=tmp_path)
+    old = {"input_tokens": 25, "output_tokens": 3, "cache_read_input_tokens": 50, "cache_creation_input_tokens": 0}
+    with pytest.raises(codex.SessionError, match="usage limit"):   # a resume that fails for another reason
+        session.run_agent("continue", cwd=tmp_path, resume="previous", previous_usage=old)
+    assert len(seen) == 2

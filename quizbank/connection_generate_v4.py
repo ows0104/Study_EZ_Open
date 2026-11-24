@@ -274,6 +274,14 @@ def run(packet, out, model, invoke, resume=None):
     def judge(name, ctx, stages=None):
         return (stages or st).judged(name, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
 
+    def ahead(name, ctx, state=None):
+        """Start a stage whose input is already final while the stages before it still run (early-call/1,
+        docs/changes/2026-11-24-main-quiz-speed-2). The stage keeps its turn, its name and its input: st.run takes
+        this answer there if the input is the same, and calls normally otherwise. A ledger made before the
+        side-by-side order (no batchMode) keeps running one stage after another."""
+        if st.parallel:
+            st.start_early(name, ctx, state)
+
     # 문항을 쓰기 전의 은행. 그 문항들은 어느 새 목표를 위해 쓰인 것이 아니므로, 범위 점검이 근거로 적어
     # 포인트가 붙어도 「이미 쓴 목표」로 세지 않는다(2026-11-16 261116_06).
     intake_ids = {q['question_id'] for q in bank['questions']}
@@ -343,11 +351,13 @@ def run(packet, out, model, invoke, resume=None):
             brief, new_tids = v3.extend_brief(brief, v3.supplement_addition(brief, addition, True), [p['point_id'] for p in new_points])
             new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
             origins = [p['origin_question_id'] for p in new_points]
+            # Both read the extended map and neither reads the other's answer: the map check starts beside the
+            # coverage judgment (they ran one after the other, 0.7 + 1.7 minutes in the late round of 261123_03).
+            map_name, map_ctx = X + ('map-check-1' if not tag else 'map-check' + tag), v4.map_check_input(brief, new_tids)
+            ahead(map_name, map_ctx)
             value = judge(X + 'coverage-supplement' + tag, v3.coverage_input(brief, bank, new_dids, origins))
             rows.update({r['direction_id']: r for r in value['rows']})
-            ctx = v4.map_check_input(brief, new_tids)
-            map_checks.append(st.judged(X + ('map-check-1' if not tag else 'map-check' + tag), ctx,
-                                        lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+            map_checks.append(st.judged(map_name, map_ctx, lambda raw, ctx=map_ctx: v3.check_map_input(raw, ctx)))
         if dup:
             owner = {d['direction_id']: t for t in brief['targets'] for d in t['directions']}
             goal_ids = sorted({did for d in dup for did, t in owner.items()
@@ -371,7 +381,10 @@ def run(packet, out, model, invoke, resume=None):
         supplement_round(off_goal)
 
     # 2p: links a stem gives as known that no question recalls → existence goals (presuppose/1) ---------------
-    presuppositions, made_points = None, []
+    # The five stages below ran one after another (6.9 minutes in 261123_03). Their inputs allow more: once the
+    # existence goals are in the map, their coverage judgment, their map check and the reverse goals' normalize all
+    # read that same map. So the last two start as soon as their input is final and are taken in the old order.
+    presuppositions, made_points, pre_turn = None, [], None
     if presuppose_on:
         points_doc, presuppositions, made_points = pre.records(presupposed, bank, points_doc,
                                                                [p['point_id'] for p in brief['points']])
@@ -385,28 +398,34 @@ def run(packet, out, model, invoke, resume=None):
             brief, new_tids = pre.extend(brief, addition, [p['point_id'] for p in made_points])
             new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
             origins = sorted({p['origin_question_id'] for p in made_points})
-            value = judge(X + 'coverage-presuppose', v3.coverage_input(brief, bank, new_dids, origins))
-            rows.update({r['direction_id']: r for r in value['rows']})
-            ctx = v4.map_check_input(brief, new_tids)
-            map_checks.append(st.judged(X + 'map-check-presuppose', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+            pre_turn = (v3.coverage_input(brief, bank, new_dids, origins), v4.map_check_input(brief, new_tids))
+            ahead(X + 'map-check-presuppose', pre_turn[1])
 
     # 2d: named elements a cue alone has to pick out, that no question asks that way → reverse goals (discriminate/1)
-    discriminations, made_reverse = None, []
+    # Its records read the bank, the points and the map as the existence goals left them, not their judgments.
+    discriminations, made_reverse, dis_turn = None, [], None
     if discriminate_on:
         points_doc, discriminations, made_reverse = dis.records(discriminated, bank, points_doc, brief,
                                                                 [p['point_id'] for p in brief['points']])
         print(f"── 역방향 판정: 거꾸로 물을 목표 {len(discriminations)}개 · 그렇게 묻는 문항 없음 {len(made_reverse)}개 → 역방향 목표", flush=True)
         if made_reverse:
             allowed = v3.supplement_ids(brief, len(made_reverse))
-            ctx = dis.normalize_input(brief, made_reverse, allowed)
-            state = {'brief': brief, 'blank': True}
-            addition = st.run(X + 'supplement-normalize-discriminate', ctx,
-                              lambda raw: check_stage('discriminate-normalize', raw, ctx, state, None), state)
-            brief, new_tids = dis.extend(brief, addition, [p['point_id'] for p in made_reverse])
-            new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
-            rows.update(dis.blank_rows(new_dids))   # judged after the add round, not before (spec R4)
-            ctx = v4.map_check_input(brief, new_tids)
-            map_checks.append(st.judged(X + 'map-check-discriminate', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+            dis_turn = (dis.normalize_input(brief, made_reverse, allowed), {'brief': brief, 'blank': True})
+            ahead(X + 'supplement-normalize-discriminate', *dis_turn)
+    if pre_turn:
+        coverage_ctx, map_ctx = pre_turn
+        value = judge(X + 'coverage-presuppose', coverage_ctx)
+        rows.update({r['direction_id']: r for r in value['rows']})
+        map_checks.append(st.judged(X + 'map-check-presuppose', map_ctx, lambda raw, ctx=map_ctx: v3.check_map_input(raw, ctx)))
+    if dis_turn:
+        ctx, state = dis_turn
+        addition = st.run(X + 'supplement-normalize-discriminate', ctx,
+                          lambda raw: check_stage('discriminate-normalize', raw, ctx, state, None), state)
+        brief, new_tids = dis.extend(brief, addition, [p['point_id'] for p in made_reverse])
+        new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
+        rows.update(dis.blank_rows(new_dids))   # judged after the add round, not before (spec R4)
+        ctx = v4.map_check_input(brief, new_tids)
+        map_checks.append(st.judged(X + 'map-check-discriminate', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
     bank = _join_points(bank, brief, rows)
 
     def review_ctx(bank_, conflicts_, basis_, qids):
@@ -657,6 +676,12 @@ def run(packet, out, model, invoke, resume=None):
         # a question left only because its prerequisite is left follows that prerequisite
         late = [u['question_id'] for u in left if not u['reason'].startswith('dependency')]
         if late:
+            # The context judgment reads the questions' text and the conflict records. The late round changes neither
+            # unless it puts a question out of scope, so the judgment starts beside it (about a minute); if the round
+            # does remove a question the input differs at its turn and it is called again as before.
+            if st.parallel:
+                ahead_bank, ahead_conflicts, _ = v3.drop_orphans(bank, conflicts, intake_conflict_ids)
+                st.start_early(X + 'context-0', v3.context_input(ahead_bank, ahead_conflicts, None, None))
             print(f"── 늦은 보충: 검토 뒤에도 지도에 못 붙은 문항 {len(late)}개 → 보충 포인트", flush=True)
             gone = supplement_round(late, '-late')
             reviews = {q: r for q, r in reviews.items() if q not in gone}
