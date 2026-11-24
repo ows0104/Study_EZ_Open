@@ -1,6 +1,6 @@
 """Main-Quiz 판에 순서 맞추기 판정(`root-order/1`)을 만들어 붙인다(docs/changes/2026-11-18-ordering-screen).
 
-러너가 판을 게시하고 선지를 붙인 직후 `publish`를 기본으로 부르고(`runner/connection_generation.py`),
+러너가 판을 게시한 직후 선지 작성과 나란히 `publish`를 기본으로 부르고(`runner/connection_generation.py`),
 아래 수동 명령은 이미 게시된 판을 채울 때 쓴다. 판을 게시한 PC(`runs/_root-generation/`)에서 돈다.
 강의마다 생성기(`quizbank.root_order`)를 하위 프로세스로 돌려 결과 JSON 하나를 asset 종류 `root_order`(`<revision>.json`)로 올린다.
 문항·판·학습 기록·선지를 바꾸지 않는다. 서버는 판정이 없으면 그 문항을 지금처럼 보여 준다.

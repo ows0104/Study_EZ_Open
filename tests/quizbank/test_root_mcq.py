@@ -420,3 +420,45 @@ def test_깨진_그림은_그_그림만_뺀다():
     import hashlib
     digest = hashlib.sha256(b"\x89PNG").hexdigest()[:12]
     assert list(files) == [f"images/B1-2-{digest}.png"]
+
+
+# ── 묶음 크기(docs/changes/2026-11-24-main-quiz-speed) ───────────────────────
+
+def test_묶음은_12문항씩이고_함께_도는_수는_Codex_자리_수다(tmp_path):
+    from studyez_llm import execution
+    assert root_mcq.BATCH == 12 and root_mcq.WORKERS == execution.DEFAULT_SLOTS
+    document = {"revision": "rev-1", "title": "리케치아", "bank_snapshot": {"questions": [
+        _q(f"B{i:02d}", answer="Fe2+") for i in range(31)]}}
+    seen = []
+
+    def write(rows):
+        return {"proposals": [{"question_id": q["question_id"], "wrong": _good("B1")[:3], "skip_reason": ""}
+                              for q in rows["questions"]]}
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write, seen=seen), rounds=1)
+    assert sorted(len(rows["questions"]) for rows in seen) == [7, 12, 12]
+    assert asset["counts"]["written"] == 31 and asset["counts"]["failedBatches"] == 0
+    assert sorted(p.name for p in (tmp_path / "round-1").iterdir()) == ["batch-0", "batch-1", "batch-2"]
+
+
+def test_족보가_아닌_오답의_jokbo_칸은_null로_받는다(tmp_path):
+    import jsonschema
+
+    def write(rows):
+        out = _all_good(rows)
+        for proposal in out["proposals"]:
+            for w in proposal["wrong"]:
+                w.setdefault("group", -1)
+                if w["source"] != "jokbo":
+                    w["jokbo"] = None
+        jsonschema.validate(out, root_mcq.PROPOSALS)   # 모델이 받는 출력 스키마가 null을 허용한다
+        return out
+    document = _document()
+    asset = root_mcq.build(document, tmp_path, "r", call=_fake(write))
+    assert sorted(asset["questions"]) == ["B1", "C1", "C2", "L1", "S1"] and asset["counts"]["failedBatches"] == 0
+    assert asset["counts"]["sources"]["jokbo"] == 1
+    jokbo = next(w for w in asset["questions"]["B1"]["wrong"] if w["source"] == "jokbo")
+    assert jokbo["jokbo"]["year"] == "2022" and jokbo["jokbo"]["number"] == "45"
+    assert all("jokbo" not in w for q in asset["questions"].values() for w in q["wrong"] if w["source"] != "jokbo")
+    contract.validate_v2(asset, document)
+    # 족보에서 온 오답은 여전히 연도·번호가 있어야 한다
+    assert contract.row_errors(document["bank_snapshot"]["questions"][0], {**_w("Fe3+", source="jokbo"), "jokbo": None})

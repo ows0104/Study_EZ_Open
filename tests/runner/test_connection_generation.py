@@ -170,3 +170,23 @@ def test_frozen_download_is_bounded_and_never_accepts_wrong_bytes(tmp_path,monke
     with pytest.raises((OSError,ValueError)):worker.frozen_source(path,'https://synthetic.invalid/signed',f.packet()['sources'][0])
     assert len(calls)==(3 if failure=='reset'else 1)
     assert not path.exists()
+
+
+def test_게시_뒤_선지와_순서_판정은_나란히_돈다(tmp_path,monkeypatch):
+    """docs/changes/2026-11-24-main-quiz-speed: 순서 맞추기 판정이 선지 작성을 기다리지 않는다.
+    둘이 동시에 들어와야 풀리는 장벽이라, 차례로 부르면 여기서 깨진다."""
+    import threading
+    client=Client();gate=threading.Barrier(2,timeout=20);seen=[]
+    monkeypatch.setattr(worker.urllib.request,'urlopen',lambda req,**kwargs:io.BytesIO(f.BODY))
+    def child(args,**kwargs):
+        packet=json.loads(Path(args[args.index('--packet')+1]).read_text(encoding='utf-8'))
+        (Path(args[args.index('--out')+1])/'result.json').write_text(json.dumps(f.result(packet)),encoding='utf-8')
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(worker,'run_forwarded',child)
+    def step(name):
+        def publish(client_,subject,run_id,folder,payload,*,model=None,run=None):
+            gate.wait();seen.append((name,subject,run_id,payload['document']['revision'],model));return True
+        return publish
+    monkeypatch.setattr(root_mcq,'publish',step('mcq'));monkeypatch.setattr(root_order,'publish',step('order'))
+    assert worker.run_generation(client,'test','demo',tmp_path,'a'*32,model='test-model')==0
+    assert sorted(s[0] for s in seen)==['mcq','order'] and len({s[1:] for s in seen})==1
