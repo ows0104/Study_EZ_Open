@@ -216,3 +216,30 @@ def test_a_resume_sets_aside_a_stored_result_the_current_checks_refuse(tmp_path,
     commands.clear()
     assert worker.run_generation(client, p['subject'], p['runId'], runs, GID, resume='Again') == 0
     assert commands == [] and len(list(gen.glob('.rejected-result-*'))) == 1
+
+
+def test_a_width_height_crop_goes_back_to_the_bank_author_once(tmp_path):
+    """gpt-6.2-sol wrote crops as [x, y, width, height] (261124_01·_03); the renderer reads [left, top, right, bottom]
+    and stopped the lecture after the whole front. The bank check now refuses it and the same session rewrites it
+    (docs/changes/2026-11-24-front-bank-crop-format)."""
+    p = server_packet(tmp_path); calls = []; run = fake_codex(calls)
+    qid = bank_value()['bank']['questions'][0]['question_id']
+
+    def value(crop):
+        return {**bank_value(), 'visual_stimuli': [{'question_id': qid, 'source_id': 'S1', 'page': 1, 'crop': crop, 'reason': 'panel'}]}
+
+    def call(task, *, cwd, label, **rest):
+        if Path(cwd).name != 'bank':
+            return run(task, cwd=cwd, label=label, **rest)
+        calls.append(('bank', task))
+        followup = 'resume' in rest
+        path = Path(cwd) / 'bank.json'
+        path.write_text(json.dumps(value([0.6, 0.3, 0.9, 0.5] if followup else [0.6, 0.3, 0.3, 0.2])), encoding='utf-8')
+        return {'text': json.dumps({'path': 'bank.json', 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}),
+                'session_id': 'session-bank', 'duration_ms': 3, 'usage': {'input_tokens': 1}}
+    front = rf.Front(p, tmp_path / 'front', invoke=call); front.followups = True
+    derived = front.run()
+    bank_calls = [t for s, t in calls if s == 'bank']
+    assert len(bank_calls) == 2 and 'not [left, top, right, bottom]' in bank_calls[1]
+    assert '[left, top, right, bottom]' in bank_calls[0]
+    assert derived['intakeBank']['visual_stimuli'][0]['crop'] == [0.6, 0.3, 0.9, 0.5]
