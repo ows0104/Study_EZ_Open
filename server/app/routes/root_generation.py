@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 # 자동 요청(auto_request)의 소유자. 사람이 아니라 러너 토큰이므로, 관리자는 누구나 이 요청을 이어 하거나 새로 출제한다.
 RUNNER_OWNER = 'runner'
 AUTO_WHY = '올해 필기가 올라왔다'
+AUTO_REQUEST = 'auto-'   # 자동 요청의 requestId 머리. claim이 자동 일감을 요청에 묶을 때 이것을 본다(prequiz_jobs.claimed_job).
 
 
 def owns(user, packet):
@@ -485,7 +486,7 @@ def auto_request(db, lecture, user):
         if control and control.revision: return None
         if db.scalars(select(RootGeneration.id).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id).limit(1)).first():
             return None
-        payload = RequestIn(requestId='auto-' + uuid4().hex, inputMode='source', authoring='cli',
+        payload = RequestIn(requestId=AUTO_REQUEST + uuid4().hex, inputMode='source', authoring='cli',
                             pipeline=map_tree.PIPELINE3, privatePilot=False)
         made = submit(subject, run_id, payload, user, db, auto=AUTO_WHY)
         return job_row(db.get(PrequizJob, made['generation']['jobId']))

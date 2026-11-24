@@ -35,12 +35,79 @@
       "release_hash": "efce0be3a8c6cbd94afb1a824d9973af5df15e1ef6d6c72f1e6f27f77aad4bc8"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "runner",
+      "at": "2026-11-24T05:59:55.144658+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_desktop_control.py",
+        "-q",
+        "-k",
+        "not shortcut_installer"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "89c1e24d8d4c68e99f42fd7ad67e7f6b25521a5b03f5d6466046740d7870c1fc",
+      "plan_hash": "1fc399666028a27b990d126a997ac85f72299dac2bb2ff088ff7cc4122ae99b5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-auto-main-quiz-on-notes/1795499991575570200-runner.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-24T06:00:15.687096+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; env=dict(os.environ, PYTHONPATH='..', PYTHONIOENCODING='utf-8'); names=['test_root_auto_request','test_smoke','test_bank_auto','test_bank_auto_exclusions','test_root_restart','test_root_generation']; codes=[subprocess.call([sys.executable,'-m','tests.'+n],cwd='server',env=env) for n in names]; print(dict(zip(names,codes))); sys.exit(max(codes))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "89c1e24d8d4c68e99f42fd7ad67e7f6b25521a5b03f5d6466046740d7870c1fc",
+      "plan_hash": "1fc399666028a27b990d126a997ac85f72299dac2bb2ff088ff7cc4122ae99b5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-auto-main-quiz-on-notes/1795499995462669600-server.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-24T05:59:16.156557+00:00"
+  "updated_at": "2026-11-24T06:00:15.687584+00:00"
 }
