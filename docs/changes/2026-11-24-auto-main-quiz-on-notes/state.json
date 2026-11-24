@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-24-auto-main-quiz-on-notes",
+  "title": "필기 업로드 시 Main-Quiz 자동 요청 · 러너 자동 시작 15초",
+  "area": "site",
+  "created_at": "2026-11-24T05:47:15.267979+00:00",
+  "required_checks": [
+    "server",
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-24T05:59:06.065156+00:00",
+      "evidence": "사용자 2026-11-24 이 세션: 「복습필기가 올라오면 러너가 자동으로 Main-Quiz를 진행했으면 좋겠어. 그리고 시작 1분 좀 길어서 15초로 해도 될듯.」 · 질문의 답: 공개 범위 「학생에게 바로 공개」, 제외 강의 「필기가 올라오면 일단 만들기 시작하자.」, 대상 시점 「새로 올라온 필기만」",
+      "scope": "server 업로드 완료의 Main-Quiz 자동 요청(root_generation.submit·auto_request, admin._auto_main_job, prequiz_jobs.claimed_job), 러너 창 자동 시작 15초와 문구, 관련 검사·문서, 이 변경 폴더. 로컬 구현·검사·Draft PR까지. 병합(자동 배포·학생 공개 범위 변경)과 러너 재설치는 따로 묻는다",
+      "evidence_version": 2,
+      "source_hash": "89c1e24d8d4c68e99f42fd7ad67e7f6b25521a5b03f5d6466046740d7870c1fc",
+      "plan_hash": "1fc399666028a27b990d126a997ac85f72299dac2bb2ff088ff7cc4122ae99b5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "efce0be3a8c6cbd94afb1a824d9973af5df15e1ef6d6c72f1e6f27f77aad4bc8"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-24T05:59:16.156557+00:00"
+}

@@ -111,19 +111,26 @@ def main() -> None:
     ).json()
     check("두 파일 다 확인됨",
           (completed["stored"], completed["missing"]) == (2, []), completed)
-    check("필기 업로드만으로 Quiz Bank 출제 작업을 만들지 않는다",
-          completed["queued"] is None, completed)
+    # 2026-11-24 사용자 결정: 올해 필기가 처음 올라오면 Main-Quiz 요청이 자동으로 선다(test_root_auto_request).
+    queued = completed["queued"] or {}
+    check("올해 필기 첫 업로드가 Main-Quiz 자동 요청을 세운다",
+          (queued.get("kind"), queued.get("state"), queued.get("origin")) == ("bank", "queued", "auto"), completed)
     from app.models import PrequizJob
     with SessionLocal() as db:
-        check("필기 업로드 후 출제 작업이 저장되지 않는다", db.query(PrequizJob).count() == 0)
+        check("자동 요청은 한 줄이다", db.query(PrequizJob).count() == 1)
 
-    # 재업로드도 출제를 등록하지 않는다. 완성된 웹 응답을 저장할 때 검수 작업을 만든다.
+    # 재업로드는 다시 요청하지 않는다. 러너는 쓸기마다 같은 강의록을 다시 밀어 본다.
     resent = client.post(
         "/api/admin/lectures/병리학/260813_03/uploads/complete", headers=RUNNER, json=files
     ).json()
     check("같은 파일을 다시 올려도 또 서지 않는다", resent["queued"] is None, resent)
     with SessionLocal() as db:
-        check("재업로드 후에도 출제 작업이 저장되지 않는다", db.query(PrequizJob).count() == 0)
+        check("재업로드 후에도 요청은 한 줄이다", db.query(PrequizJob).count() == 1)
+        # 아래 검사들은 빈 줄에서 시작한다. 자동 요청의 일감·요청은 여기서 치운다.
+        from app.models.root_generation import RootGeneration
+        db.query(RootGeneration).delete()
+        db.query(PrequizJob).delete()
+        db.commit()
 
     # 필기는 받는 것이 아니라 보는 것이다. `inline=1`을 주면 첨부가 아니라
     # 인라인으로 서명돼야 새 탭이 내려받기로 바뀌지 않는다.

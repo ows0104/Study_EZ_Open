@@ -20,6 +20,7 @@ from app.database import get_db
 from app.jobs.queue import MAX_RUNNING, RUNNER_NAME, open_job_of, queue_order
 from app.jobs.views import board, job_row, runner_row
 from app.models import (
+    JOB_AUTO,
     JOB_BANK,
     JOB_BANK_POINTS,
     JOB_BUTTON,
@@ -356,7 +357,8 @@ def claim_prequiz_job(
 def claimed_job(db: Session, job: PrequizJob | None):
     """Bind an explicit root request to this claimed job; never widen batch scope."""
     row = job_row(job)
-    if not job or job.state != JOB_RUNNING or job.kind != JOB_BANK or job.origin != JOB_BUTTON or job.cancel_requested:
+    # 자동 요청(root_generation.auto_request)의 일감도 버튼 일감처럼 자기 RootGeneration에만 묶인다.
+    if not job or job.state != JOB_RUNNING or job.kind != JOB_BANK or job.origin not in (JOB_BUTTON, JOB_AUTO) or job.cancel_requested:
         return row
     from app.models.root_generation import RootGeneration
     root = db.scalars(select(RootGeneration).where(RootGeneration.job_id == job.id)).first()

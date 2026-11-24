@@ -5,6 +5,7 @@ from pathlib import PurePath
 from uuid import uuid4
 from typing import Literal
 import json
+import logging
 import re
 import io
 from collections import OrderedDict
@@ -19,10 +20,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, defer
 from app.auth import CurrentUser, require_admin, require_runner
 from app.database import get_db
-from app.models import Asset, Lecture, PrequizJob, JOB_BANK, JOB_BUTTON, JOB_QUEUED, JOB_DONE
+from app.models import Asset, Lecture, PrequizJob, JOB_AUTO, JOB_AUTO_DAILY_CAP, JOB_BANK, JOB_BUTTON, JOB_QUEUED, JOB_DONE
 from app.models.root_generation import RootGeneration
 from app.models.root_learning import RootContent, RootControl, RootEvent
-from app.jobs.queue import open_job_of
+from app.jobs.queue import auto_review_excluded, auto_used_today, open_job_of
+from app.jobs.views import job_row
 from app.storage import ObjectStorage, StorageNotConfigured
 from app.root_learning.content import globally_enabled
 from app.routes.bank_api.common import bank_sources
@@ -34,6 +36,14 @@ from studyez_contracts.roots import map_tree
 router = APIRouter()
 BASE = '/admin/root-learning/lectures/{subject}/{run_id}/generation'
 DUPLICATE_STAGE = '중복 요청 보존 · 기존 검수 상한 유지'
+log = logging.getLogger(__name__)
+# 자동 요청(auto_request)의 소유자. 사람이 아니라 러너 토큰이므로, 관리자는 누구나 이 요청을 이어 하거나 새로 출제한다.
+RUNNER_OWNER = 'runner'
+AUTO_WHY = '올해 필기가 올라왔다'
+
+
+def owns(user, packet):
+    return packet['owner'] in (user.id, RUNNER_OWNER)
 
 
 class RequestIn(BaseModel):
@@ -307,7 +317,7 @@ def restart_target(db, subject, run_id, user, replace_published=False, from_publ
         raise HTTPException(409, '이미 게시된 작업입니다. 판 교체는 별도 승인이 필요합니다.')
     if job.state not in RESTARTABLE and not (replace_published and row.result_digest is not None and job.state == 'done'):
         raise HTTPException(409, '진행·대기 중인 작업이 있습니다. 끝나거나 중지된 뒤 새로 출제하세요.')
-    if row.packet['owner'] != user.id: raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
+    if not owns(user, row.packet): raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
     if not from_published: return row
     # docs/changes/2026-11-15-replace-published-target: 「중복만 다시 판정」·「못 붙은 문항만 재배치」 reuse the stages of the
     # run whose revision students see now — not the newest request, which may be an earlier attempt that failed.
@@ -317,7 +327,7 @@ def restart_target(db, subject, run_id, user, replace_published=False, from_publ
     if (published is None or (published.subject, published.run_id) != (subject, run_id)
             or published.packet['revision'] != revision or published.result_digest is None):
         raise HTTPException(409, '지금 공개된 판을 만든 작업을 찾지 못했습니다. 공개 판을 확인하세요.')
-    if published.packet['owner'] != user.id: raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
+    if not owns(user, published.packet): raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
     return published
 
 
@@ -335,6 +345,12 @@ def latest(subject: str, run_id: str, user: CurrentUser = Depends(require_admin)
 
 @router.post(BASE)
 def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    return submit(subject, run_id, payload, user, db)
+
+
+def submit(subject, run_id, payload, user, db, *, auto=None):
+    """The button's request. `auto` is why the server itself asks (auto_request): the job is then an automatic one,
+    under the daily automatic cap, with nobody's name on it."""
     if payload.inputMode=='provided' and (not payload.conceptMap.strip() or not payload.points.strip()):
         raise HTTPException(422, 'Concept map과 출제포인트를 입력하세요.')
     if payload.parallelAuthoring and (payload.authoring!='cli' or payload.inputMode!='source'):
@@ -404,7 +420,7 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
             existing = None
     if existing:
         existing=canonical_generation(db,existing)
-        if existing.packet['privatePilot'] != payload.privatePilot or existing.packet['owner'] != user.id:
+        if existing.packet['privatePilot'] != payload.privatePilot or not owns(user, existing.packet):
             raise HTTPException(409, '같은 입력의 기존 작업이 있습니다. 공개 범위는 등록된 판의 공개 관리에서 바꾸세요.')
         if payload.resume: resume_job(db, existing, payload.resumeReason, user.id)
         return {'generation': public_job(db, existing), 'reused': True}
@@ -433,8 +449,14 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
     from studyez_contracts.roots.parallel import SOURCE_FORMAT as PARALLEL_FORMAT
     packet['sourceAssessmentFormat']=map_tree.format_for(payload.pipeline) if payload.pipeline else PARALLEL_FORMAT if payload.parallelAuthoring else SOURCE_FORMAT
     packet['inputHash'] = packet_hash(packet)
-    job = PrequizJob(subject=subject, run_id=run_id, kind=JOB_BANK, origin=JOB_BUTTON, state='held' if payload.authoring=='web' else JOB_QUEUED,
-                     requested_by=user.email or user.id, stage='ChatGPT 응답 대기' if payload.authoring=='web' else 'Main-Quiz 앞 단계(개념 지도·포인트) 대기' if payload.pipeline else '문제은행·개념도·출제포인트 CLI 병렬 대기' if payload.parallelAuthoring else 'Concept map·포인트 자동출제 대기')
+    stage = 'ChatGPT 응답 대기' if payload.authoring=='web' else 'Main-Quiz 앞 단계(개념 지도·포인트) 대기' if payload.pipeline else '문제은행·개념도·출제포인트 CLI 병렬 대기' if payload.parallelAuthoring else 'Concept map·포인트 자동출제 대기'
+    # 자동 요청은 예습·Quiz Bank 자동 일감과 같은 하루 상한을 쓴다. 넘으면 요청은 남기고 줄만 세워 둔다(ensure_auto_job과 같다).
+    over = auto is not None and auto_used_today(db) >= JOB_AUTO_DAILY_CAP
+    if over: stage = f'오늘 자동 상한 {JOB_AUTO_DAILY_CAP}편을 다 썼다 — 만들려면 이유를 적고 이어 하기'
+    elif auto is not None: stage = f'{auto} — {stage}'
+    job = PrequizJob(subject=subject, run_id=run_id, kind=JOB_BANK, origin=JOB_BUTTON if auto is None else JOB_AUTO,
+                     state='held' if payload.authoring=='web' or over else JOB_QUEUED,
+                     requested_by=(user.email or user.id) if auto is None else '', stage=stage)
     db.add(job); db.flush()
     row = RootGeneration(id=generation_id, job_id=job.id, subject=subject, run_id=run_id, user_id=user.id,
         request_id=payload.requestId, input_digest=digest, packet=packet, baseline=control_hash(db, subject, run_id))
@@ -445,6 +467,35 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
     except IntegrityError:
         db.rollback(); raise HTTPException(409, '동시에 등록되었습니다. 작업을 다시 조회하세요.')
     return {'generation': public_job(db, row), 'reused': False}
+
+
+def auto_request(db, lecture, user):
+    """올해 필기가 처음 등록된 강의에 버튼과 같은 요청(새 구조 2, CLI 원본, 학생 공개)을 넣는다.
+
+    2026-11-24 사용자 결정(docs/changes/2026-11-24-auto-main-quiz-on-notes): 첫 필기 업로드가 강의마다 누르던 버튼을 대신한다.
+    **한 번도 요청된 적 없고 공개된 판도 없는 강의만** 건드린다 — 필기를 바꿔 올려도 이미 있는 요청·공개판은 그대로다.
+    실습·CBL·PBL은 기존 자동 복습 규칙대로 뺀다. 업로드를 실패시키지 않는다: 요청하지 못하면 이유를 로그에 남기고 None."""
+    subject, run_id = lecture.subject, lecture.run_id
+    try:
+        # 방금 올린 자료를 DB에 적힌 값으로 다시 읽는다. 메모리의 업로드 시각과 DB가 돌려주는 시각은 표기가 달라,
+        # 그대로 두면 관리자가 같은 입력으로 이어 할 때 다른 요청으로 보인다(input_digest).
+        db.expire_all()
+        if auto_review_excluded(db, subject, run_id): return None
+        control = db.get(RootControl, (subject, run_id))
+        if control and control.revision: return None
+        if db.scalars(select(RootGeneration.id).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id).limit(1)).first():
+            return None
+        payload = RequestIn(requestId='auto-' + uuid4().hex, inputMode='source', authoring='cli',
+                            pipeline=map_tree.PIPELINE3, privatePilot=False)
+        made = submit(subject, run_id, payload, user, db, auto=AUTO_WHY)
+        return job_row(db.get(PrequizJob, made['generation']['jobId']))
+    except HTTPException as error:
+        db.rollback()
+        log.warning('Main-Quiz 자동 요청 건너뜀 %s/%s: %s', subject, run_id, error.detail)
+    except Exception:
+        db.rollback()
+        log.exception('Main-Quiz 자동 요청 실패 %s/%s', subject, run_id)
+    return None
 
 
 def registered_exam_date(db,lecture):

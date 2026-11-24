@@ -96,7 +96,7 @@ def wait(runs: Path, seconds: float, job=None) -> str:
 
 
 class AutoStart:
-    def __init__(self, now: float, seconds: float = 60):
+    def __init__(self, now: float, seconds: float = 15):
         self.deadline = now + seconds
         self.pending = True
 
