@@ -722,7 +722,7 @@ def main(argv=None) -> int:
     ap.add_argument("step", choices=["check", "solve", "judge", "apply", "prepare",
                                  "grade", "axis"])
     ap.add_argument("prep_dir")
-    ap.add_argument("--model", help="GPT 모델 (기본: STUDYEZ_MODEL 또는 gpt-6.1-sol)")
+    ap.add_argument("--model", help="GPT 모델 (기본: STUDYEZ_MODEL 또는 gpt-6.2-sol)")
     ap.add_argument("--chunk", type=int, default=25,
                     help="한 세션에 넣을 카드 수. 0 이면 전부 한 번에 (기본 25)")
     ap.add_argument("--timeout", type=int, default=1800, help="세션 하나의 제한 시간(초)")

@@ -48,8 +48,8 @@ UI 확인: `web`에서 Vite를 실행하고 `/tests/prequiz.html`을 연다. 모
 `exec --ignore-user-config`·`--ignore-rules`·`--output-schema`를 지원해야 한다.
 CLI 옵션과 JSONL 이벤트는 [공식 비대화형 실행 문서](https://learn.chatgpt.com/docs/non-interactive-mode)를 참고한다.
 
-- 기본 모델: `gpt-6.1-sol`. `--model` 또는 `STUDYEZ_MODEL`로 바꾼다.
-- 재현 의미 채점: `gpt-6.1-sol`. `--judge-model`로 바꾸며, 명시적 `--model`이 우선한다.
+- 기본 모델: `gpt-6.2-sol`. `--model` 또는 `STUDYEZ_MODEL`로 바꾼다.
+- 재현 의미 채점: `gpt-6.2-sol`. `--judge-model`로 바꾸며, 명시적 `--model`이 우선한다.
 - 실행 파일이 PATH에 없으면 Windows Codex 앱의 번들 CLI를 자동으로 찾는다.
   다른 설치 위치는 `STUDYEZ_CODEX_BIN`에 Codex 실행 파일 경로를 지정한다.
 - 기존 `opus`·`sonnet`·`STUDYEZ_CLAUDE_BIN` 설정은 사용하지 않는다.

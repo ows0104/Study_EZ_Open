@@ -533,7 +533,7 @@ def _legacy_main(argv=None) -> int:
                          "auto(기본)면 실습 사진·반복률·교수 교체 순으로 판정한다")
     ap.add_argument("--domain", choices=sorted(DOMAINS),
                     help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN}; 범용은 generic)")
-    ap.add_argument("--model", help="GPT 모델. 기본 STUDYEZ_MODEL 또는 gpt-6.1-sol")
+    ap.add_argument("--model", help="GPT 모델. 기본 STUDYEZ_MODEL 또는 gpt-6.2-sol")
     ap.add_argument("--timeout", type=int, default=3600, help="세션 하나의 제한 시간(초)")
     ap.add_argument("--jobs", type=int, default=4,
                     help="재현 검사에서 동시에 띄울 빈 세션 수")

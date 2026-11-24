@@ -13,7 +13,7 @@ from pathlib import Path
 from .execution import AlreadyRunning, claude_slot_limit, exclusive, run_process, slot, slot_limit
 from . import telemetry
 
-DEFAULT_MODEL = "gpt-6.1-sol"
+DEFAULT_MODEL = "gpt-6.2-sol"
 JUDGE_MODEL = DEFAULT_MODEL
 
 # 독립 평가에 사용자 커넥터·기억·브라우저·다른 에이전트를 싣지 않는다.
