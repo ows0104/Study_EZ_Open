@@ -18,6 +18,14 @@ def local_usage_log(monkeypatch, tmp_path):
     monkeypatch.setenv('STUDYEZ_CODEX_USAGE_DIR', str(tmp_path / 'usage'))
 
 
+def test_default_model_is_gpt_6_2_sol_unless_overridden(monkeypatch):
+    monkeypatch.delenv('STUDYEZ_MODEL', raising=False)
+    assert codex.model_name() == codex.JUDGE_MODEL == 'gpt-6.2-sol'
+    monkeypatch.setenv('STUDYEZ_MODEL', 'gpt-6.1-sol')
+    assert codex.model_name() == 'gpt-6.1-sol'
+    assert codex.model_name('gpt-6.2-astra') == 'gpt-6.2-astra'
+
+
 def events(text='{"ok":true}', *, extra=()):
     return "\n".join(json.dumps(e) for e in [
         {"type": "thread.started", "thread_id": "test-session"},

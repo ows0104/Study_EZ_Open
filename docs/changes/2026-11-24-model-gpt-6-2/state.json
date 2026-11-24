@@ -1,0 +1,106 @@
+{
+  "id": "2026-11-24-model-gpt-6-2",
+  "title": "Codex 기본 모델 gpt-6.2-sol",
+  "area": "generation",
+  "created_at": "2026-11-24T08:16:17.723314+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-24T08:16:50.673270+00:00",
+      "evidence": "사용자 2026-11-24 이 세션: 「어 고치고 병합후 재설치해줘.」(앞 질문: 「현재 CLI는 어떤 모델을 써? 6.2가 새로 출시되었다고 해서.」)",
+      "scope": "studyez_llm/codex.py(DEFAULT_MODEL), runner/cli/arguments.py·quizgen/run.py·quizgen/reproduce.py(도움말), docs/quizgen.md·docs/pipeline.md, tests/studyez_llm/test_codex.py, 이 변경 폴더. 로컬 검사·실제 호출·PR·병합·러너 재설치",
+      "evidence_version": 2,
+      "source_hash": "c5c47286ac94041206cb16cdb483c6a63b956208ee52a120b615147668ee2fe2",
+      "plan_hash": "0f9dc8cd27c6f013ec326ec9a7bffcf7c9eb19d8edc4627cf3a01345d4ed685f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "83bea0b2dcb84f399ec88ffc19019e913ccf767b9eecfab18eb9916e4d791aa1"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-24T08:24:12.917993+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/runner",
+        "tests/studyez_llm",
+        "tests/contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c5c47286ac94041206cb16cdb483c6a63b956208ee52a120b615147668ee2fe2",
+      "plan_hash": "0f9dc8cd27c6f013ec326ec9a7bffcf7c9eb19d8edc4627cf3a01345d4ed685f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-24-model-gpt-6-2/1795508231972379500-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-24T08:24:27.208362+00:00",
+    "summary": "기본 모델 한 줄·도움말·문서·기본값 검사. 우선순위(인자→STUDYEZ_MODEL→기본값)와 요청별 지정은 그대로. 러너 CLI 0.167로 gpt-6.2-sol 호출 확인. 회귀 2524 통과.",
+    "evidence_version": 2,
+    "source_hash": "c5c47286ac94041206cb16cdb483c6a63b956208ee52a120b615147668ee2fe2",
+    "plan_hash": "0f9dc8cd27c6f013ec326ec9a7bffcf7c9eb19d8edc4627cf3a01345d4ed685f",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-24T08:24:27.288177+00:00"
+}
