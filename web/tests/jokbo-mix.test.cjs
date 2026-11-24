@@ -125,28 +125,32 @@ test('족보 모아풀기 섞어풀기: 모든 문항을 한 번씩',async()=>{
   finally{await browser.close();}
 });
 
-test('족보 모아풀기: 5시간 안에 푼 문제 빼기 — 새로고침 뒤 이미 푼 문제를 다시 내지 않는다',async()=>{
-  const {browser,page}=await launch('recent');const errors=[];page.on('pageerror',e=>errors.push(e.message));
+test('족보 모아풀기: 「5시간 안에 푼 문제 빼기」 없음, 강의명 숨기기 스위치는 새로고침 뒤에도 유지',async()=>{
+  const {browser,page}=await launch('hide');const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
     await page.goto(url+'?e=evA&e=evB&e=evC');
     await counted(page);
-    assert.equal(await startCount(page),'9');
-    await page.getByRole('radio',{name:'섞어풀기'}).click();
+    assert.equal(await page.getByRole('button',{name:'5시간 안에 푼 문제 빼기'}).count(),0);
     await page.locator('.mq-start-button').click();
-    const solved=[];
-    for(let i=0;i<3;i++){solved.push(await stem(page));await solve(page);}
-    await page.waitForTimeout(500);
+    await page.locator('.jokbo-reveal').waitFor();
+    const title=page.locator('.pq-head .pq-title');
+    const hide=page.getByRole('switch',{name:'강의명 숨기기'});
+    assert.equal(await hide.getAttribute('aria-checked'),'false');
+    assert.match(await title.innerText(),/^Lecture [ABC]/);
+    await hide.click();
+    assert.equal(await hide.getAttribute('aria-checked'),'true');
+    assert.equal(await title.count(),0);
+    await solve(page);
+    assert.equal(await title.count(),0);
+    await shot(page,'hide-lecture');
     await page.reload();
     await counted(page);
-    const skip=page.getByRole('button',{name:'5시간 안에 푼 문제 빼기'});
-    assert.equal(await skip.getAttribute('aria-pressed'),'false');
-    assert.equal(await startCount(page),'9');
-    await skip.click();
-    assert.equal(await skip.getAttribute('aria-pressed'),'true');
-    assert.equal(await startCount(page),'6');
     await page.locator('.mq-start-button').click();
-    for(let i=0;i<6;i++){assert.ok(!solved.includes(await stem(page)),'이미 푼 문제가 다시 나옴');await solve(page);}
-    await shot(page,'skip-recent-done');
+    await page.locator('.jokbo-reveal').waitFor();
+    assert.equal(await page.getByRole('switch',{name:'강의명 숨기기'}).getAttribute('aria-checked'),'true');
+    assert.equal(await title.count(),0);
+    await page.getByRole('switch',{name:'강의명 숨기기'}).click();
+    assert.match(await title.innerText(),/^Lecture [ABC]/);
     assert.deepEqual(errors,[]);
   }finally{await browser.close();}
 });

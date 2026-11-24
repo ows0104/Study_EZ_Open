@@ -78,6 +78,17 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     }
     assert.deepEqual(await where(page),{title:'Second root lecture',question:'Second question 1?',step:'문항 4 / 6'});
 
+    // 강의명 숨기기(2026-11-24): 우상단 스위치로 머리줄 강의명만 감춘다.
+    const hide=page.getByRole('switch',{name:'강의명 숨기기'});
+    assert.equal(await hide.getAttribute('aria-checked'),'false');
+    await hide.click();
+    assert.equal(await hide.getAttribute('aria-checked'),'true');
+    assert.equal(await page.locator('.mq-solve-title').count(),0);
+    await page.getByText('Second question 1?',{exact:true}).waitFor();
+    await shot(page,'hide-lecture');
+    await hide.click();
+    assert.equal(await page.locator('.mq-solve-title').innerText(),'Second root lecture');
+
     // Z goes back across lectures: first the rating in lecture A (answer shown again), then its reveal.
     await enabled(page,'되돌리기');await heading(page).focus();await page.keyboard.press('z');
     await page.getByText('Synthetic question 3?',{exact:true}).waitFor();await enabled(page,'Good');
