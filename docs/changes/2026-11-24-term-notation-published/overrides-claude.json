@@ -1,0 +1,76 @@
+{
+  "_": "Claude 검토판의 예외. 처음엔 슬라이드 오타 교정만(overrides.json에서 가져옴). 결과를 읽고 더한다.",
+  "261123_02": {
+    "*": {
+      "post": [
+        [
+          "olecrenon",
+          "olecranon"
+        ]
+      ],
+      "why": "슬라이드 오타. 표기가 아니라 철자를 바로잡는다"
+    },
+    "Q064": {
+      "skip": [
+        "이중에너지 CT"
+      ],
+      "why": "보기가 모두 한글(단순 X선·자기공명영상)인데 오답 하나만 영어가 된다(에이전트가 스스로 짚음)"
+    },
+    "Q065": {
+      "skip": [
+        "콜히친"
+      ],
+      "why": "보기가 모두 한글 치료 이름인데 오답 하나만 영어가 된다(에이전트가 스스로 짚음)"
+    }
+  },
+  "261123_03": {
+    "*": {
+      "post": [
+        [
+          "stomaitis",
+          "stomatitis"
+        ],
+        [
+          "humoral tuberosity",
+          "humeral tuberosity"
+        ]
+      ],
+      "why": "슬라이드 오타"
+    },
+    "Q131": {
+      "skip": [
+        "방사선학적 축성 SpA",
+        "말초 척추관절염(peripheral SpA)"
+      ],
+      "why": "정답만 한글 병기 없는 영어가 되고 오답은 모두 한글이 앞인 꼴이다. 원래대로"
+    }
+  },
+  "261123_06": {
+    "Q012": {
+      "post": [
+        [
+          "항체 결합력",
+          "antibody affinity(항체 결합력)"
+        ]
+      ],
+      "why": "정답 둘 중 titer(역가)만 영어 병기인데 오답이 모두 한글이다"
+    },
+    "Q152": {
+      "post": [
+        [
+          "Warfarin(와파린)",
+          "warfarin"
+        ],
+        [
+          "IV immunoglobulin(정맥 면역글로불린)",
+          "IV immunoglobulin"
+        ],
+        [
+          "High dose prednisolone(고용량 프레드니솔론)",
+          "high-dose prednisolone"
+        ]
+      ],
+      "why": "정답 low-molecular-weight heparin(LMWH)만 한글 병기가 없다. 약 이름은 모두 영어로"
+    }
+  }
+}
