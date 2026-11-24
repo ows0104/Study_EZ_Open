@@ -20,6 +20,7 @@ from app.database import get_db
 from app.jobs.queue import MAX_RUNNING, RUNNER_NAME, open_job_of, queue_order
 from app.jobs.views import board, job_row, runner_row
 from app.models import (
+    JOB_AUTO,
     JOB_BANK,
     JOB_BANK_POINTS,
     JOB_BUTTON,
@@ -356,10 +357,15 @@ def claim_prequiz_job(
 def claimed_job(db: Session, job: PrequizJob | None):
     """Bind an explicit root request to this claimed job; never widen batch scope."""
     row = job_row(job)
-    if not job or job.state != JOB_RUNNING or job.kind != JOB_BANK or job.origin != JOB_BUTTON or job.cancel_requested:
+    if not job or job.state != JOB_RUNNING or job.kind != JOB_BANK or job.origin not in (JOB_BUTTON, JOB_AUTO) or job.cancel_requested:
         return row
     from app.models.root_generation import RootGeneration
     root = db.scalars(select(RootGeneration).where(RootGeneration.job_id == job.id)).first()
+    if root and job.origin == JOB_AUTO:
+        # 자동 일감은 서버가 스스로 넣은 요청(root_generation.auto_request)일 때만 묶인다. 그 밖의 자동 일감은 지금처럼 예외가 없다.
+        from app.routes.root_generation import AUTO_REQUEST
+        if not root.request_id.startswith(AUTO_REQUEST):
+            return row
     if (root and not root.result_digest and (root.web_response or (root.packet.get('parallelAuthoring') is True and root.packet.get('authoring')=='cli'and root.packet.get('inputMode')=='source')
                  or (root.packet.get('pipeline') in ('map-tree/1','map-tree/2','map-tree/3') and root.packet.get('authoring')=='cli' and root.packet.get('inputMode')=='source'))
         and (root.subject, root.run_id) == (job.subject, job.run_id)

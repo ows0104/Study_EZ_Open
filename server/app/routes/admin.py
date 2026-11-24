@@ -261,15 +261,24 @@ def complete_uploads(
         asset.slide_no = slide_no_from_filename(filename) if slides else None
         stored.append(filename)
 
-    queued = _auto_main_job(db, lecture, fresh)
+    # 자료를 먼저 굳힌다. 자동 요청이 실패해 되돌려도 방금 올린 자료는 남는다.
     db.commit()
+    queued = _auto_main_job(db, lecture, fresh, user)
     # 올라오지 않은 파일을 성공으로 세지 않는다. 러너가 이 목록을 보고 다시 민다.
     return {"stored": len(stored), "missing": missing, "queued": queued}
 
 
-def _auto_main_job(db: Session, lecture: Lecture, fresh: set[str]) -> dict[str, Any] | None:
-    """필기 업로드만으로 별도 출제하지 않는다. 완성된 웹 응답이 검수 작업을 등록한다."""
-    return None
+def _auto_main_job(db: Session, lecture: Lecture, fresh: set[str],
+                   user: CurrentUser | None = None) -> dict[str, Any] | None:
+    """올해 필기가 **처음** 올라온 강의에 Main-Quiz를 요청한다(2026-11-24 사용자 결정).
+
+    다시 올린 필기는 `fresh`에 없으므로 쓸기마다 같은 요청이 서지 않는다. 무엇을 건너뛰는지는
+    `root_generation.auto_request`가 정한다. 요청하지 못해도 업로드는 성공이다."""
+    if "notes_current" not in fresh:
+        return None
+    from app.routes import root_generation
+    return root_generation.auto_request(
+        db, lecture, user or CurrentUser(id=root_generation.RUNNER_OWNER, email="", is_admin=True))
 
 
 # ---------------------------------------------------------------- 산출물 JSON

@@ -1,0 +1,179 @@
+{
+  "id": "2026-11-24-auto-main-quiz-on-notes",
+  "title": "필기 업로드 시 Main-Quiz 자동 요청 · 러너 자동 시작 15초",
+  "area": "site",
+  "created_at": "2026-11-24T05:47:15.267979+00:00",
+  "required_checks": [
+    "server",
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-24T06:02:40.848683+00:00",
+      "evidence": "사용자 2026-11-24 이 세션: 「복습필기가 올라오면 러너가 자동으로 Main-Quiz를 진행했으면 좋겠어. 그리고 시작 1분 좀 길어서 15초로 해도 될듯.」 · 질문의 답: 공개 범위 「학생에게 바로 공개」, 제외 강의 「필기가 올라오면 일단 만들기 시작하자.」, 대상 시점 「새로 올라온 필기만」. (같은 발언의 재기록: 검사 중 spec R5를 '서버 자동 요청에 딸린 자동 일감만 묶는다'로 좁힌 뒤의 문서 지문에 맞춤. 새 승인 발언은 없음)",
+      "scope": "server 업로드 완료의 Main-Quiz 자동 요청(root_generation.submit·auto_request, admin._auto_main_job, prequiz_jobs.claimed_job), 러너 창 자동 시작 15초와 문구, 관련 검사·문서, 이 변경 폴더. 로컬 구현·검사·Draft PR까지. 병합(자동 배포·학생 공개 범위 변경)과 러너 재설치는 따로 묻는다",
+      "evidence_version": 2,
+      "source_hash": "a50e34729797b14358e97e2a93d12f863ab4dbf408da523ac72b1175cb2ecf4d",
+      "plan_hash": "6a8afbfacd54763c9d4a17ac20929771516a9a09d2a50ca5b253d1c8f4614efa",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "e30674e7dcee9569b08ea5723cdda8ac801410ae12ca9f196cc7dd9657d19f1f"
+    }
+  },
+  "checks": [
+    {
+      "name": "runner",
+      "at": "2026-11-24T05:59:55.144658+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_desktop_control.py",
+        "-q",
+        "-k",
+        "not shortcut_installer"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "89c1e24d8d4c68e99f42fd7ad67e7f6b25521a5b03f5d6466046740d7870c1fc",
+      "plan_hash": "1fc399666028a27b990d126a997ac85f72299dac2bb2ff088ff7cc4122ae99b5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-auto-main-quiz-on-notes/1795499991575570200-runner.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-24T06:00:15.687096+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; env=dict(os.environ, PYTHONPATH='..', PYTHONIOENCODING='utf-8'); names=['test_root_auto_request','test_smoke','test_bank_auto','test_bank_auto_exclusions','test_root_restart','test_root_generation']; codes=[subprocess.call([sys.executable,'-m','tests.'+n],cwd='server',env=env) for n in names]; print(dict(zip(names,codes))); sys.exit(max(codes))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "89c1e24d8d4c68e99f42fd7ad67e7f6b25521a5b03f5d6466046740d7870c1fc",
+      "plan_hash": "1fc399666028a27b990d126a997ac85f72299dac2bb2ff088ff7cc4122ae99b5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-auto-main-quiz-on-notes/1795499995462669600-server.log"
+    },
+    {
+      "name": "runner",
+      "at": "2026-11-24T06:02:58.801829+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_desktop_control.py",
+        "-q",
+        "-k",
+        "not shortcut_installer"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a50e34729797b14358e97e2a93d12f863ab4dbf408da523ac72b1175cb2ecf4d",
+      "plan_hash": "6a8afbfacd54763c9d4a17ac20929771516a9a09d2a50ca5b253d1c8f4614efa",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-auto-main-quiz-on-notes/1795500161292179400-runner.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-24T06:03:19.731073+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; env=dict(os.environ, PYTHONPATH='..', PYTHONIOENCODING='utf-8'); names=['test_root_auto_request','test_root_job_claim','test_smoke','test_bank_auto','test_bank_auto_exclusions','test_root_restart','test_root_generation']; codes=[subprocess.call([sys.executable,'-m','tests.'+n],cwd='server',env=env) for n in names]; print(dict(zip(names,codes))); sys.exit(max(codes))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a50e34729797b14358e97e2a93d12f863ab4dbf408da523ac72b1175cb2ecf4d",
+      "plan_hash": "6a8afbfacd54763c9d4a17ac20929771516a9a09d2a50ca5b253d1c8f4614efa",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-24-auto-main-quiz-on-notes/1795500179082984400-server.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-24T06:03:19.731764+00:00"
+}

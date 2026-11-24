@@ -13,8 +13,8 @@ from runner import agent, desktop_control as control
 
 def test_auto_start_boundary_and_once_only():
     timer = control.AutoStart(100)
-    assert not timer.due(159.999)
-    assert timer.due(160)
+    assert not timer.due(114.999)
+    assert timer.due(115)
     assert not timer.due(500)
 
 

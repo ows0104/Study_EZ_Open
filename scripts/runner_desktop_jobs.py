@@ -133,7 +133,7 @@ def operate(db, user, runs, subjects, request, window):
             return
         for row in rows:
             if row['autoReady']:
-                ensure_auto_job(db, row['subject'], row['runId'], row['kind'], '프로그램 1분 자동 시작')
+                ensure_auto_job(db, row['subject'], row['runId'], row['kind'], '프로그램 자동 시작')
         db.commit()
         return
     if action not in ('start', 'stop', 'cancel'):
