@@ -2,7 +2,7 @@
 
 2026-11-14 객관식 모드(docs/changes/2026-11-14-mcq-mode)로 시작해, 같은 날 두 선지 기능을 합쳤다
 (docs/changes/2026-11-14-choices-merge, `root-mcq/2`).
-문항·판·학습 기록은 읽기만 한다. 판의 `bank_snapshot`에서 basic·list·cloze·sequence 문항을 40개씩 묶어
+문항·판·학습 기록은 읽기만 한다. 판의 `bank_snapshot`에서 basic·list·cloze·sequence 문항을 12개씩 묶어(아래 `BATCH`)
 ① 오답만 받아 오고(`content/prompts/learning-links/mcq/write.md`) — 출처는 같은 강의·다른 강의·족보·직접 작성(사용자 2026-11-14)
 ② 표기 언어·병기·길이·단정 표현으로 티 나는 오답을 코드가 빼고(`studyez_contracts/roots/mcq.py` `row_errors`)
 ③ 남은 오답을 독립된 호출로 마지막 의학 검토 한 번 받은 뒤(`review.md`)
@@ -32,10 +32,15 @@ PROMPTS = Path(__file__).resolve().parents[1] / "content/prompts/learning-links/
 PROMPT = PROMPTS / "write.md"
 REVIEW_PROMPT = PROMPTS / "review.md"
 REVIEW_POLICY = "mcq-medical/3"   # 2026-11-14: 강의 맥락 기준·그림 전달(docs/changes/2026-11-14-mcq-images-lenient)
-BATCH = 40
+# 한 응답은 300초 안에 끝나야 한다(docs/changes/2026-11-24-main-quiz-speed). Codex는 응답이 300초 동안 조용하면
+# 끊고 처음부터 다시 받는데, 구조화 출력은 다 쓸 때까지 조용하다. 40문항 묶음의 답은 1.3만~2.2만 토큰(초당 45쯤)이라
+# 그 선에 걸려 묶음 하나가 5분에 끝나기도, 여섯 번 다시 받아 42분이 걸리기도 했다(2026-11-23 43호출 중 25호출).
+# 재생(261123_03, 15문항 두 묶음)은 6.6천·7.1천 토큰에 166·178초였다. 묶음마다 1.75배쯤 흔들리므로 12문항으로 잡는다
+# (보통 5천~6천 토큰, 2~2.5분). 묶음이 늘어난 만큼 함께 도는 수를 Codex 자리 수(8)까지 올린다.
+BATCH = 12
 ATTEMPTS = 2
 ROUNDS = 2
-WORKERS = 3
+WORKERS = 8
 _STR = {"type": "string"}
 
 JOKBO = {"type": "object", "additionalProperties": False, "required": list(contract.JOKBO_KEYS),
@@ -44,7 +49,9 @@ WRONG = {"type": "array", "items": {"type": "object", "additionalProperties": Fa
                                   "required": ["group", "text", "parts", "source", "basis", "why_tempting", "why_wrong", "jokbo"],
                                   "properties": {"group": {"type": "integer"}, "text": _STR, "parts": {"type": "array", "items": _STR},
                                                  "source": {"type": "string", "enum": list(contract.SOURCES)},
-                                                 "basis": _STR, "why_tempting": _STR, "why_wrong": _STR, "jokbo": JOKBO}}}
+                                                 "basis": _STR, "why_tempting": _STR, "why_wrong": _STR,
+                                                 # 족보에서 온 오답만 채운다. 나머지는 null — 빈 문자열 다섯 칸이 출력의 5분의 1이었다.
+                                                 "jokbo": {"anyOf": [JOKBO, {"type": "null"}]}}}}
 PROPOSALS = {"type": "object", "additionalProperties": False, "required": ["proposals"], "properties": {"proposals": {
     "type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["question_id", "wrong", "skip_reason"],
                                "properties": {"question_id": _STR, "wrong": WRONG, "skip_reason": _STR}}}}}

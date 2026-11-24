@@ -1,0 +1,116 @@
+{
+  "id": "2026-11-24-main-quiz-speed",
+  "title": "Main-Quiz 생성→선지 시간 단축 1차(선지 묶음)",
+  "area": "integration",
+  "created_at": "2026-11-24T04:53:05.311616+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-24T05:02:20.867499+00:00",
+      "evidence": "사용자 2026-11-24 이 세션: 「지금 메인덱 생성을 누르고 선지까지 나오는데 시간이 좀 오래걸려. 구조를 대대적으로 개선하고, 필요없거나 영양가 없는 부분은 최소화하는식으로 개선해줄래? 만약 수술적 절제가 필요하다면 나한테 물어보고 해도 좋아.」",
+      "scope": "quizbank/root_mcq.py(묶음 12·동시 8·jokbo null 허용), content/prompts/learning-links/mcq/write.md(jokbo 칸 한 줄), runner/connection_generation.py·runner/root_order.py(선지와 순서 판정을 나란히), tests/quizbank/test_root_mcq.py, tests/runner/test_connection_generation.py, 이 변경 폴더. 로컬 구현·검사·재생·Draft PR까지. 단계 삭제·/4 재배치·러너 재설치 제외",
+      "evidence_version": 2,
+      "source_hash": "886e2e19f1f60a08bd5e528c9c666b58d4eddd7ebfc3f36557a64e96807f2f8c",
+      "plan_hash": "74799f5c6efbfeeec3feb657a5735e1ab9543fa54203aeaeeda78a78aac2654b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "da262e2ab2e9e15808fcc829d4180a93f113ee1b2b58003947b2b3a8104ee980"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-24T05:20:14.354361+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7dee9bbc04155553a8a921ed7fcca092669d2b425eef52334100d4e732726cee",
+      "plan_hash": "74799f5c6efbfeeec3feb657a5735e1ab9543fa54203aeaeeda78a78aac2654b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-24-main-quiz-speed/1795497163540334100-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-24T05:20:27.016658+00:00",
+    "summary": "경계: 선지 생성기(quizbank/root_mcq.py)의 묶음·동시 수·작성 스키마, 러너의 게시 뒤 호출부. 계약 root-mcq/2·서버·웹 변경 없음을 확인(row_errors·entry_v2는 source가 jokbo일 때만 jokbo 칸을 읽는다). 재생에서 15문항 답이 예상보다 길어 묶음을 15→12로 낮춤. 남은 위험: 12문항 묶음과 강의 전체 벽시계는 러너 재설치 뒤 첫 출제에서 확인, 다른 단계(normalize·front/bank·review)의 300초 선은 그대로. 근거: tests/quizbank+tests/runner 2019 통과(바로가기 설치 검사 1개는 worktree에 .venv가 없어 제외), 261123_03 30문항 재생 166·178초.",
+    "evidence_version": 2,
+    "source_hash": "7dee9bbc04155553a8a921ed7fcca092669d2b425eef52334100d4e732726cee",
+    "plan_hash": "74799f5c6efbfeeec3feb657a5735e1ab9543fa54203aeaeeda78a78aac2654b",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-24T05:20:27.136277+00:00"
+}

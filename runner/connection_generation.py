@@ -266,9 +266,15 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     # 선지도 게시 직후 기본으로 붙인다(2026-11-14 사용자 「기본으로 설정해줘」, docs/changes/2026-11-14-choices-by-default).
     # 같은 날 주관식 「선지 보기」와 객관식 모드의 선지를 하나로 합쳐(docs/changes/2026-11-14-choices-merge)
     # root_choices 대신 root_mcq(`root-mcq/2`)를 부른다. 실패해도 게시 결과는 그대로다.
-    from .root_mcq import publish as publish_choices
-    publish_choices(client, subject, run_id, out, payload, model=model, run=run_forwarded)
     # 순서 맞추기 판정(2026-11-18, docs/changes/2026-11-18-ordering-screen). 실패해도 게시 결과·선지는 그대로다.
+    # 둘은 게시된 판만 읽고 서로의 결과를 쓰지 않는다: 나란히 돌려 판정이 선지를 기다리지 않게 한다
+    # (docs/changes/2026-11-24-main-quiz-speed). 둘 다 실패를 예외로 올리지 않는다.
+    from concurrent.futures import ThreadPoolExecutor
+    from .root_mcq import publish as publish_choices
     from .root_order import publish as publish_order
-    publish_order(client, subject, run_id, out, payload, model=model, run=run_forwarded)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        after = [pool.submit(step, client, subject, run_id, out, payload, model=model, run=run_forwarded)
+                 for step in (publish_choices, publish_order)]
+        for step in after:
+            step.result()
     return 0
