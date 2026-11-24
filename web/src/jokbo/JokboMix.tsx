@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { Icon } from "../shell/icons";
-import type { JokboBand, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
+import type { JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
 import { readJokboMix } from "../bank/mixLinks";
-import { postAnswer, putBand } from "./marks";
+import { useMarkWriter } from "./marks";
 import { JokboSolve, lectureTitle } from "./JokboPage";
-import { professorsOf, defaultScope, type JokboScope, type Verdict } from "./selection";
+import { professorsOf, defaultScope, type JokboScope } from "./selection";
 import { canSame, effectiveScope, laneItems, mixKey, shuffle, splitKey, spread, tagItems, type MixOrder } from "./mixOrder";
 import "../bank/main-quiz.css";
 import "../bank/root-batch.css";
@@ -39,10 +39,7 @@ function Mix({ eventIds }: { eventIds: string[] }) {
   const [round, setRound] = useState(0);
   // 시작 화면에서 고른 범위 전부. 이것을 통째로 푼 판만 회독으로 센다(강의마다 1).
   const range = useRef<{ items: JokboItem[]; events: string[] } | null>(null);
-  const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
-  const bandsRef = useRef(bands);
-  bandsRef.current = bands;
-  const pending = useRef<Record<string, Promise<unknown>>>({});
+  const { bands, setBands, answered, rate, unanswer } = useMarkWriter(splitKey);
 
   useEffect(() => { document.title = "족보 모아풀기 · Study_EZ"; }, []);
 
@@ -89,20 +86,6 @@ function Mix({ eventIds }: { eventIds: string[] }) {
     return doc ? professorsOf(doc, itemId) : { kind: "unknown", professors: [] };
   }, [lookup]);
 
-  const answered = useCallback((key: string, verdict: Verdict) => {
-    const { eventId, itemId } = splitKey(key);
-    if (verdict === "wrong") setBands(prev => ({ ...prev, [key]: "high" }));
-    pending.current[key] = postAnswer(eventId, itemId, verdict).catch(() => { /* 기록 실패는 풀이를 막지 않는다 */ });
-  }, []);
-  const rate = useCallback((key: string, band: JokboBand | null) => {
-    const before = bandsRef.current[key] ?? null;
-    if (before === band) return;
-    const { eventId, itemId } = splitKey(key);
-    setBands(prev => ({ ...prev, [key]: band }));
-    const after = pending.current[key] ?? Promise.resolve();
-    void after.then(() => putBand(eventId, itemId, band)).catch(() => { /* 다음 불러오기에서 서버 값으로 돌아간다 */ });
-  }, []);
-
   function begin() {
     const parts = live.map(l => tagItems(l.eventId, itemsOf(l)));
     const items = order === "spread" ? spread(parts) : shuffle(parts);
@@ -126,7 +109,7 @@ function Mix({ eventIds }: { eventIds: string[] }) {
   if (queue) return (
     <main className="main-quiz-learning jokbo-learning">
       <JokboSolve key={round} items={queue} bands={bands} titleOf={titleOf} hideableTitle whoOf={whoOf}
-        onExit={() => setQueue(null)} onLeave={back} onRetry={retry} onAnswered={answered} onRate={rate}
+        onExit={() => setQueue(null)} onLeave={back} onRetry={retry} onAnswered={answered} onRate={rate} onUnanswer={unanswer}
         onFinish={queue === range.current?.items ? finished : undefined} />
     </main>
   );

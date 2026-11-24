@@ -240,12 +240,14 @@ def main() -> None:
     # 2026-11-14: 오답노트 — 푼 결과·상중하 표시(jokbo_mark 표), 강의를 가리지 않는 오답노트.
     # 2026-11-14: 족보 회독 — 끝 화면에 닿으면 1회독(jokbo_round 표).
     # 2026-11-18: 족보 모아풀기 — 여러 시간표 칸의 족보 요약(읽기).
+    # 2026-11-24: 족보 풀이 Z로 고른 답 취소 — answer가 준 before로 jokbo_mark 한 줄을 돌린다.
     jokbo_routes = """GET /api/jokbo/events/{event_id}
 GET /api/jokbo/events/{event_id}/summary
 POST /api/jokbo/summaries
 GET /api/jokbo/marks
 GET /api/jokbo/wrong-notes
 POST /api/jokbo/events/{event_id}/items/{item_id}/answer
+POST /api/jokbo/events/{event_id}/items/{item_id}/answer/undo
 PUT /api/jokbo/events/{event_id}/items/{item_id}/mark
 POST /api/jokbo/events/{event_id}/rounds
 PUT /api/admin/jokbo/events/{event_id}

@@ -6,7 +6,7 @@ import { useNoteLecture } from "../notes/noteLecture";
 import { Icon } from "../shell/icons";
 import type { JokboBand, JokboDoc, JokboItem, JokboMark, JokboResponse } from "../types/jokbo";
 import { JokboBody } from "./JokboBody";
-import { RATINGS, postAnswer, putBand, shownBand, type Shown } from "./marks";
+import { RATINGS, shownBand, useMarkWriter, type Shown } from "./marks";
 import {
   changedChoices, defaultScope, grade, needed, otherYears, pickItems, professorsOf, sameItemIds, yearsOf,
   type JokboScope, type Verdict,
@@ -39,11 +39,8 @@ export function JokboPage() {
   const [round, setRound] = useState(0);
   // 진입 화면에서 고른 범위. 이것을 통째로 푼 판만 회독으로 센다.
   const range = useRef<JokboItem[] | null>(null);
-  const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
-  const bandsRef = useRef(bands);
-  bandsRef.current = bands;
-  // 채점 기록(틀리면 서버가 high를 붙인다)이 끝난 뒤에 표시를 쓴다. 순서가 뒤집히면 고른 표시가 high로 덮인다.
-  const pending = useRef<Record<string, Promise<unknown>>>({});
+  const split = useCallback((itemId: string) => ({ eventId, itemId }), [eventId]);
+  const { bands, setBands, answered, rate, unanswer } = useMarkWriter(split);
 
   useEffect(() => {
     let alive = true;
@@ -51,20 +48,7 @@ export function JokboPage() {
       .then(got => { if (alive) setBands(prev => ({ ...Object.fromEntries(got.marks.map(m => [m.itemId, m.band])), ...prev })); })
       .catch(() => { /* 표시를 못 읽어도 풀 수는 있다 */ });
     return () => { alive = false; };
-  }, [eventId]);
-
-  const answered = useCallback((itemId: string, verdict: Verdict) => {
-    if (verdict === "wrong") setBands(prev => ({ ...prev, [itemId]: "high" }));
-    pending.current[itemId] = postAnswer(eventId, itemId, verdict).catch(() => { /* 기록 실패는 풀이를 막지 않는다 */ });
-  }, [eventId]);
-
-  const rate = useCallback((itemId: string, band: JokboBand | null) => {
-    const before = bandsRef.current[itemId] ?? null;
-    if (before === band) return; // 틀려서 서버가 이미 high, 또는 원래 표시 그대로
-    setBands(prev => ({ ...prev, [itemId]: band }));
-    const after = pending.current[itemId] ?? Promise.resolve();
-    void after.then(() => putBand(eventId, itemId, band)).catch(() => { /* 다음 불러오기에서 서버 값으로 돌아간다 */ });
-  }, [eventId]);
+  }, [eventId, setBands]);
 
   useEffect(() => {
     let alive = true;
@@ -94,7 +78,7 @@ export function JokboPage() {
         ? <JokboSolve key={round} items={queue} bands={bands}
             titleOf={() => lectureTitle(data.doc)} whoOf={it => professorsOf(data.doc, it.id)}
             onExit={() => setQueue(null)} onLeave={back} onRetry={start} onAnswered={answered} onRate={rate}
-            onFinish={queue === range.current ? finished : undefined} />
+            onUnanswer={unanswer} onFinish={queue === range.current ? finished : undefined} />
         : <JokboStart data={data} onBack={back} onStart={startRange} />}
     </main>
   );
@@ -216,7 +200,7 @@ const BACK_ICON = (
  * 풀이·끝 화면. 강의 하나 족보와 족보 모아풀기(`JokboMix`)가 같이 쓴다(2026-11-18).
  * `titleOf`: 머리줄 강의 제목(문항이 없으면 끝 화면), `whoOf`: 그 문항의 출제 구획·교수.
  */
-export function JokboSolve({ items, titleOf, hideableTitle, whoOf, bands, onExit, onLeave, onRetry, onAnswered, onRate, onFinish }: {
+export function JokboSolve({ items, titleOf, hideableTitle, whoOf, bands, onExit, onLeave, onRetry, onAnswered, onRate, onUnanswer, onFinish }: {
   items: JokboItem[];
   titleOf: (item?: JokboItem) => string;
   /** 족보 모아풀기(2026-11-24): 우상단 「강의명 숨기기」 스위치를 그린다. */
@@ -226,6 +210,8 @@ export function JokboSolve({ items, titleOf, hideableTitle, whoOf, bands, onExit
   onExit: () => void; onLeave: () => void; onRetry: (items: JokboItem[]) => void;
   onAnswered: (itemId: string, verdict: Verdict) => void;
   onRate: (itemId: string, band: JokboBand | null) => void;
+  /** z로 고른 답을 취소한다. 채점 기록과 그 답으로 붙은 표시를 답 전으로 돌린다. */
+  onUnanswer: (itemId: string, verdict: Verdict) => void;
   /** 고른 범위 전부를 푸는 판이면 있다. 끝 화면에 닿을 때 한 번 부른다(회독 1). */
   onFinish?: () => void;
 }) {
@@ -233,8 +219,6 @@ export function JokboSolve({ items, titleOf, hideableTitle, whoOf, bands, onExit
   const [picked, setPicked] = useState<number[]>([]);
   const [shown, setShown] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
-  // z로 직전 표시를 되돌려 그 문제의 답 화면에 와 있다. 한 번 더 고르기 전까지 z를 또 받지 않는다.
-  const [undone, setUndone] = useState(false);
   const [titleHidden, toggleTitleHidden] = useLectureNameHidden();
   const item = items[index] as JokboItem | undefined;
   const verdict = shown ? results[results.length - 1]?.verdict : undefined;
@@ -258,27 +242,33 @@ export function JokboSolve({ items, titleOf, hideableTitle, whoOf, bands, onExit
     setIndex(i => i + 1);
     setPicked([]);
     setShown(false);
-    setUndone(false);
     window.scrollTo({ top: 0 });
   }, [item, shown, bands, onRate]);
 
   /**
-   * z: 다른 퀴즈처럼 직전 평가(모르겠음·주의·괜찮음)를 되돌린다(2026-11-15 사용자 지시).
-   * 직전 문제의 답 화면으로 돌아가고 오답노트 표시는 고르기 전 값으로 돌린다. 끝 화면에서도 된다.
-   * 답을 막 본 문제는 채점 기록이 이미 남아 되돌리지 않는다.
+   * z: 직전 화면으로 한 칸씩, 이번 판 처음까지(2026-11-15 도입, 2026-11-24 사용자 「일반 복습 강의처럼 체크한 답도 취소」).
+   *   표시를 고른 뒤 → 그 문제 답 화면. 오답노트 표시는 고르기 전 값으로.
+   *   답 화면     → 고르기 전 문제 화면. 고른 답의 채점 기록·그 답으로 붙은 표시도 답 전으로.
+   * 끝 화면에서도 된다. 회독은 끝 화면에 처음 닿을 때 센 그대로다.
    */
   const undo = useCallback(() => {
-    if (shown || undone) return;
     const last = results[results.length - 1];
-    if (!last || last.band === undefined) return;
-    onRate(last.item.id, last.before ?? null);
-    setResults(prev => prev.map((r, i) => (i === prev.length - 1 ? { ...r, band: undefined, before: undefined } : r)));
-    setIndex(i => i - 1);
-    setPicked(last.picked);
-    setShown(true);
-    setUndone(true);
+    if (!last) return;
+    if (shown) {
+      onUnanswer(last.item.id, last.verdict);
+      setResults(prev => prev.slice(0, -1));
+      setPicked([]);
+      setShown(false);
+    } else {
+      if (last.band === undefined) return;
+      onRate(last.item.id, last.before ?? null);
+      setResults(prev => prev.map((r, i) => (i === prev.length - 1 ? { ...r, band: undefined, before: undefined } : r)));
+      setIndex(i => i - 1);
+      setPicked(last.picked);
+      setShown(true);
+    }
     window.scrollTo({ top: 0 });
-  }, [shown, undone, results, onRate]);
+  }, [shown, results, onRate, onUnanswer]);
 
   const pick = useCallback((n: number) => {
     if (!item || shown) return;

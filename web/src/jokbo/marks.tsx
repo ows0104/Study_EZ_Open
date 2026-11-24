@@ -1,5 +1,7 @@
+import { useCallback, useRef, useState } from "react";
 import { api } from "../api";
-import type { JokboBand, JokboMark } from "../types/jokbo";
+import type { JokboAnswerMark, JokboBand, JokboMark, JokboMarkBefore, JokboResult } from "../types/jokbo";
+import type { Verdict } from "./selection";
 
 /**
  * 족보 오답노트 표시(2026-11-14 개편). 예습 퀴즈의 헷갈려요/이해했어요처럼 답을 본 뒤 하나를 고른다.
@@ -26,12 +28,71 @@ function itemPath(eventId: string, itemId: string) {
   return `/api/jokbo/events/${encodeURIComponent(eventId)}/items/${encodeURIComponent(itemId)}`;
 }
 
-export function postAnswer(eventId: string, itemId: string, result: "correct" | "wrong" | "ungraded") {
-  return api<JokboMark>(`${itemPath(eventId, itemId)}/answer`, { method: "POST", body: JSON.stringify({ result }) });
+export function postAnswer(eventId: string, itemId: string, result: JokboResult) {
+  return api<JokboAnswerMark>(`${itemPath(eventId, itemId)}/answer`, { method: "POST", body: JSON.stringify({ result }) });
 }
 
 export function putBand(eventId: string, itemId: string, band: JokboBand | null) {
   return api<JokboMark>(`${itemPath(eventId, itemId)}/mark`, { method: "PUT", body: JSON.stringify({ band }) });
+}
+
+/** Z로 고른 답 취소(2026-11-24). `before`는 그 답을 기록한 `postAnswer`가 돌려준 값이다. */
+export function undoAnswer(eventId: string, itemId: string, result: JokboResult, before: JokboMarkBefore) {
+  return api<JokboMark>(`${itemPath(eventId, itemId)}/answer/undo`, { method: "POST", body: JSON.stringify({ result, before }) });
+}
+
+/**
+ * 족보 풀이의 오답노트 표시와 서버 쓰기(강의 하나 족보·모아풀기 공용).
+ *
+ * 같은 문항의 쓰기는 보낸 순서대로 간다 — 답 기록 → 표시 → 답 취소.
+ * 순서가 뒤집히면 고른 표시가 채점의 high로 덮이고, 답 취소는 답 기록이 준 `before`가 있어야 보낼 수 있다.
+ * 쓰기 실패는 풀이를 막지 않는다. 다음 불러오기에서 서버 값으로 돌아간다.
+ */
+export function useMarkWriter(split: (key: string) => { eventId: string; itemId: string }) {
+  const [bands, setBands] = useState<Record<string, JokboBand | null>>({});
+  const bandsRef = useRef(bands);
+  bandsRef.current = bands;
+  const queue = useRef<Record<string, Promise<unknown>>>({});
+  // 문항마다 아직 취소하지 않은 답 기록과, 답 기록 직전의 화면 표시(없었으면 undefined).
+  const answers = useRef<Record<string, { mark: Promise<JokboAnswerMark | null>; shown: JokboBand | null | undefined }[]>>({});
+
+  const run = useCallback(<T,>(key: string, step: () => Promise<T>): Promise<T | null> => {
+    const next = (queue.current[key] ?? Promise.resolve()).then(step).catch(() => null);
+    queue.current[key] = next;
+    return next;
+  }, []);
+
+  const answered = useCallback((key: string, verdict: Verdict) => {
+    const { eventId, itemId } = split(key);
+    const shown = key in bandsRef.current ? bandsRef.current[key] : undefined;
+    if (verdict === "wrong") setBands(prev => ({ ...prev, [key]: "high" }));
+    const mark = run(key, () => postAnswer(eventId, itemId, verdict));
+    (answers.current[key] ??= []).push({ mark, shown });
+  }, [split, run]);
+
+  const rate = useCallback((key: string, band: JokboBand | null) => {
+    if ((bandsRef.current[key] ?? null) === band) return; // 틀려서 서버가 이미 high, 또는 원래 표시 그대로
+    const { eventId, itemId } = split(key);
+    setBands(prev => ({ ...prev, [key]: band }));
+    void run(key, () => putBand(eventId, itemId, band));
+  }, [split, run]);
+
+  const unanswer = useCallback((key: string, verdict: Verdict) => {
+    const last = answers.current[key]?.pop();
+    if (!last) return;
+    const { eventId, itemId } = split(key);
+    setBands(prev => {
+      const next = { ...prev };
+      if (last.shown === undefined) delete next[key]; else next[key] = last.shown;
+      return next;
+    });
+    void run(key, async () => {
+      const got = await last.mark;
+      return got?.before ? undoAnswer(eventId, itemId, verdict, got.before) : null; // 기록이 실패했으면 취소할 것도 없다
+    });
+  }, [split, run]);
+
+  return { bands, setBands, answered, rate, unanswer };
 }
 
 /** 오답노트 카드 아래 세 버튼. 지금 표시가 눌려 있다. */
