@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-26-calendar-readline-colors",
+  "title": "캘린더 회독 줄 색: 예습 연하게·복습 진하게·족보 연한 빨강",
+  "area": "site",
+  "created_at": "2026-11-25T15:12:52.323171+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-25T15:12:52.323209+00:00"
+}
