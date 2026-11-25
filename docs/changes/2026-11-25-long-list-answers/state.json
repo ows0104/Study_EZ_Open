@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-25-long-list-answers",
+  "title": "Main-Quiz 긴 나열 답 줄이기",
+  "area": "generation",
+  "created_at": "2026-11-25T02:50:34.092544+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-25T02:50:34.092568+00:00"
+}
