@@ -39,6 +39,7 @@ from studyez_contracts.learning_links import concept_tree
 from studyez_contracts.bank import importance as imp
 from studyez_contracts.roots import document_hash, map_tree
 from quizbank import withheld_pages
+from runner import marked_pages
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPTS = ROOT / 'content/prompts/learning-links'
@@ -136,6 +137,13 @@ def refs_ok(value, pages, withheld=None):
             hidden = sorted(set(value['pages']) & set((withheld or {}).get(value['source_id'], ())))
             require(not hidden, f"{value['source_id']} page {hidden} was withheld by the operator and shows nothing; cite only shown pages")
         for x in value.values(): refs_ok(x, pages, withheld)
+
+
+def marked_ok(marked, pages):
+    """Marked pages name a source of this run and pages inside it."""
+    for r in [*marked['pages'], *marked['instruction'].get('refs', [])]:
+        require(r['source_id'] in pages, 'marked_pages: unknown source ' + str(r['source_id']))
+        require(all(1 <= p <= pages[r['source_id']] for p in r['pages']), 'marked_pages: outside page')
 
 
 def audit_schema():
@@ -302,6 +310,15 @@ class Front:
             extra['modelTitle'] = value.get('title')
             value['title'] = self.title
             write(result, value)
+        admin = (read(self.out / 'input.json').get('marked_pages') if kind == 'point' and self.v4 else None)
+        profile = value.get('notebook_profile')
+        if admin is not None and type(profile) is dict and profile.get('marked_pages') != admin:
+            # The administrator's record outranks what the model read (2026-11-25-professor-marked-pages, 결정 4).
+            if not (work / ('model-' + result.name)).exists():
+                (work / ('model-' + result.name)).write_bytes(result.read_bytes())
+            extra['modelMarkedPages'] = profile.get('marked_pages')
+            profile['marked_pages'] = admin
+            write(result, value)
         self.validate(kind, value)
         return value, extra
 
@@ -346,6 +363,11 @@ class Front:
         pages = {s['source_id']: s['page_count'] for s in inventory}
         ctx = {'subject': self.packet['subject'], 'runId': self.packet['runId'], 'title': self.title,
                'scope': map_tree.lecture_scope(self.title, pages, self.packet.get('scope', '')), 'sources': inventory}
+        # The administrator's marked pages (docs/changes/2026-11-25-professor-marked-pages), frozen with the material.
+        marked = self.admin_marked() if self.v4 else None
+        if marked is not None:
+            marked_ok(marked, pages)
+            ctx['marked_pages'] = marked
         write(self.out / 'input.json', ctx)
         write(self.out / 'material-hashes.json', tree_hashes(building))
         building.replace(material)
@@ -353,6 +375,12 @@ class Front:
 
     def pages(self):
         return {s['source_id']: s['page_count'] for s in read(self.out / 'input.json')['sources']}
+
+    def admin_marked(self):
+        """The administrator's marked pages for this lecture: frozen in this front folder the first time."""
+        out = self.out.resolve()
+        runs = out.parents[2] if len(out.parents) > 2 else out.parent
+        return marked_pages.frozen(out, runs, self.packet['subject'], self.packet['runId'])
 
     def withheld(self):
         return {s['source_id']: s['withheld_pages'] for s in read(self.out / 'input.json')['sources'] if s.get('withheld_pages')}
@@ -365,6 +393,8 @@ class Front:
             v4.check_points(value)
         elif kind == 'point': imp.point_table(value['points'], value['notebook_profile'])  # every basis is computable
         refs_ok(value, self.pages(), self.withheld())
+        if kind == 'point' and (value.get('notebook_profile') or {}).get('marked_pages') is not None:
+            marked_ok(value['notebook_profile']['marked_pages'], self.pages())
         key, rows = ('concept_id', value['concepts']) if kind == 'map' else ('point_id', value['points'])
         ids = [r[key] for r in rows]
         require(len(ids) == len(set(ids)), 'duplicate ID')
