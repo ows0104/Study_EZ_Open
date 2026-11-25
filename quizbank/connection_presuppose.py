@@ -346,11 +346,12 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
             stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
             bank = render(merged, stimuli)
             again = review(f'{X}review{TAG}-{k + 1}', changed) if changed else {}
-            # An operator's rewrite is also undone when it made the answer itself worse than the published question's
-            # (the finding was about the design; a new factual doubt is not what was asked for).
+            # An operator's rewrite is also undone when its re-review is worse than the published question's review, in
+            # the answer or in the design. Judged only against the operator's finding (design: wrong), any rewrite
+            # looks better, and a rewrite left with a design doubt and no fix budget is no task: the published task
+            # went missing and the whole lecture was refused (2026-11-25 job 746 / 261123_06, Q072·Q100).
             reverted = [q for q in changed if q in again and (
-                v3.worse(shown[q], again[q])
-                or q in pending and v3.RANK[again[q]['verdict']] > v3.RANK[before_reviews[q]['verdict']])]
+                v3.worse(shown[q], again[q]) or q in pending and v3.worse(before_reviews[q], again[q]))]
             if reverted and not [q for q in changed if q not in reverted]:
                 # Every fix of the round was worse: the round is undone as a whole, as the first run does
                 # (connection_generate_v4). Merging the empty rest again is not a fix output — 2026-11-17 job 670 /
