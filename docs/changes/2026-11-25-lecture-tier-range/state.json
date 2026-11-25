@@ -9,12 +9,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-25T12:35:34.791647+00:00",
-      "evidence": "사용자 2026-11-25 채팅: 「강의마다 따로 저장되게 바꿔줘. 그리고 가격대 선택처럼 해줘. 중요도 선이 있고 양쪽에 동그라미가 있어서 범위를 선택할 수 있게.」 계획 확인 질문에 「진행」, 처음 값 질문에 「Essential - Important」, 이어서 「아니지 선분이 4개, 점이 5개이고, 선분에 중요도가 적혀있어야지.」",
-      "scope": "plan.md 범위(content.py focus 읽기·routes/root_learning.py focus 호출부·RootToday.tsx 슬라이더·main-quiz.css 필터 구역·server tests·web 고정물), Draft PR까지. master 병합·DB 스키마·운영 데이터·문항 변경 제외",
+      "at": "2026-11-25T14:03:54.210491+00:00",
+      "evidence": "사용자 2026-11-25 채팅(#261 병합 뒤, 스크린숏 첨부): 「여기에서 저 선분 간격 좀 벌려줘. 지금 글자가 너무 붙어있는듯. 그리고 숫자는 중요도 아래에 넣는거 어때?」",
+      "scope": "spec L5a: main-quiz.css 슬라이더·오늘 추천 글 칸 폭, 카드 수를 이름 아래로. 웹 표시만, Draft PR까지. master 병합 제외",
       "evidence_version": 2,
-      "source_hash": "b4c687ab1f39c785b8aafdd0ff82fa1f37b6a9a5647dd9af89bb46508cccc0d9",
-      "plan_hash": "7a3a0ae9588bb3a5b1e8f77ca4f1306bdd82fec499b4bc818ef44871ebbc316c",
+      "source_hash": "6137ddd3cbaec0f59685dcc1aec355ea034bd3cb182928df3a3a1301c727f8b3",
+      "plan_hash": "1c5db317e8716a1ae3c08185de5612f114edbda6b652d308737eb8836bc099ce",
       "inputs": [
         ".github",
         "bridge",
@@ -32,7 +32,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "2c15920c862909bcc72562cdba43a0d17e4b14dba95bee5e7344308c046618bf"
+      "release_hash": "d814ed29a1b3b05bedfbf81406e7d36b35453287045afcd5a08a75b5714da2f0"
     }
   },
   "checks": [],
@@ -42,5 +42,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-25T12:35:37.233208+00:00"
+  "updated_at": "2026-11-25T14:04:11.079539+00:00"
 }

@@ -155,7 +155,7 @@
 .mq-progress .is-learned{background:var(--accent)}
 .mq-today{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 24px;border:1px solid var(--accent-line);border-radius:14px;
   background:linear-gradient(135deg,var(--accent-soft),var(--surface) 70%)}
-.mq-today-text{display:flex;flex-direction:column;gap:4px;min-width:0;margin:0}
+.mq-today-text{display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-width:0;margin:0}
 .mq-today h2{margin:0;font-size:13px;font-weight:600;color:var(--accent-ink);letter-spacing:0}
 .mq-today p{margin:0;font-size:17px;color:var(--ink)}
 .mq-today p b{font-variant-numeric:tabular-nums}
@@ -168,11 +168,11 @@
 /* 오늘 학습 중요도 범위(2026-11-25-lecture-tier-range; 처음은 2026-11-12 칩). 선분 4개·경계 점 5개.
    선분·점·이름은 손잡이 반지름만큼 안쪽(--pad)에 그려, range 입력의 손잡이 중심(양 끝에서 반지름 안쪽)과 맞춘다. */
 .mq-focus{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 16px;margin-top:12px}
-.mq-range{--thumb:22px;--pad:calc(var(--thumb) / 2);position:relative;flex:1 1 320px;max-width:460px;min-width:0}
+.mq-range{--thumb:22px;--pad:calc(var(--thumb) / 2);position:relative;flex:1 1 420px;max-width:600px;min-width:0}
 .mq-range-stops{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 var(--pad)}
-.main-quiz-learning .mq-range-stops button{display:flex;align-items:baseline;justify-content:center;gap:4px;min-height:0;height:auto;padding:2px 0 3px;
+.main-quiz-learning .mq-range-stops button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;min-height:0;height:auto;padding:2px 0 4px;line-height:1.2;
   border:0;background:none;color:var(--ink-3);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;opacity:1;min-width:0;white-space:nowrap}
-.mq-range-stops button b{font-weight:700;font-variant-numeric:tabular-nums;font-size:11.5px;opacity:.85}
+.mq-range-stops button b{font-weight:600;font-variant-numeric:tabular-nums;font-size:11.5px;opacity:.7}
 .main-quiz-learning .mq-range-stops button.is-in{color:var(--accent-ink,var(--accent))}
 .mq-range-stops button.is-empty{opacity:.55}
 .mq-range-stops button:disabled{cursor:default}
