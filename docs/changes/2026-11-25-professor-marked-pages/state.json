@@ -33,12 +33,49 @@
       "release_hash": "7ed96e1f906267439a9c1affd3934b446e72dae5e03ea8ed5a23c8ba1d5f0102"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-25T11:05:08.964252+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "tests",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4e547e940cdef6b584922c99529078802c8439b4f8afc4b5033da2b7f916b0ce",
+      "plan_hash": "484d49433e68353595f248ef4094bb83b19d06b7b3dda1fd044e91d6779dd685",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-25-professor-marked-pages/1795603381073267300-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-25T10:15:17.387383+00:00"
+  "updated_at": "2026-11-25T11:05:08.966407+00:00"
 }
