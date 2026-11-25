@@ -362,22 +362,98 @@ def attach_points(points_doc, output, off_goal_ids, page_counts, reserved=()):
     return value, decisions
 
 
+# ---------------------------------------------------------------- marked pages (2026-11-25-professor-marked-pages)
+MARKED_SOURCES = ('notes', 'admin')
+MARKED_ORIGIN = 'marked'
+
+
+def check_marked_pages(value):
+    """`notebook_profile.marked_pages`: the professor's words that name pages for the exam, and those pages.
+
+    {instruction: {quote, refs, year, source: notes|admin}, marker, pages: [{source_id, pages}]}. The pages are the
+    lecture's own pages (what the words point at); the instruction refs are where the words are written."""
+    def refs(rows, what):
+        require(type(rows) is list and rows and all(type(r) is dict and type(r.get('source_id')) is str and r['source_id']
+                and type(r.get('pages')) is list and r['pages'] and all(type(n) is int and n >= 1 for n in r['pages'])
+                for r in rows), f'marked_pages: {what} need source_id and physical pages')
+        require(len({r['source_id'] for r in rows}) == len(rows), f'marked_pages: {what} name each source once')
+    require(type(value) is dict, 'marked_pages: object required')
+    ins = value.get('instruction')
+    require(type(ins) is dict and type(ins.get('quote')) is str and ins['quote'].strip(), "marked_pages: the professor's words are required")
+    require(type(ins.get('year')) is int and ins.get('source') in MARKED_SOURCES, 'marked_pages: instruction year and source (notes|admin)')
+    if ins['source'] == 'notes':
+        refs(ins.get('refs'), 'instruction refs')
+    require(type(value.get('marker')) is str, 'marked_pages: marker must be a string')
+    refs(value.get('pages'), 'pages')
+    return value
+
+
+def marked_pages(profile, exam_date=None):
+    """{source_id: set(pages)} the importance floor applies to, or None. Words found only in an earlier year's notes
+    are reported for the admin and not applied (user decision 3, 2026-11-25); the admin's record always applies."""
+    value = (profile or {}).get('marked_pages')
+    if value is None:
+        return None
+    check_marked_pages(value)
+    ins = value['instruction']
+    year = int(exam_date[:4]) if type(exam_date) is str and exam_date[:4].isdigit() else None
+    if ins['source'] != 'admin' and (year is None or ins['year'] < year):
+        return None
+    return {r['source_id']: set(r['pages']) for r in value['pages']}
+
+
+def marked_points(brief, pages):
+    """Brief points cited on a marked page."""
+    return [p['point_id'] for p in brief['points']
+            if any(set(e.get('pages') or []) & pages.get(e['source_id'], set()) for e in p.get('evidence') or [])]
+
+
+def marked_questions(brief, coverage_rows, pages):
+    """Questions that answer a component of a goal of a marked point's target (the coverage judgment's own rows;
+    `location=answer` only, so a question that merely mentions the page in its stem does not count)."""
+    pids = set(marked_points(brief, pages))
+    tids = {tid for p in brief['points'] if p['point_id'] in pids for tid in p.get('target_ids') or []}
+    dids = {d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']}
+    return sorted({qid for r in coverage_rows if r['direction_id'] in dids for qid in covering(r)})
+
+
+def marked_report(brief, coverage_rows, pages, table):
+    """Per marked page: points, goals, covered goals and Core+ questions (reported, never a gate)."""
+    rows = index_by(coverage_rows, 'direction_id')
+    tiers = table['questions']
+    out = []
+    for sid, nums in sorted(pages.items()):
+        for n in sorted(nums):
+            one = {sid: {n}}
+            pids = set(marked_points(brief, one))
+            tids = {tid for p in brief['points'] if p['point_id'] in pids for tid in p.get('target_ids') or []}
+            goals = [d for t in brief['targets'] if t['target_id'] in tids for d in t['directions']]
+            qids = marked_questions(brief, coverage_rows, one)
+            out.append({'source_id': sid, 'page': n, 'points': len(pids), 'goals': len(goals),
+                        'covered': sum(1 for d in goals if d['direction_id'] in rows and rows[d['direction_id']]['status'] == 'covered'),
+                        'coreOrAbove': sum(1 for q in qids if q in tiers and imp.ORDER[tiers[q]['tier']] >= imp.ORDER[imp.MARKED_TIER])})
+    return out
+
+
 def check_points(points_doc):
     """A /4 exam-point document: schema version, IDs, the notebook profile; no basis on any point."""
     require(type(points_doc) is dict and points_doc.get('schema_version') == 'exam-point-extract/4', 'v4: points are not exam-point-extract/4')
     profile = points_doc.get('notebook_profile')
     require(type(profile) is dict and profile.get('emphasis_style') in imp.STYLES, 'v4: notebook_profile.emphasis_style required')
+    if 'marked_pages' in profile:
+        check_marked_pages(profile['marked_pages'])
     ids = [p.get('point_id') for p in points_doc.get('points', [])]
     require(ids and len(ids) == len(set(ids)), 'v4: point IDs')
     require(all('importance_basis' not in p for p in points_doc['points']), 'v4: exam points carry no importance (R1)')
     return points_doc
 
 
-def question_table(basis, profile, bank):
-    """The importance table of the final bank: every question needs its basis, nothing else is accepted."""
+def question_table(basis, profile, bank, marked=None):
+    """The importance table of the final bank: every question needs its basis, nothing else is accepted.
+    `marked`: question ids answering a marked page (importance-basis/2), None for /1."""
     qids = [q['question_id'] for q in bank['questions']]
     require(set(basis) == set(qids), 'v4 importance: every question of the bank needs exactly one basis')
-    return imp.question_table({qid: basis[qid] for qid in qids}, profile)
+    return imp.question_table({qid: basis[qid] for qid in qids}, profile, marked)
 
 
 def project_importance(bank, table):
@@ -394,7 +470,7 @@ def project_importance(bank, table):
         tier = max(own, key=imp.ORDER.get) if own else c['tier']
         c.update(tier=tier, importance=imp.BANK_IMPORTANCE[tier])
     value['build_meta']['schema_version'] = '3.3'
-    proof = {'policy': imp.POLICY, 'table': table, 'sourceBankHash': document_hash(bank), 'schemaVersion': bank['build_meta']['schema_version'],
+    proof = {'policy': table['policy'], 'table': table, 'sourceBankHash': document_hash(bank), 'schemaVersion': bank['build_meta']['schema_version'],
              'original': {x.get('question_id', x.get('concept_id')): {'tier': x['tier'], 'importance': x['importance']}
                           for x in [*bank['questions'], *bank['concepts']]},
              'fallback': []}
@@ -430,7 +506,10 @@ def importance_warnings(table):
     rows = table['questions']
     _, warn = imp.must_know_share(list(rows.values()))
     spread = imp.forecast_spread([{'point_id': qid, 'importance_basis': r['basis']} for qid, r in rows.items()])
-    return {'mustKnow': warn, 'forecastSpread': {k: v for k, v in spread.items() if len(v) > 1}}
+    out = {'mustKnow': warn, 'forecastSpread': {k: v for k, v in spread.items() if len(v) > 1}}
+    if table['policy'] == imp.POLICY2:
+        out['markedFloor'] = sorted(qid for qid, r in rows.items() if r['rule'] == 'marked_page')
+    return out
 
 
 def importance_notes(reviews):
@@ -1015,10 +1094,14 @@ def notebook_profile(packet, meta):
     require(type(points) is dict and type(points.get('notebook_profile')) is dict, 'result4: the exam points carry no notebook profile')
     if meta['supplementPoints'] is not None:
         extended = meta['supplementPoints']
-        require(extended['points'][:len(points['points'])] == points['points'] and extended['notebook_profile'] == points['notebook_profile'],
+        require(extended['points'][:len(points['points'])] == points['points']
+                and added_profile(points['notebook_profile'], extended['notebook_profile']),
                 'result4: supplement changed the exam points')
-        require(all(p.get('origin') in ('question', pre.ORIGIN, dis.ORIGIN) and 'importance_basis' not in p for p in extended['points'][len(points['points']):]),
+        require(all(p.get('origin') in ('question', pre.ORIGIN, dis.ORIGIN, MARKED_ORIGIN) and 'importance_basis' not in p
+                    for p in extended['points'][len(points['points']):]),
                 'result4: unmarked supplement point or a point with importance')
+        require('marked_pages' in extended['notebook_profile'] or not any(p.get('origin') == MARKED_ORIGIN for p in extended['points']),
+                'result4: marked-page supplement points without marked pages')
         made = [p['point_id'] for p in extended['points'] if p.get('origin') == pre.ORIGIN]
         require(made == sorted({r['point_id'] for r in meta.get('presuppositions') or [] if r['point_id']}),
                 'result4: presupposition points differ from the presupposition records')
@@ -1030,21 +1113,41 @@ def notebook_profile(packet, meta):
                 and not any(r['point_id'] for r in meta.get('discriminations') or []),
                 'result4: supplement decisions without points')
     require(all('importance_basis' not in p for p in points['points']), 'result4: /4 exam points carry no importance (R1)')
+    if meta['supplementPoints'] is not None:
+        return meta['supplementPoints']['notebook_profile']
     return points['notebook_profile']
+
+
+def added_profile(original, extended):
+    """A supplement keeps the notebook profile, except that it may add the admin's marked pages to a profile that had
+    none (2026-11-25-professor-marked-pages: filling a published lecture the professor marked pages of)."""
+    if extended == original:
+        return True
+    rest = {k: v for k, v in extended.items() if k != 'marked_pages'}
+    return ('marked_pages' not in original and rest == original
+            and check_marked_pages(extended['marked_pages'])['instruction']['source'] == 'admin')
 
 
 def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
              presuppositions=None, discriminations=None, settled=(), settled_places=None):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
-    generator and the consumer, so both build the same thing)."""
-    table = question_table(basis, profile, reviewed)
+    generator and the consumer, so both build the same thing).
+
+    With marked pages (importance-basis/2) the questions answering them are at least Core."""
+    pages = marked_pages(profile, exam_date)
+    table = question_table(basis, profile, reviewed, marked_questions(brief, coverage_rows, pages) if pages else None)
     snapshot, projection = v2.project_container_concepts(reviewed)
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
                                 snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table),
                                 placement=placement, presuppositions=presuppositions,
                                 discriminations=discriminations, settled=settled, settled_places=settled_places)
-    return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
+    warnings = importance_warnings(table)
+    if pages:
+        warnings['markedPages'] = marked_report(brief, coverage_rows, pages, table)
+    elif (profile or {}).get('marked_pages'):
+        warnings['markedPagesNotApplied'] = '이전 해 필기의 말씀이라 적용하지 않음 — 관리자 확인 필요(content/prompts/bank/markedPages.json)'
+    return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': warnings}
 
 
 def _placement4(value, brief, reviewed, meta):

@@ -10,6 +10,10 @@ from __future__ import annotations
 import json
 
 POLICY = "importance-basis/1"
+# /2 (docs/changes/2026-11-25-professor-marked-pages): a question whose answer is on a page the professor marked
+# ("시험은 햇살 슬라이드만") is at least Core. Used only when the lecture records marked pages; /1 is unchanged.
+POLICY2 = "importance-basis/2"
+MARKED_TIER = "Core"
 BANK_IMPORTANCE = {"Essential": 5, "Core": 4, "Important": 3, "Optional": 2}  # bank 3.3
 LABEL = {"Essential": "Must-Know", "Core": "Core", "Important": "Important", "Optional": "Optional"}
 WEIGHTS = {
@@ -28,6 +32,7 @@ OVERRIDES = ("exam_forecast", "exam_exclusion")
 FLOOR = "writer_mark"            # parts the professor read out: at least Important
 KINDS = (*OVERRIDES, FLOOR, *WEIGHTS)
 STYLES = ("slide", "verbal")     # verbal: the professor emphasises by speech, so writer marks count +1
+ORDER = {"Optional": 0, "Important": 1, "Core": 2, "Essential": 3}
 MUST_KNOW_SCORE, CORE_SCORE, IMPORTANT_SCORE = 4.0, 1.5, 1.0
 # 2026-11-08 live Quiz Bank, 35 lectures: per-lecture Must-Know share median 9%, p90 34%, max 63%.
 MUST_KNOW_SHARE_WARN = 0.34
@@ -64,8 +69,11 @@ def validate_basis(basis):
             _require(row["quote"].strip(), f"importance_basis: {row['kind']} needs the original wording")
 
 
-def score(basis, style="slide"):
-    """`{tier, importance, score, rule}` for one point. Same kinds count once; exam years each."""
+def score(basis, style="slide", marked=False):
+    """`{tier, importance, score, rule}` for one point. Same kinds count once; exam years each.
+
+    `marked` (/2): the answer is on a page the professor marked; the computed tier is raised to Core when lower.
+    An exclusion stays Optional (the professor's own words outrank the page)."""
     validate_basis(basis)
     _require(style in STYLES, "emphasis_style must be slide or verbal")
     kinds = {r["kind"] for r in basis}
@@ -82,10 +90,11 @@ def score(basis, style="slide"):
     rule = "sum"
     if FLOOR in kinds and tier == "Optional":
         tier, rule = "Important", "floor"
+    if marked and ORDER[tier] < ORDER[MARKED_TIER]:
+        tier, rule = MARKED_TIER, "marked_page"
     return {"tier": tier, "importance": BANK_IMPORTANCE[tier], "score": total, "rule": rule}
 
 
-ORDER = {"Optional": 0, "Important": 1, "Core": 2, "Essential": 3}
 
 
 def point_table(points, profile):
@@ -98,15 +107,22 @@ def point_table(points, profile):
     return {"policy": POLICY, "emphasis_style": profile["emphasis_style"], "points": table}
 
 
-def question_table(basis_by_question, profile):
+def question_table(basis_by_question, profile, marked=None):
     """Per question (root-generation/4): the question's own basis and computed decision.
 
     From 2026-11-10 the authoring stages write the basis per question and the exam points carry none
-    (docs/changes/2026-11-10-importance-at-authoring R2). Kinds, weights and lines are the point table's."""
+    (docs/changes/2026-11-10-importance-at-authoring R2). Kinds, weights and lines are the point table's.
+
+    `marked` (a set of question ids, /2): questions answering a marked page; None keeps /1 exactly."""
     _require(type(profile) is dict and profile.get("emphasis_style") in STYLES, "notebook_profile.emphasis_style required")
     _require(type(basis_by_question) is dict, "question basis must map question_id to a basis")
-    rows = {qid: {"basis": basis, **score(basis, profile["emphasis_style"])} for qid, basis in basis_by_question.items()}
-    return {"policy": POLICY, "source": "question", "emphasis_style": profile["emphasis_style"], "questions": rows}
+    _require(marked is None or set(marked) <= set(basis_by_question), "marked questions must be questions of the table")
+    rows = {qid: {"basis": basis, **score(basis, profile["emphasis_style"], marked is not None and qid in marked)}
+            for qid, basis in basis_by_question.items()}
+    if marked is None:
+        return {"policy": POLICY, "source": "question", "emphasis_style": profile["emphasis_style"], "questions": rows}
+    return {"policy": POLICY2, "source": "question", "emphasis_style": profile["emphasis_style"],
+            "marked": sorted(marked), "questions": rows}
 
 
 def _rows(table):

@@ -6,7 +6,33 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
+  "approvals": {
+    "build": {
+      "at": "2026-11-25T10:15:12.414835+00:00",
+      "evidence": "사용자 2026-11-25 「구현해」 (plan.md 승인 질문에 대한 답)",
+      "scope": "plan.md 1~5단계 로컬 구현·검사·Draft PR. Ready·병합·러너 재설치·운영 요청은 제외",
+      "evidence_version": 2,
+      "source_hash": "b4afcc06896bc3603ed92db2ecb024187f76e12cd4fbf5c5820d110085756bd2",
+      "plan_hash": "484d49433e68353595f248ef4094bb83b19d06b7b3dda1fd044e91d6779dd685",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "7ed96e1f906267439a9c1affd3934b446e72dae5e03ea8ed5a23c8ba1d5f0102"
+    }
+  },
   "checks": [],
   "review": null,
   "lifecycle": {
@@ -14,5 +40,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-25T08:12:21.958851+00:00"
+  "updated_at": "2026-11-25T10:15:17.387383+00:00"
 }
