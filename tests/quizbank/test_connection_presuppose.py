@@ -396,3 +396,37 @@ def test_a_fill_record_must_fit_the_revision(tmp_path):
     plain_previous, plain_old, plain_packet = published(tmp_path / 'plain')
     with pytest.raises(ValueError, match='이미 거친 판만'):
         g.run(plain_packet, tmp_path / 'y', invoke=t4.Model(), presuppose_of=plain_previous, fill=fill_record(plain_old, ['D2']))
+
+
+class DoubtAfterRewrite(t4.Model):
+    """The re-review of the rewritten Q2 finds a new design doubt (2026-11-25 job 746 / 261123_06: Q072·Q100)."""
+
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage == 'v4-review-presuppose-1':
+            value = copy.deepcopy(value)
+            for r in value['reviews']:
+                if r['question_id'] == 'Q2':
+                    r.update(design='doubt', note='The new answer frame is not in the source.')
+        return value, info
+
+
+def test_a_rewrite_the_re_review_finds_worse_in_design_is_undone_and_the_lecture_still_publishes(tmp_path):
+    """Job 746 (2026-11-25): the published Q072 and Q100 were reviewed ok; rewritten, their re-review said design
+    doubt with no fix budget left. Only a worse content verdict undid an operator's rewrite, so the two stayed doubtful,
+    dropped out of the tasks, and the whole lecture was refused 「이전 판의 과제가 빠졌습니다」. Now the published
+    question comes back, and the rest of the fill goes on."""
+    previous, old, packet = judged(tmp_path)
+    rewrite = [{'question_id': 'Q2', 'note': 'The answer is a long unordered list.', 'fix': 'Lay the answer out.'}]
+    result = g.run(packet, tmp_path / 'new', invoke=DoubtAfterRewrite(), presuppose_of=previous,
+                   fill=fill_record(old, [], rewrite))
+    assert consume(result, packet) == result['document']
+    old_q = {q['question_id']: q for q in old['document']['bank_snapshot']['questions']}
+    new_q = {q['question_id']: q for q in result['document']['bank_snapshot']['questions']}
+    assert new_q['Q2'] == old_q['Q2'] and t4.tasks(result) == t4.tasks(old)
+    assert result['manifest']['fixes'][len(old['manifest']['fixes']):] == \
+        [{'question_id': 'Q2', 'attempt': 1, 'stage': 'v4-fix-presuppose-0', 'reverted': True}]
+    record = result['manifest']['presupposeOnly']
+    assert not record.get('rewrittenQuestions')
+    carried = next(c for c in record['carry'] if c['revision'] == old['document']['revision'])
+    assert carried['tasks'] == carried['of'] == len(old['document']['tasks'])
