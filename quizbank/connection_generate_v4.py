@@ -390,7 +390,7 @@ def run(packet, out, model, invoke, resume=None):
                                                                [p['point_id'] for p in brief['points']])
         print(f"── 전제 판정: 발문이 전제로 준 연결 {len(presuppositions)}개 · 답으로 묻는 문항 없음 {len(made_points)}개 → 존재 목표", flush=True)
         if made_points:
-            allowed = v3.supplement_ids(brief, len(made_points))
+            allowed = pre.new_goal_ids(brief, made_points)
             ctx = pre.normalize_input(brief, made_points, allowed)
             state = {'brief': brief, 'blank': True}
             addition = st.run(X + 'supplement-normalize-presuppose', ctx,
