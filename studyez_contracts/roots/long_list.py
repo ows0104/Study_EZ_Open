@@ -3,6 +3,8 @@
 답이 긴 나열 문항마다 근거 쪽 원본을 보고 둘 중 하나로 판정한다.
 - grouped: 원본이 그 목록을 묶음(표의 열·칸, 약물 계열, 소제목)으로 나눠 놓았다.
   고칠 때는 원래 문항을 한 묶음(`keep_group`)으로 좁히고, 나머지 묶음은 새 문항으로 얹는다(spec R1).
+- overlapping: 원본 묶음은 있지만 묶음끼리 원소가 대부분 겹친다(중증도·치료 단계 열마다 같은 약이 반복되는 도표).
+  어느 묶음으로 좁혀도 부담이 줄지 않아 자동으로 고치지 않고 사람에게 보인다.
 - ungrouped: 원본 묶음이 없다. 한 카드로 두고 정답 칸을 「**대표: …**」 + 「갈래: 축 — 원소」로 보인다(spec R2).
   대표는 원본 강조로 고르고, 갈래는 의학적으로 통하는 축이 있을 때만 둔다.
 
@@ -17,7 +19,7 @@ from studyez_contracts.roots.generation_v3 import locator_pages
 
 SCHEMA = 'long-list-judge/1'
 MIN_UNITS = 6
-KINDS = ('grouped', 'ungrouped')
+KINDS = ('grouped', 'overlapping', 'ungrouped')
 # 11-16 결정 「강의에 없는 묶음 이름(「비…」「나머지 …」)을 만들지 않는다」는 갈래에도 남긴다.
 _BAD_AXIS = re.compile(r'^\s*(비\S|나머지|기타|그 ?밖|그 ?외)')
 
@@ -37,6 +39,20 @@ def cited(question: dict) -> list[tuple[str, int]]:
         for page in locator_pages(ref.get('locator')):
             found.add((ref.get('source_id'), int(page)))
     return sorted(found)
+
+
+def goals(document: dict) -> dict[str, list[dict]]:
+    """문항 → 그 문항이 배치된 학습 목표(cue·answer_scope). 판정기가 원래 질문이 가리킨 묶음을 고르는 데 쓴다."""
+    review = document.get('review') or {}
+    dirs = {d['direction_id']: d for t in review.get('targets') or [] for d in t.get('directions') or []}
+    out: dict[str, list[dict]] = {}
+    for m in review.get('mappings') or []:
+        d = dirs.get(m.get('direction_id'))
+        if d and m.get('question_id'):
+            row = {'cue': d.get('cue', ''), 'answer_scope': d.get('answer_scope', '')}
+            if row not in out.setdefault(m['question_id'], []):
+                out[m['question_id']].append(row)
+    return out
 
 
 def _indices(values, count: int, what: str) -> list[int]:
@@ -61,11 +77,11 @@ def check(question: dict, judgment: dict) -> dict:
     if not basis:
         raise ValueError('판정 근거가 비었음')
     row = {'kind': kind, 'basis': basis, 'note': str(judgment.get('note') or '').strip()}
-    if kind == 'grouped':
+    if kind in ('grouped', 'overlapping'):
         if len(groups) < 2:
-            raise ValueError('grouped인데 묶음이 둘 미만')
+            raise ValueError(f'{kind}인데 묶음이 둘 미만')
         if reps or branches:
-            raise ValueError('grouped에 대표·갈래를 적음')
+            raise ValueError(f'{kind}에 대표·갈래를 적음')
         pages = {p for _, p in cited(question)}
         covered = set()
         clean = []
@@ -82,6 +98,9 @@ def check(question: dict, judgment: dict) -> dict:
             clean.append({'name': name, 'unit_indices': members, 'page': g.get('page')})
         if covered != set(range(count)):
             raise ValueError('묶음이 답 단위를 다 덮지 않음')
+        if kind == 'overlapping':
+            row.update(fixable=False, groups=clean, keep_group=-1)
+            return row
         keep = judgment.get('keep_group')
         if not isinstance(keep, int) or not 0 <= keep < len(clean):
             raise ValueError('keep_group이 묶음 번호가 아님')

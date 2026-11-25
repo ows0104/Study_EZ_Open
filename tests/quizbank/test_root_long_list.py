@@ -76,7 +76,8 @@ def test_only_long_lists_are_sent_with_their_pages(tmp_path):
 def test_judgments_are_checked_and_previewed(tmp_path):
     result = root_long_list.build(_document(), tmp_path / 'out', generation_dir=_generation(tmp_path),
                                   call=_fake([_grouped(), _ungrouped()]))
-    assert result['counts'] == {'eligible': 2, 'grouped': 1, 'ungrouped': 1, 'unfixable': 0, 'dropped': 0, 'failedBatches': 0}
+    assert result['counts'] == {'eligible': 2, 'grouped': 1, 'overlapping': 0, 'ungrouped': 1, 'unfixable': 0, 'dropped': 0,
+                                'failedBatches': 0}
     assert result['judgments']['Q090']['keep_group'] == 1
     assert result['previews']['Q122'].splitlines() == [
         '**대표: 인후통, 고열**', '갈래:', '  전신 — 고열, 오한, 피로감, 두통',
@@ -131,3 +132,19 @@ def test_representatives_without_branches_show_the_rest_on_one_line():
     row = contract.check(Q122, _ungrouped(branches=[]))
     assert contract.answer_preview(Q122, row).splitlines() == [
         '**대표: 인후통, 고열**', '그 밖에: 오한, 피로감, 두통, 발성장애, 기침, 호흡곤란, 청색증, 임파선염, 림프절 비대']
+
+
+def test_overlapping_groups_are_kept_for_a_person():
+    row = contract.check(Q090, _grouped(kind='overlapping', keep_group=-1))
+    assert row['fixable'] is False and row['keep_group'] == -1 and len(row['groups']) == 2
+
+
+def test_each_question_carries_its_goal(tmp_path):
+    document = _document()
+    document['review'] = {
+        'targets': [{'directions': [{'direction_id': 'DQ018', 'cue': 'SLE의 검사 항목은?', 'answer_scope': '항-dsDNA, ESR'}]}],
+        'mappings': [{'question_id': 'Q090', 'direction_id': 'DQ018'}, {'question_id': 'Q090', 'direction_id': 'DQ018'}]}
+    seen = []
+    root_long_list.build(document, tmp_path / 'out', generation_dir=_generation(tmp_path), call=_fake([], seen))
+    sent = {q['question_id']: q['goals'] for q in seen[0][0]['questions']}
+    assert sent == {'Q090': [{'cue': 'SLE의 검사 항목은?', 'answer_scope': '항-dsDNA, ESR'}], 'Q122': []}

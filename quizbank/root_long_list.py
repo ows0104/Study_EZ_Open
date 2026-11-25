@@ -86,7 +86,7 @@ def batches(targets: list[dict]) -> list[list[dict]]:
     return out
 
 
-def batch_input(batch: list[dict], images: dict[tuple[str, int], bytes]) -> tuple[dict, dict[str, bytes]]:
+def batch_input(batch: list[dict], images: dict[tuple[str, int], bytes], goals: dict | None = None) -> tuple[dict, dict[str, bytes]]:
     files, rows = {}, []
     for q in batch:
         pages = []
@@ -96,7 +96,7 @@ def batch_input(batch: list[dict], images: dict[tuple[str, int], bytes]) -> tupl
             if body:
                 files[name] = body
             pages.append({"source_id": sid, "page": page, "image": name})
-        rows.append({"question_id": q["question_id"], "question": q.get("question", ""),
+        rows.append({"question_id": q["question_id"], "question": q.get("question", ""), "goals": (goals or {}).get(q["question_id"], []),
                      "units": [{"index": i, "text": u} for i, u in enumerate(contract.units(q))], "pages": pages})
     return {"questions": rows}, files
 
@@ -123,9 +123,10 @@ def build(document: dict, out: Path, *, generation_dir: Path, model: str | None 
     targets = [q for q in document["bank_snapshot"]["questions"] if contract.eligible(q)]
     images = render(sources(generation_dir), sorted({p for q in targets for p in contract.cited(q)}))
     prompt = PROMPT.read_text(encoding="utf-8")
+    goals = contract.goals(document)
     rows, dropped, usage, failed = {}, {}, [], 0
     for n, batch in enumerate(batches(targets)):
-        data, files = batch_input(batch, images)
+        data, files = batch_input(batch, images, goals)
         output, error = _stage(out / f"judge-{n}", "judge", prompt, JUDGMENTS, data, model, "긴 나열 판정", call, usage,
                                images=files)
         if output is None:
@@ -140,9 +141,9 @@ def build(document: dict, out: Path, *, generation_dir: Path, model: str | None 
     kinds = [r["kind"] for r in rows.values()]
     result = {"schema": contract.SCHEMA, "revision": document["revision"], "title": document.get("title"),
               "createdAt": datetime.now(UTC).isoformat(), "policy": POLICY,
-              "counts": {"eligible": len(targets), "grouped": kinds.count("grouped"),
+              "counts": {"eligible": len(targets), "grouped": kinds.count("grouped"), "overlapping": kinds.count("overlapping"),
                          "ungrouped": sum(1 for r in rows.values() if r["kind"] == "ungrouped" and r["fixable"]),
-                         "unfixable": sum(1 for r in rows.values() if not r["fixable"]),
+                         "unfixable": sum(1 for r in rows.values() if r["kind"] == "ungrouped" and not r["fixable"]),
                          "dropped": len(dropped), "failedBatches": failed},
               "judgments": rows, "previews": previews, "dropped": dropped}
     (out / "long-list.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -154,7 +155,7 @@ def build(document: dict, out: Path, *, generation_dir: Path, model: str | None 
 
 def summary(result: dict) -> str:
     c = result["counts"]
-    return (f"긴 나열 대상 {c['eligible']}문항 · 원본 묶음 {c['grouped']} · 대표/갈래 {c['ungrouped']} · "
+    return (f"긴 나열 대상 {c['eligible']}문항 · 원본 묶음 {c['grouped']} · 겹치는 묶음 {c['overlapping']} · 대표/갈래 {c['ungrouped']} · "
             f"고칠 방법 없음 {c['unfixable']} · 버림 {c['dropped']} · 실패 묶음 {c['failedBatches']}")
 
 
