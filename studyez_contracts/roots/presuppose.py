@@ -132,6 +132,15 @@ def records(outputs, bank, points_doc, reserved=()):
 
 
 # ---------------------------------------------------------------- existence goals
+# 원본이 한 연결의 원소를 이름 붙은 묶음(표의 열·칸, 약물 계열)으로 나눴으면 정규화가 묶음마다 존재 목표를 만든다
+# (docs/changes/2026-11-25-long-list-answers). 그 몫으로 포인트마다 목표 ID를 여유 있게 준다. 안 쓴 번호는 다음 보충이 잇는다.
+GOALS_PER_POINT = 3
+
+
+def new_goal_ids(brief, points):
+    return v3.supplement_ids(brief, GOALS_PER_POINT * len(points))
+
+
 def relation_ids(brief, count, prefix='RQP'):
     """The IDs new content relations may take. `prefix` keeps each policy's relations apart (discriminate/1 uses
     RQD), so one does not reuse a number the other already gave."""

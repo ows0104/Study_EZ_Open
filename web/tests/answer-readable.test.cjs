@@ -181,3 +181,15 @@ test('one answer edit synchronizes basic, list and OX while preserving legacy ex
   const legacy = editorQuestion({ format: 'ox', question: '발문', answer: 'X', answer_units: ['X', '판단 근거'] });
   assert.equal(legacy.explanation, '판단 근거');
 });
+
+test('긴 나열의 「대표 + 갈래」 답은 대표만 굵게, 갈래 줄은 단위 강조 없이 보인다 (2026-11-25)', () => {
+  const units = ['고열', '오한', '인후통', '기침', '임파선염', '림프절 비대'];
+  const layered = '**대표: 인후통, 고열**\n갈래:\n인후·기도 — 인후통, 기침\n전신 — 고열, 오한\n림프절 — 임파선염, 림프절 비대';
+  const html = body({}, { answer: layered, answerUnits: units });
+  assert.match(html, /<strong>대표: 인후통, 고열<\/strong>/);
+  assert.doesNotMatch(html, /bank-answer-point/);
+  assert.equal((html.match(/bank-readable-line/g) || []).length, 5);
+  assert.doesNotMatch(html, /bank-units/);   // 모든 단위가 답 글에 있어 아래 남은 단위 목록이 없다
+  const flat = body({}, { answer: units.join('; '), answerUnits: units });
+  assert.match(flat, /bank-answer-point/);   // 대표 줄이 없는 나열은 지금처럼
+});

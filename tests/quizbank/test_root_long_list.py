@@ -148,3 +148,11 @@ def test_each_question_carries_its_goal(tmp_path):
     root_long_list.build(document, tmp_path / 'out', generation_dir=_generation(tmp_path), call=_fake([], seen))
     sent = {q['question_id']: q['goals'] for q in seen[0][0]['questions']}
     assert sent == {'Q090': [{'cue': 'SLE의 검사 항목은?', 'answer_scope': '항-dsDNA, ESR'}], 'Q122': []}
+
+
+def test_mostly_single_item_branches_are_dropped_but_representatives_stay():
+    one_each = [{'axis': f'갈래{n}', 'unit_indices': [n]} for n in range(10)]
+    one_each[9]['unit_indices'] = [9, 10]
+    row = contract.check(Q122, _ungrouped(branches=one_each))
+    assert row['branches'] == [] and row['branches_dropped'] and row['representatives'] == [4, 0]
+    assert row['fixable'] is True

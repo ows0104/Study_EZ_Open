@@ -6,7 +6,33 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
+  "approvals": {
+    "build": {
+      "at": "2026-11-25T05:46:53.354419+00:00",
+      "evidence": "2026-11-25 채팅: 「어 그렇게 하자」(판정→좁히기+얹기, 루프스 시범 먼저), 「Yes, build it」(판정기), 「Yes, fix then run」, 「잠만 왜 54편이야. 2차꺼만 하면 돼」, 「Yes, go ahead」(생성 규칙·정답 칸 표시)",
+      "scope": "판정기(quizbank/root_long_list.py·studyez_contracts/roots/long_list.py·지시문·검사), v4 add/fix/존재 정규화 지시문, presuppose 목표 ID 여유, web BankQuestion 대표 줄 표시. 운영 쓰기·채우기 요청은 범위 밖",
+      "evidence_version": 2,
+      "source_hash": "77f87e01f63928d0cd25b65ce8e741712e71126fc44727c563771e9fc68743d5",
+      "plan_hash": "2f653ab66de372fbbcc1296a008947d71998a6556b586a736d2f12eb81fa99e6",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "bc15cc0a20cee7254b7a9aa15ae1f97ef1574628cd6766b2cf1b522e4cca1413"
+    }
+  },
   "checks": [],
   "review": null,
   "lifecycle": {
@@ -14,5 +40,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-25T02:50:34.092568+00:00"
+  "updated_at": "2026-11-25T05:46:55.057943+00:00"
 }

@@ -198,7 +198,7 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
     # 2: existence goals ------------------------------------------------------
     new_dids = []
     if made:
-        allowed = v3.supplement_ids(brief, len(made))
+        allowed = pre.new_goal_ids(brief, made)
         ctx = pre.normalize_input(brief, made, allowed)
         state = {'brief': brief, 'blank': True}
         addition = st.run(X + 'supplement-normalize' + TAG, ctx, lambda raw: check_stage('presuppose-normalize', raw, ctx, state, None), state)

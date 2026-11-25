@@ -130,6 +130,10 @@ def check(question: dict, judgment: dict) -> dict:
             clean.append({'axis': axis, 'unit_indices': members})
         if sorted(covered) != list(range(count)):
             raise ValueError('갈래가 답 단위를 정확히 한 번씩 덮지 않음')
+        if sum(len(b['unit_indices']) == 1 for b in clean) * 2 > len(clean):
+            # 원소 하나짜리 갈래가 대부분이면 묶는 뜻이 없다(2026-11-25 2차 판정 8장). 갈래만 버리고 대표는 남긴다.
+            row['branches_dropped'] = '원소 하나짜리 갈래가 대부분'
+            clean = []
     row.update(fixable=bool(reps or clean),   # 둘 다 없으면 고칠 방법이 없는 목록으로 남긴다
 representatives=reps, representative_basis=str(judgment.get('representative_basis') or '').strip(),
                branches=clean)
