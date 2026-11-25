@@ -21,7 +21,8 @@ SCHEMA = 'long-list-judge/1'
 MIN_UNITS = 6
 KINDS = ('grouped', 'overlapping', 'ungrouped')
 # 11-16 결정 「강의에 없는 묶음 이름(「비…」「나머지 …」)을 만들지 않는다」는 갈래에도 남긴다.
-_BAD_AXIS = re.compile(r'^\s*(비\S|나머지|기타|그 ?밖|그 ?외)')
+# 「비…」는 「비뇨기」「비강」 같은 말과 글자로 가를 수 없어 지시문에만 둔다(2026-11-25 261123_03 Q181).
+_BAD_AXIS = re.compile(r'^\s*(나머지|기타|그 ?밖|그 ?외)')
 
 
 def units(question: dict) -> list[str]:
