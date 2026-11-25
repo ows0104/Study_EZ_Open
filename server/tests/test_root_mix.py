@@ -109,8 +109,8 @@ assert 'task3' not in task_ids(r.json()['sessionId'])
 assert task_ids(r.json()['sessionId']) == ['task2', 'task1'], task_ids(r.json()['sessionId'])
 phases = r.json()['phases']
 assert phases['due'] == 1 and phases['unseen'] == 0 and len(phases['urgency']) == 1 and phases['urgency'][0] > 0, phases
-# 강의 화면의 중요도 저장값은 그대로다.
-assert client.get(BASE).json()['focus']['tiers'] == ALL
+# 강의 화면의 중요도 저장값은 그대로다(처음 값 Essential~Important, 2026-11-25-lecture-tier-range).
+assert client.get(BASE).json()['focus']['tiers'] == ['Essential', 'Core', 'Important']
 
 # ── R4 섞어서: same seed same order, prerequisite question first ──
 doc = {'tasks': [{'task_id': f't{i}', 'question_id': f'q{i}', 'direction_id': f'd{i}'} for i in range(8)],

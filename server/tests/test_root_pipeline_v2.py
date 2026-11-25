@@ -3,7 +3,7 @@ import copy,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tests/contracts'))
 import generation_v2_fixture as f
-from tests.root_support import setup,ADMIN,BASE,start,view,action
+from tests.root_support import setup,ADMIN,BASE,start,view,action,widen
 client,user,SessionLocal=setup()
 from app.main import app
 from app.auth import CurrentUser,require_runner
@@ -67,6 +67,7 @@ value['document']=c.make_document(value['brief'],value['document']['bank_snapsho
 assert [t['question_id']for t in value['document']['tasks']]==['Q2']
 r=client.put(base+'/result',json=value);assert r.status_code==200,r.text
 assert client.put(base+'/result',json=value).json()['reused']is True
+widen(client)
 sid=start(client,'v2-session');front=view(client,sid)
 assert front['task']['question']['question_id']=='Q2'and 'Secret answer'not in str(front)
 assert front['summary']['unready']==1

@@ -33,10 +33,11 @@ tiered['bank_snapshot']['questions'][1]['tier'] = 'Optional'
 assert content.task_tiers(tiered, {}) == {'task1': 'Essential', 'task2': 'Optional', 'task3': 'Core'}
 assert content.task_tiers(tiered, {'Q2': {'tier': 'Important', 'originalTier': 'Optional'}})['task2'] == 'Important'
 
-# ── Default: every tier, the former plan and session ID ──
+# ── Default (2026-11-25-lecture-tier-range L2): Essential~Important for a lecture without a choice ──
+NARROW = ['Essential', 'Core', 'Important']
 user('a')
 before = overview()
-assert before['focus'] == {'tiers': ALL, 'prereqs': True, 'counts': {'Essential': 0, 'Core': 3, 'Important': 0, 'Optional': 0}}
+assert before['focus'] == {'tiers': NARROW, 'prereqs': True, 'counts': {'Essential': 0, 'Core': 3, 'Important': 0, 'Optional': 0}}
 assert plan_questions(before) == ['Q1', 'Q2', 'Q3']
 base_total = before['summary']['total']
 
@@ -97,12 +98,30 @@ assert focus('mm-third', ALL).status_code == 200
 assert overview()['focus']['tiers'] == ALL
 assert focus('f5', ['Optional']).status_code == 200
 
-# ── Per learner and per subject: another account keeps every tier ──
+# ── Per learner and per lecture: another account starts from the default ──
 user('b')
 other = overview()
-assert other['focus']['tiers'] == ALL and plan_questions(other) == ['Q1', 'Q2', 'Q3']
+assert other['focus']['tiers'] == NARROW and plan_questions(other) == ['Q1', 'Q2', 'Q3']
 
-# The all-tier session of a learner without a choice has the former ID (no focus in its key or state).
+# ── Per lecture (2026-11-25-lecture-tier-range L1): another lecture of the same subject is its own choice ──
+from datetime import timedelta
+from app.models.root_learning import RootEvent
+from tests.root_support import NOW
+with SessionLocal() as db:
+    db.add(RootEvent(user_id='b', request_id='b-other', session_id='', subject='test', run_id='other', revision='x',
+                     kind='focus', payload={'tiers': ['Optional'], 'prereqs': False, 'seq': 9}, result={},
+                     created_at=NOW + timedelta(minutes=1)))
+    db.commit()
+    assert content.focus_for(db, 'test', 'other', 'b') == ['Optional'] and not content.focus_prereqs(db, 'test', 'other', 'b')
+    assert content.focus_for(db, 'test', 'demo', 'b') == NARROW and content.focus_prereqs(db, 'test', 'demo', 'b')
+assert overview()['focus']['tiers'] == NARROW and overview()['focus']['prereqs'] is True
+# seq counts within the lecture: the other lecture's seq 9 does not make this the 10th.
+assert focus('b-all', ALL).status_code == 200
+with SessionLocal() as db:
+    assert db.get(RootEvent, ('b', 'b-all')).payload['seq'] == 1
+    assert content.focus_for(db, 'test', 'other', 'b') == ['Optional']
+
+# Every tier chosen: the former session ID (no focus in its key or state).
 sid_b = start(client, 'b1')
 with SessionLocal() as db:
     row = db.get(RootSession, sid_b)

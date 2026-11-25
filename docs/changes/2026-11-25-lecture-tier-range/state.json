@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-25-lecture-tier-range",
+  "title": "Main-Quiz 중요도 필터 강의별 저장·범위 슬라이더",
+  "area": "site",
+  "created_at": "2026-11-25T12:15:17.668888+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-25T12:35:34.791647+00:00",
+      "evidence": "사용자 2026-11-25 채팅: 「강의마다 따로 저장되게 바꿔줘. 그리고 가격대 선택처럼 해줘. 중요도 선이 있고 양쪽에 동그라미가 있어서 범위를 선택할 수 있게.」 계획 확인 질문에 「진행」, 처음 값 질문에 「Essential - Important」, 이어서 「아니지 선분이 4개, 점이 5개이고, 선분에 중요도가 적혀있어야지.」",
+      "scope": "plan.md 범위(content.py focus 읽기·routes/root_learning.py focus 호출부·RootToday.tsx 슬라이더·main-quiz.css 필터 구역·server tests·web 고정물), Draft PR까지. master 병합·DB 스키마·운영 데이터·문항 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "b4c687ab1f39c785b8aafdd0ff82fa1f37b6a9a5647dd9af89bb46508cccc0d9",
+      "plan_hash": "7a3a0ae9588bb3a5b1e8f77ca4f1306bdd82fec499b4bc818ef44871ebbc316c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "2c15920c862909bcc72562cdba43a0d17e4b14dba95bee5e7344308c046618bf"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-25T12:35:37.233208+00:00"
+}

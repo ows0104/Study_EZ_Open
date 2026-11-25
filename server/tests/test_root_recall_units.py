@@ -5,7 +5,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tests/contracts'))
 import generation_v2_fixture as f
 from studyez_contracts.roots import generation_v2 as c
 from studyez_contracts.roots.source_assessment import envelope
-from tests.root_support import setup,publish,start,view,action
+from tests.root_support import setup,publish,start,view,action,widen
 
 client,user,_=setup()
 b=f.brief();b['recall_policy']='recall-units/1';bank=f.old.bank()
@@ -16,6 +16,7 @@ a=f.assessment(b,bank);a['design_checks']=[{'question_id':q['question_id'],'verd
 audit=c.compile_assessment(b,bank,envelope(b,bank,a))
 doc=c.make_document(b,bank,audit,revision='units-http',title='Synthetic units',exam_date=None,medical=f.old.checks(bank))
 publish(client,user,doc)
+widen(client)
 sid=start(client,'units-session');front=view(client,sid)
 assert front['task']['question']['question_id']=='Q1'
 assert 'Secret answer'not in str(front)

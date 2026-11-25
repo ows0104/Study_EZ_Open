@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ROOT_TIERS } from '../types/rootLearning';
 import type { RootFocus, RootOverview, RootSummary, RootPolicy, RootTierName } from '../types/rootLearning';
@@ -32,19 +32,50 @@ function Stat({label,value,total,tone}:{label:string;value:number;total?:number;
  * Main-Quiz 첫 화면(2026-11-08). 홈의 「강의 목록」과 같은 머리·숫자 칸·카드 모양.
  * 해야 할 일(오늘 학습)을 한 장의 카드에 두고, 설명·정책·판 정보는 접어 둔다.
  */
-/** 오늘 학습 중요도 필터(2026-11-12). 이름과 준비된 과제 수만. 마지막 남은 칩은 끌 수 없다. */
-function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;onChange:(tiers:RootTierName[],prereqs?:boolean)=>void}) {
-  const on=new Set(focus.tiers);
-  // 선행 문항(2026-11-18-prereq-toggle): 고른 중요도 밖의 선행 문항을 끌어올지. 모두 켜져 있으면 밖이 없다.
-  const prereqs=focus.prereqs!==false,narrowed=on.size<ROOT_TIERS.length;
+/**
+ * 오늘 학습 중요도 범위(2026-11-25-lecture-tier-range, 처음은 2026-11-12 칩). 선분 4개(중요도마다 하나, 이름은 선분 위)와
+ * 경계 점 5개. 손잡이 둘이 점 위에 있고 그 사이 선분들이 고른 중요도다. 손잡이는 겹치지 않아 늘 한 선분 이상이다.
+ * 끄는 동안은 화면만, 놓을 때(pointerup·키·blur) 달라졌으면 한 번 저장한다.
+ * 선분 이름을 누르면 가까운 손잡이가 와서 그 선분을 넣는다.
+ * 옛 비연속 선택은 가장 낮은 것~가장 높은 것으로 보이고, 처음 움직일 때 연속 구간으로 저장된다.
+ */
+function FocusRange({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;onChange:(tiers:RootTierName[],prereqs?:boolean)=>void}) {
+  const end=ROOT_TIERS.length;
+  const picked=focus.tiers.map(t=>ROOT_TIERS.indexOf(t)).filter(i=>i>=0);
+  const from=picked.length?Math.min(...picked):0,to=picked.length?Math.max(...picked)+1:end;
+  const [draft,setDraft]=useState<[number,number]>([from,to]);
+  const draftRef=useRef(draft);
+  const set=(next:[number,number])=>{draftRef.current=next;setDraft(next);};
+  // 서버 값(저장 응답·다른 강의로 이동)이 바뀌면 손잡이도 따라간다.
+  useEffect(()=>{set([from,to]);},[from,to]);
+  const commit=(next=draftRef.current)=>{
+    const tiers=ROOT_TIERS.slice(next[0],next[1]);
+    if(tiers.join()!==focus.tiers.join())onChange(tiers);
+  };
+  const [lo,hi]=draft;
+  const pick=(i:number)=>{
+    const next:[number,number]=i<lo?[i,hi]:i>=hi?[lo,i+1]:i-lo<=hi-1-i?[i,hi]:[lo,i+1];
+    set(next);commit(next);
+  };
+  // 선행 문항(2026-11-18-prereq-toggle): 고른 중요도 밖의 선행 문항을 끌어올지. 모두 고르면 밖이 없다.
+  const prereqs=focus.prereqs!==false,narrowed=focus.tiers.length<ROOT_TIERS.length;
+  const thumb=(which:0|1)=><input type="range" min={0} max={end} step={1} value={draft[which]} disabled={disabled}
+    aria-label={which?'중요도 끝':'중요도 시작'}
+    aria-valuetext={which?`${ROOT_TIERS[draft[1]-1]}까지`:`${ROOT_TIERS[draft[0]]}부터`}
+    onChange={e=>{const v=Number(e.currentTarget.value);set(which?[lo,Math.max(lo+1,v)]:[Math.min(hi-1,v),hi]);}}
+    onPointerUp={()=>commit()} onKeyUp={()=>commit()} onBlur={()=>commit()}/>;
   return <div className="mq-focus" role="group" aria-label="중요도">
-    {ROOT_TIERS.map(tier=>{
-      const pressed=on.has(tier),last=pressed&&on.size===1;
-      return <button key={tier} type="button" aria-pressed={pressed} disabled={disabled||last}
-        className={focus.counts[tier]?undefined:'is-empty'}
-        onClick={()=>onChange(ROOT_TIERS.filter(t=>t===tier?!pressed:on.has(t)))}>
-        {pressed&&<Icon.check/>}{tier}<b>{focus.counts[tier]}</b></button>;
-    })}
+    <div className="mq-range" style={{'--lo':lo/end,'--hi':hi/end} as CSSProperties}>
+      <div className="mq-range-stops">
+        {ROOT_TIERS.map((tier,i)=><button key={tier} type="button" disabled={disabled}
+          className={[i>=lo&&i<hi?'is-in':'',focus.counts[tier]?'':'is-empty'].filter(Boolean).join(' ')||undefined}
+          onClick={()=>pick(i)}>{tier}<b>{focus.counts[tier]}</b></button>)}
+      </div>
+      <div className="mq-range-track" aria-hidden="true"><i/>
+        {Array.from({length:end+1},(_,i)=><span key={i} className={i>=lo&&i<=hi?'is-in':undefined} style={{left:`${i/end*100}%`}}/>)}
+      </div>
+      {thumb(0)}{thumb(1)}
+    </div>
     <button type="button" className="mq-focus-prereqs" aria-pressed={prereqs} disabled={disabled||!narrowed}
       onClick={()=>onChange(focus.tiers,!prereqs)}>{prereqs&&<Icon.check/>}선행 문항</button>
   </div>;
@@ -103,7 +134,7 @@ export function RootToday({info,onStart,disabled,mapDisabled=disabled,starting=f
             :q?.newToday!==undefined?<>새 카드 <b>{q.newToday.toLocaleString('ko-KR')}</b>장 · 복습 <b>{q.reviewDue.toLocaleString('ko-KR')}</b>장</>
             :<>오늘 카드 <b>{p.tasks.length.toLocaleString('ko-KR')}</b>장</>}</p>
           <small>{p.deadline?`첫 학습 목표일 ${p.deadline}${p.days!==null&&p.days<=0?' · 목표일 지남':''}`:'시험일 미정 · 준비된 새 범위와 필요한 복습을 추천합니다.'}</small>
-          {info.focus&&onFocus&&<FocusChips focus={info.focus} disabled={disabled||starting} onChange={onFocus}/>}
+          {info.focus&&onFocus&&<FocusRange focus={info.focus} disabled={disabled||starting||focusing} onChange={onFocus}/>}
           <div className="mq-mode" role="radiogroup" aria-label="풀이 모드">
             {([['recall','주관식'],['mcq','객관식']] as [QuizMode,string][]).map(([value,label])=>
               <button key={value} type="button" role="radio" aria-checked={mode===value} className={mode===value?'is-on':''}

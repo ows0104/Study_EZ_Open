@@ -1,0 +1,34 @@
+# Main-Quiz 중요도 필터 강의별 저장·범위 슬라이더 — 설계
+
+## 요구사항과 수용 기준
+
+- L1 강의별 저장: 마지막 선택은 (사용자, subject, run_id)마다 하나. 2026-11-12-tier-filter R4의 「과목마다」를 대신한다.
+  `seq`(R8)도 같은 묶음 안에서 센다.
+- L2 처음 값(사용자 11-25 「Essential - Important」): 그 강의에 focus 이벤트가 없으면 Essential·Core·Important,
+  선행 문항 포함. 옛 R4의 「처음은 4개 모두」를 대신한다(새 사용자·새 강의도 같음).
+  옛 이벤트도 run_id가 있으므로, 칩을 실제로 바꾼 강의는 그 선택을 그대로 이어받는다.
+  같은 과목 다른 강의에서 물려받던 선택은 더 이상 따라오지 않는다.
+- L3 범위: 화면은 TIERS 순서(Essential, Core, Important, Optional)의 연속 구간만 보낸다. 최소 한 중요도.
+- L4 옛 비연속 선택(예: Essential+Important): 읽을 때 그대로 계획에 쓴다(서버 계약 그대로).
+  슬라이더는 가장 낮은 것~가장 높은 것을 보이고, 처음 움직이면 연속 구간으로 저장된다.
+- L5 슬라이더(사용자 11-25 「선분이 4개, 점이 5개이고, 선분에 중요도가 적혀있어야지」): 선분 4개가 중요도 하나씩이고
+  이름과 준비된 카드 수(`focus.counts`, 0이면 흐리게)는 선분 위에 적는다. 경계 점 5개(0~4). 손잡이 둘이 점 위에 있고
+  그 사이 선분들이 고른 중요도다. 손잡이는 겹치지 않는다(늘 한 선분 이상). 고른 구간·점은 강조색, 밖은 흐린 선.
+  끄는 동안은 화면만 바뀌고, 놓을 때(pointerup·키 입력·blur) 값이 달라졌으면 한 번 저장한다.
+  선분 이름을 누르면 가까운 손잡이가 와서 그 선분을 넣는다(밖이면 넓히고, 안이면 가까운 끝을 그 선분까지 당긴다).
+  저장·재계획 중(`focusing`)과 시작 중에는 움직일 수 없다. 키보드: 각 손잡이가 `input[type=range]`라 화살표·Home·End.
+- L6 선행 문항 버튼: 위치·동작 그대로. 모두 고르면 흐리게(지금과 같음).
+
+## 책임·입출력 계약·오류 상태
+
+- 서버 `content.focus_for(db, subject, run_id, user_id)`, `focus_prereqs(...)`, `focus_events(...)`에 run_id를 더한다.
+  호출부 셋: 강의 목록 overview(`row.run_id`), `overview_data`(`doc.run_id`), `PUT .../focus`(경로의 run_id).
+- API 모양은 그대로: `PUT /root-learning/lectures/{subject}/{run_id}/focus` `{requestId, tiers, prereqs?}`,
+  overview의 `focus {tiers, prereqs, counts}`. 비연속 tiers도 서버는 계속 받는다(옛 웹 호환).
+- 오류: 저장 실패 시 지금처럼 이전 선택으로 돌리고 오류 문구.
+
+## 호환성과 데이터 보존
+
+- DB 표·migration 없음. 기존 focus 이벤트는 지우거나 고치지 않는다(append-only). 학습 기록·문항 변경 없음.
+- 옛 웹(칩)은 같은 API로 계속 동작하며, 저장도 강의별로 된다.
+- 회차 재사용 키(`focus` 포함)는 그대로라, 같은 강의에서 같은 선택이면 같은 회차다.
