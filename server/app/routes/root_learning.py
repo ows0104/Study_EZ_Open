@@ -139,8 +139,8 @@ def overview_data(db, row, user, when):
     # 오늘 학습 중요도 필터(2026-11-12): only today's plan is filtered; summary and progress keep every task.
     exam_date = current_exam_date(db, row)
     document = {**row.document, 'exam_date': exam_date}
-    chosen = content.focus_for(db, row.subject, user.id)
-    prereqs = content.focus_prereqs(db, row.subject, user.id)
+    chosen = content.focus_for(db, row.subject, row.run_id, user.id)
+    prereqs = content.focus_prereqs(db, row.subject, row.run_id, user.id)
     tiers = content.task_tiers(mine_row.document, state.personal_tiers(row.document, events))
     narrowed = len(chosen) < len(policy.TIERS)
     # 오늘 학습 이어 풀기(2026-11-14): 칩 조합과 상관없이 오늘 흐름 하나를 이어 푼다. 끝났으면 「더 풀기」(start)가 뒤에 붙인다.
@@ -214,8 +214,8 @@ def refocus_stream(db, doc, user, when):
     seen = {t['task_id'] for t in keep} | {e['payload'].get('task_id') for e in touched_today if e['revision'] == doc.revision}
     mine_doc, available, _ = with_mine(db, doc, user.id, events)
     document = {**mine_doc.document, 'exam_date': current_exam_date(db, doc)}
-    chosen = content.focus_for(db, doc.subject, user.id)
-    prereqs = content.focus_prereqs(db, doc.subject, user.id)
+    chosen = content.focus_for(db, doc.subject, doc.run_id, user.id)
+    prereqs = content.focus_prereqs(db, doc.subject, doc.run_id, user.id)
     tiers = content.task_tiers(mine_doc.document, state.personal_tiers(doc.document, events))
     focused = {t for t in available if tiers[t] in chosen} if len(chosen) < len(policy.TIERS) else None
     links = content.existence_links(db, doc)
@@ -904,7 +904,7 @@ def save_optional(payload: RootOptional, user: CurrentUser = Depends(require_app
 
 
 # ── 오늘 학습 중요도 필터 (2026-11-12) ─────────────────────────────────────────
-# 과목마다 마지막 선택을 append-only root_event(kind='focus')로 남긴다(표 추가 없음).
+# 강의마다(2026-11-25, 처음은 과목마다) 마지막 선택을 append-only root_event(kind='focus')로 남긴다(표 추가 없음).
 # 오늘 계획만 거른다. 학습 목표·진척·기록·복습 일정은 그대로다(docs/changes/2026-11-12-tier-filter).
 # 2026-11-14부터 칩을 바꾸면 오늘 흐름의 안 푼 뒷부분만 다시 고른다(docs/changes/2026-11-14-continuous-today).
 
@@ -929,8 +929,8 @@ def save_focus(subject: str, run_id: str, payload: RootFocus,
             raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
         return overview_data(db, doc, user, now())
     tiers = [t for t in policy.TIERS if t in payload.tiers]
-    prereqs = content.focus_prereqs(db, subject, user.id) if payload.prereqs is None else payload.prereqs
-    seq = 1 + max((e.payload.get('seq', 0) for e in content.focus_events(db, subject, user.id)), default=0)
+    prereqs = content.focus_prereqs(db, subject, run_id, user.id) if payload.prereqs is None else payload.prereqs
+    seq = 1 + max((e.payload.get('seq', 0) for e in content.focus_events(db, subject, run_id, user.id)), default=0)
     when = now()
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
                      revision=doc.revision, kind='focus',

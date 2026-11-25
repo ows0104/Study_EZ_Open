@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tests/contracts'))
 from quiz_curation_fixture import fixture
 import generation_v2_fixture as f
-from tests.root_support import setup,BASE
+from tests.root_support import setup,widen,BASE
 client,user,SessionLocal=setup()
 from app.models import PrequizJob,JOB_BANK,JOB_BUTTON,JOB_DONE
 from app.models.root_generation import RootGeneration
@@ -40,6 +40,7 @@ user('admin',True)
 overview=client.get(BASE);assert overview.status_code==200,overview.text
 assert overview.json()['summary']['total']==1 and overview.json()['summary']['unready']==0
 assert overview.json()['summary']['importantUnseen']==0
+widen(client)
 started=client.post(BASE+'/sessions',json={'requestId':'synthetic-curated-start'});assert started.status_code==200,started.text
 session=client.get('/api/root-learning/sessions/'+started.json()['sessionId']);assert session.status_code==200
 assert session.json()['count']==1 and session.json()['task']['question']['question_id']=='Q1'

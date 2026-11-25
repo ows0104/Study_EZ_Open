@@ -49,6 +49,11 @@ def publish(client,user,doc=None):
     user('a')
 
 
+def widen(client,base=BASE,request='widen-all'):
+    """네 중요도 모두(2026-11-25-lecture-tier-range): 처음 값은 Essential~Important라, Optional 고정 문항 검사가 오늘 계획을 비우지 않게."""
+    r=client.put(base+'/focus',json={'requestId':request,'tiers':['Essential','Core','Important','Optional']});assert r.status_code==200,r.text
+
+
 def start(client,request='start'):
     r=client.post(BASE+'/sessions',json={'requestId':request});assert r.status_code==200,r.text
     return r.json()['sessionId']

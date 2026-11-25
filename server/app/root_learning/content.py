@@ -228,28 +228,33 @@ def task_tiers(doc, tiers):
     return out
 
 
-def focus_for(db, subject, user_id):
-    """오늘 학습 중요도 필터(2026-11-12): this learner's last choice for the subject, else every tier."""
+# 처음 값(2026-11-25-lecture-tier-range L2, 사용자 「Essential - Important」): 강의에 선택이 없을 때.
+DEFAULT_FOCUS = ('Essential', 'Core', 'Important')
+
+
+def focus_for(db, subject, run_id, user_id):
+    """오늘 학습 중요도 필터(2026-11-12): this learner's last choice for the lecture (2026-11-25), else DEFAULT_FOCUS."""
     from .policy import TIERS
-    row = _last_focus(db, subject, user_id)
-    chosen = set(row.payload.get('tiers', [])) if row else set(TIERS)
+    row = _last_focus(db, subject, run_id, user_id)
+    chosen = set(row.payload.get('tiers', [])) if row else set(DEFAULT_FOCUS)
     return [t for t in TIERS if t in chosen] or list(TIERS)
 
 
-def focus_prereqs(db, subject, user_id):
+def focus_prereqs(db, subject, run_id, user_id):
     """선행 문항 포함/미포함(2026-11-18-prereq-toggle): the same last choice. Older choices without it bring prerequisites in."""
-    row = _last_focus(db, subject, user_id)
+    row = _last_focus(db, subject, run_id, user_id)
     return bool(row.payload.get('prereqs', True)) if row else True
 
 
-def _last_focus(db, subject, user_id):
+def _last_focus(db, subject, run_id, user_id):
     # `seq` orders choices saved at the same instant (request IDs are random), as 「내 중요도」 does.
-    return max(focus_events(db, subject, user_id), key=lambda e: (e.payload.get('seq', 0), e.created_at), default=None)
+    return max(focus_events(db, subject, run_id, user_id), key=lambda e: (e.payload.get('seq', 0), e.created_at), default=None)
 
 
-def focus_events(db, subject, user_id):
+def focus_events(db, subject, run_id, user_id):
+    # 강의마다(2026-11-25-lecture-tier-range L1). 저장 행은 처음부터 run_id를 적었다.
     return db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == subject,
-                                              RootEvent.kind == 'focus')).all()
+                                              RootEvent.run_id == run_id, RootEvent.kind == 'focus')).all()
 
 
 def optional_events(db, user_id):

@@ -165,20 +165,44 @@
 .mq-start-button:hover:not(:disabled){background:var(--accent-ink)}
 .mq-start-button:disabled{opacity:.45;cursor:default}
 .mq-start-button svg{width:16px;height:16px}
-/* 오늘 학습 중요도 필터(2026-11-12) */
-.mq-focus{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.main-quiz-learning .mq-focus button{display:inline-flex;align-items:center;gap:6px;height:34px;min-height:0;padding:0 14px;border-radius:999px;
-  border:1px solid var(--line-strong,var(--line));background:var(--surface);color:var(--ink-2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;opacity:1}
-.mq-focus button b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-3)}
-.mq-focus button svg{width:14px;height:14px;flex:none;margin-left:-3px}
-.main-quiz-learning .mq-focus button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
-.main-quiz-learning .mq-focus button[aria-pressed="true"] b{color:var(--on-accent)}
-.mq-focus button.is-empty[aria-pressed="false"]{opacity:.6}
-.mq-focus button:disabled{cursor:default}
-.main-quiz-learning .mq-focus button[aria-pressed="false"]:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
-/* 선행 문항(2026-11-18-prereq-toggle): 중요도 칩과 떨어뜨린다. 칩이 모두 켜져 있으면 효과가 없어 흐리게. */
-.mq-focus .mq-focus-prereqs{margin-left:10px}
-.mq-focus .mq-focus-prereqs:disabled{opacity:.45}
+/* 오늘 학습 중요도 범위(2026-11-25-lecture-tier-range; 처음은 2026-11-12 칩). 선분 4개·경계 점 5개.
+   선분·점·이름은 손잡이 반지름만큼 안쪽(--pad)에 그려, range 입력의 손잡이 중심(양 끝에서 반지름 안쪽)과 맞춘다. */
+.mq-focus{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 16px;margin-top:12px}
+.mq-range{--thumb:22px;--pad:calc(var(--thumb) / 2);position:relative;flex:1 1 320px;max-width:460px;min-width:0}
+.mq-range-stops{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 var(--pad)}
+.main-quiz-learning .mq-range-stops button{display:flex;align-items:baseline;justify-content:center;gap:4px;min-height:0;height:auto;padding:2px 0 3px;
+  border:0;background:none;color:var(--ink-3);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;opacity:1;min-width:0;white-space:nowrap}
+.mq-range-stops button b{font-weight:700;font-variant-numeric:tabular-nums;font-size:11.5px;opacity:.85}
+.main-quiz-learning .mq-range-stops button.is-in{color:var(--accent-ink,var(--accent))}
+.mq-range-stops button.is-empty{opacity:.55}
+.mq-range-stops button:disabled{cursor:default}
+.mq-range-track{position:relative;height:var(--thumb);margin:0 var(--pad)}
+.mq-range-track::before,.mq-range-track>i{content:"";position:absolute;top:50%;height:4px;margin-top:-2px;border-radius:2px}
+.mq-range-track::before{left:0;right:0;background:var(--line-strong,var(--line))}
+.mq-range-track>i{left:calc(var(--lo) * 100%);width:calc((var(--hi) - var(--lo)) * 100%);background:var(--accent)}
+.mq-range-track>span{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--line-strong,var(--line));box-sizing:border-box}
+.mq-range-track>span.is-in{border-color:var(--accent);background:var(--accent)}
+.main-quiz-learning .mq-range input[type=range]{position:absolute;bottom:0;left:0;width:100%;
+  height:var(--thumb);min-height:0;margin:0;padding:0;border:0;background:none;-webkit-appearance:none;appearance:none;pointer-events:none;z-index:1}
+.mq-range input[type=range]::-webkit-slider-runnable-track{background:none;border:0;height:var(--thumb)}
+.mq-range input[type=range]::-moz-range-track{background:none;border:0}
+.mq-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:var(--thumb);height:var(--thumb);
+  border-radius:50%;border:2px solid var(--accent);background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:grab}
+.mq-range input[type=range]::-moz-range-thumb{pointer-events:auto;width:var(--thumb);height:var(--thumb);box-sizing:border-box;
+  border-radius:50%;border:2px solid var(--accent);background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:grab}
+.mq-range input[type=range]:active::-webkit-slider-thumb{cursor:grabbing}
+.mq-range input[type=range]:focus-visible{outline:none}
+.mq-range input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent);outline-offset:2px}
+.mq-range input[type=range]:focus-visible::-moz-range-thumb{outline:2px solid var(--accent);outline-offset:2px}
+.mq-range input[type=range]:disabled::-webkit-slider-thumb{cursor:default;border-color:var(--line-strong,var(--line))}
+.mq-range input[type=range]:disabled::-moz-range-thumb{cursor:default;border-color:var(--line-strong,var(--line))}
+/* 선행 문항(2026-11-18-prereq-toggle). 모두 고르면 효과가 없어 흐리게. */
+.main-quiz-learning .mq-focus .mq-focus-prereqs{display:inline-flex;align-items:center;gap:6px;height:34px;min-height:0;padding:0 14px;
+  border-radius:999px;border:1px solid var(--line-strong,var(--line));background:var(--surface);color:var(--ink-2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;opacity:1}
+.mq-focus .mq-focus-prereqs svg{width:14px;height:14px;flex:none;margin-left:-3px}
+.main-quiz-learning .mq-focus .mq-focus-prereqs[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.main-quiz-learning .mq-focus .mq-focus-prereqs:disabled{opacity:.45;cursor:default}
 .mq-card-count{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;padding:0 7px;margin-left:2px;
   border-radius:7px;background:color-mix(in srgb,var(--on-accent) 22%,transparent);color:var(--on-accent);
   font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}

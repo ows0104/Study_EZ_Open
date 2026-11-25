@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tests/contracts'))
 import automation_fixture as f
-from tests.root_support import setup,publish,start,view,action,BASE,ADMIN
+from tests.root_support import setup,publish,start,view,action,widen,BASE,ADMIN
 client,user,SessionLocal=setup()
 # Historical /1 publication, including its preserved non-ok task behavior.
 # New requests/default /2 readiness gates are covered by test_root_pipeline_v2.
@@ -81,6 +81,7 @@ assert client.get(BASE).status_code==404
 assert client.get(GEN).status_code==403
 assert client.post(GEN,json={**payload,'requestId':'student'}).status_code==403
 user('admin',True)
+widen(client)
 sid=start(client,'new-start');before=view(client,sid)
 assert 'reviewNotes' not in str(before) and 'sourceLinks' not in str(before) and 'Secret answer' not in str(before)
 assert action(client,sid,'new-reveal','reveal',attempted=True,response='Synthetic recall').status_code==200
