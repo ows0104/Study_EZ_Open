@@ -408,16 +408,28 @@ def marked_points(brief, pages):
             if any(set(e.get('pages') or []) & pages.get(e['source_id'], set()) for e in p.get('evidence') or [])]
 
 
-def marked_questions(brief, coverage_rows, pages):
-    """Questions that answer a component of a goal of a marked point's target (the coverage judgment's own rows;
-    `location=answer` only, so a question that merely mentions the page in its stem does not count)."""
+def marked_goals(brief, pages):
+    """Goals (direction ids) of the targets of points cited on a marked page: what a fill on those pages writes for."""
     pids = set(marked_points(brief, pages))
     tids = {tid for p in brief['points'] if p['point_id'] in pids for tid in p.get('target_ids') or []}
-    dids = {d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']}
+    return [d['direction_id'] for t in brief['targets'] if t['target_id'] in tids for d in t['directions']]
+
+
+def marked_questions(brief, coverage_rows, pages, item_reviews=None, evidence_source=None):
+    """Questions whose answer is on a marked page.
+
+    review-evidence/1 runs: the item review's own evidence slides (the page the answer was checked on) — on the
+    2026-11-25 전신경화증 revision this took the 47 questions answered on a sun page and none from the pages around
+    them. Older runs: questions answering a component (`location=answer`) of a goal from a marked point's target."""
+    if evidence_source is not None:
+        wanted = pages.get(evidence_source, set())
+        return sorted(r['question_id'] for r in item_reviews or []
+                      if {s['page'] for s in (r.get('evidence') or {}).get('slides', [])} & wanted)
+    dids = set(marked_goals(brief, pages))
     return sorted({qid for r in coverage_rows if r['direction_id'] in dids for qid in covering(r)})
 
 
-def marked_report(brief, coverage_rows, pages, table):
+def marked_report(brief, coverage_rows, pages, table, item_reviews=None, evidence_source=None):
     """Per marked page: points, goals, covered goals and Core+ questions (reported, never a gate)."""
     rows = index_by(coverage_rows, 'direction_id')
     tiers = table['questions']
@@ -426,9 +438,9 @@ def marked_report(brief, coverage_rows, pages, table):
         for n in sorted(nums):
             one = {sid: {n}}
             pids = set(marked_points(brief, one))
-            tids = {tid for p in brief['points'] if p['point_id'] in pids for tid in p.get('target_ids') or []}
-            goals = [d for t in brief['targets'] if t['target_id'] in tids for d in t['directions']]
-            qids = marked_questions(brief, coverage_rows, one)
+            dids = marked_goals(brief, one)
+            goals = [{'direction_id': did} for did in dids]
+            qids = marked_questions(brief, coverage_rows, one, item_reviews, evidence_source)
             out.append({'source_id': sid, 'page': n, 'points': len(pids), 'goals': len(goals),
                         'covered': sum(1 for d in goals if d['direction_id'] in rows and rows[d['direction_id']]['status'] == 'covered'),
                         'coreOrAbove': sum(1 for q in qids if q in tiers and imp.ORDER[tiers[q]['tier']] >= imp.ORDER[imp.MARKED_TIER])})
@@ -1129,13 +1141,17 @@ def added_profile(original, extended):
 
 
 def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
-             presuppositions=None, discriminations=None, settled=(), settled_places=None):
+             presuppositions=None, discriminations=None, settled=(), settled_places=None, item_reviews=None,
+             evidence_source=None):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing).
 
     With marked pages (importance-basis/2) the questions answering them are at least Core."""
     pages = marked_pages(profile, exam_date)
-    table = question_table(basis, profile, reviewed, marked_questions(brief, coverage_rows, pages) if pages else None)
+    if pages:
+        marked = set(marked_questions(brief, coverage_rows, pages, item_reviews, evidence_source))
+        marked &= {q['question_id'] for q in reviewed['questions']}
+    table = question_table(basis, profile, reviewed, sorted(marked) if pages else None)
     snapshot, projection = v2.project_container_concepts(reviewed)
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
@@ -1144,7 +1160,7 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
                                 discriminations=discriminations, settled=settled, settled_places=settled_places)
     warnings = importance_warnings(table)
     if pages:
-        warnings['markedPages'] = marked_report(brief, coverage_rows, pages, table)
+        warnings['markedPages'] = marked_report(brief, coverage_rows, pages, table, item_reviews, evidence_source)
     elif (profile or {}).get('marked_pages'):
         warnings['markedPagesNotApplied'] = '이전 해 필기의 말씀이라 적용하지 않음 — 관리자 확인 필요(content/prompts/bank/markedPages.json)'
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': warnings}
@@ -1250,7 +1266,8 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                                      placement=placement, presuppositions=meta.get('presuppositions'),
                                      discriminations=meta.get('discriminations'), settled=_settled(meta),
-                                     settled_places=_settled_places(meta))
+                                     settled_places=_settled_places(meta), item_reviews=meta['itemReviews'],
+                                     evidence_source=(meta.get('reviewEvidence') or {}).get('sourceId'))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
     if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):

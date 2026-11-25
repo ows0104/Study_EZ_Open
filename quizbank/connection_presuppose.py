@@ -42,7 +42,7 @@ from . import connection_batches as batches
 from . import connection_dedupe as dedupe
 from . import connection_visuals as visual
 from .connection_generate_v3 import Stages, chunks, _bank_findings, _medical_batches, _state, ADD_PER_GOAL, COVERAGE_CHUNK
-from .connection_generate_v4 import _goals, _merge_row, _first_evidence, check_stage
+from .connection_generate_v4 import _goals, _merge_row, _first_evidence, check_stage, report_marked
 
 # One add round: every existence goal gets its one question in it (pre.written_for keeps a second round from asking it
 # again). On the 2026-11-16 trial the second round only wrote four stray questions (two never placed) for about three
@@ -78,9 +78,16 @@ def check_fill(fill, old):
                    and all(type(r[k]) is str and r[k].strip() for k in ('note', 'fix')) for r in rewrite)
                and len({r['question_id'] for r in rewrite}) == len(rewrite),
                f'{LABEL}: 다시 쓸 문항 기록의 형식이 다르거나 이 판에 없는 문항입니다(question_id·note·fix).')
-    v3.require(fill['goals'] or rewrite, f'{LABEL}: 채우기 기록에 목표도 다시 쓸 문항도 없습니다.')
+    marked = fill.get('markedPages')
+    if marked is not None:
+        # The administrator's marked pages (docs/changes/2026-11-25-professor-marked-pages): added to the published
+        # profile, so the questions answering them are recomputed to at least Core.
+        v3.require(v4.check_marked_pages(marked)['instruction']['source'] == 'admin',
+                   f'{LABEL}: 채우기의 짚은 쪽 기록은 관리자 기록(source admin)만 받습니다.')
+    v3.require(fill['goals'] or rewrite or marked is not None, f'{LABEL}: 채우기 기록에 목표도 다시 쓸 문항도 없습니다.')
     return {'previousRevision': fill['previousRevision'], 'goals': list(fill['goals']), 'rewrite': copy.deepcopy(rewrite),
-            'reason': fill['reason'], 'approval': fill['approval'], 'at': fill['at']}
+            'reason': fill['reason'], 'approval': fill['approval'], 'at': fill['at'],
+            **({'markedPages': copy.deepcopy(marked)} if marked is not None else {})}
 
 
 def fill_gaps(goal_ids, rows, brief, presuppositions, discriminations, bank):
@@ -164,6 +171,15 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
     context = v3.context_summary(meta['clinicalContext'])
     page_counts = {s['source_id']: s['page_count'] for s in brief['sources']}
     points_doc = meta.get('supplementPoints') or v4.check_points(json.loads(packet['points']))
+    marked = (fill or {}).get('markedPages')
+    if marked is not None:
+        v3.require(points_doc['notebook_profile'].get('marked_pages') is None,
+                   f'{LABEL}: 이 판의 포인트에는 이미 짚은 쪽 기록이 있습니다(관리자 기록으로 바꾸려면 새로 출제합니다).')
+        points_doc = copy.deepcopy(points_doc)
+        points_doc['notebook_profile'] = {**points_doc['notebook_profile'], 'marked_pages': marked}
+        profile = points_doc['notebook_profile']
+        print(f"── {LABEL} 짚은 쪽: " + ', '.join(f"{r['source_id']} {r['pages']}" for r in marked['pages'])
+              + " — 답이 이 쪽인 문항은 Core 이상", flush=True)
     evidence = meta.get('reviewEvidence')
     evidence_notes = {'source_id': evidence['sourceId'], 'page_count': page_counts[evidence['sourceId']]} if evidence else None
 
@@ -405,7 +421,9 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile, revision=packet['revision'],
                                       title=packet['title'], exam_date=packet['examDate'], placement=placement,
                                       presuppositions=presuppositions, discriminations=discriminations,
-                                      settled=published, settled_places=settled_places)
+                                      settled=published, settled_places=settled_places, item_reviews=review_rows,
+                                      evidence_source=(evidence or {}).get('sourceId'))
+    report_marked(proofs['importanceWarnings'])
     kept_tasks = {t['question_id'] for t in old['document']['tasks']}
     # Strict: a published task never becomes a duplicate of an added question (its history would stop).
     v3.require(kept_tasks <= {t['question_id'] for t in doc['tasks']}, f'{LABEL}: 이전 판의 과제가 빠졌습니다.')
@@ -469,7 +487,7 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
                     questionImportance=basis, importanceNotes=v4.importance_notes(review_rows), visualStimuli=stimuli,
                     medicalUnreviewed=unreviewed, importanceWarnings=proofs['importanceWarnings'],
                     importanceProjection=proofs['importanceProjection'],
-                    supplementPoints=meta.get('supplementPoints') if fill is not None
+                    supplementPoints=(points_doc if marked is not None else meta.get('supplementPoints')) if fill is not None
                     else points_doc if supplement or made or made_reverse else None,
                     placement={'policy': v4.REVIEW_PLACEMENT2},
                     presuppositions=presuppositions, discriminations=discriminations, presupposeOnly=record, **placed)

@@ -199,6 +199,21 @@ def remove_questions(bank, stimuli, basis, reviews, rows, goals, gone):
     return bank, stimuli, basis, reviews
 
 
+def report_marked(warnings):
+    """Marked pages (docs/changes/2026-11-25-professor-marked-pages): per page, its goals and Core+ questions. Reported
+    in the log and readiness.json (importanceWarnings), never a gate; a page with no goal is a warning."""
+    if warnings.get('markedPagesNotApplied'):
+        print('── 짚은 쪽: ' + warnings['markedPagesNotApplied'], flush=True)
+    rows = warnings.get('markedPages')
+    if not rows:
+        return
+    print(f"── 짚은 쪽 {len(rows)}쪽 · Core로 올린 문항 {len(warnings['markedFloor'])}개: "
+          + ' · '.join(f"{r['source_id']} p{r['page']} 목표 {r['covered']}/{r['goals']} 문항 {r['coreOrAbove']}" for r in rows), flush=True)
+    empty = [f"{r['source_id']} p{r['page']}" for r in rows if not r['goals']]
+    if empty:
+        print('── 경고: 목표가 없는 짚은 쪽 ' + ', '.join(empty) + ' (게시는 막지 않습니다)', flush=True)
+
+
 def run(packet, out, model, invoke, resume=None):
     from . import connection_generate as g
     out = Path(out)
@@ -738,7 +753,8 @@ def run(packet, out, model, invoke, resume=None):
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile,
                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                                       placement=placement, presuppositions=presuppositions,
-                                      discriminations=discriminations)
+                                      discriminations=discriminations, item_reviews=review_rows,
+                                      evidence_source=ledger['reviewEvidence']['sourceId'] if evidence_on else None)
     if presuppositions is not None:
         counts = pre.report(presuppositions, doc)
         print(f"── 전제 정리: {counts['presupposed']}개 중 답으로 묻는 과제 있음 {counts['recalledByTask']} · 존재 목표 {counts['existenceGoal']} · "
@@ -748,6 +764,7 @@ def run(packet, out, model, invoke, resume=None):
         print(f"── 역방향 정리: 거꾸로 물 목표 {counts['reversible']}개 중 이미 그렇게 묻던 것 {counts['alreadyAsked']} · "
               f"역방향 목표 {counts['goalsMade']}개 중 문항 생김 {counts['goalsWithTask']} · 남은 연결 {len(counts['open'])} · "
               f"발문이 답을 흘린 문항 {len(counts['answerInStem'])}개", flush=True)
+    report_marked(proofs['importanceWarnings'])
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "

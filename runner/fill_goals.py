@@ -8,6 +8,9 @@
         "rewrite": [{"question_id": "Q124", "note": "…", "fix": "…"}],   지적과 함께 다시 쓸 공개 문항(없으면 빈 목록)
         "reason": "…", "approval": "사용자 발언 원문", "at": "ISO 시각"}}}
 
+같은 강의에 `runs/marked-pages.json` 기록(교수가 짚은 쪽)이 있으면 굳힐 때 `markedPages`로 함께 넣는다
+(runner.marked_pages). 생성기가 공개판 프로필에 더해, 짚은 쪽이 답인 문항을 Core 이상으로 다시 계산한다.
+
 보강(presuppose-only/1) 요청을 돌릴 때 그 강의의 기록이 있으면 실행 폴더에 `fill.json`으로 굳혀 생성기에 넘긴다.
 한 번 굳힌 실행은 파일이 바뀌어도 처음 것을 쓴다(이어 하기가 다른 목록으로 돌지 않게). 기록이 없으면 None —
 러너 명령은 지금과 같다. 형식이 틀리면 FillError로 그 일감을 보류한다. 내용 검사(판·목표·문항이 맞는가)는
@@ -52,9 +55,15 @@ def frozen(out: Path, subject: str, run_id: str) -> Path | None:
     target = out / FROZEN
     if target.exists():
         return target
-    row = load(out.parent.parent).get(f"{subject}/{run_id}")
+    runs = out.parent.parent
+    row = load(runs).get(f"{subject}/{run_id}")
     if row is None:
         return None
+    # The administrator's marked pages of this lecture go with it (docs/changes/2026-11-25-professor-marked-pages).
+    from . import marked_pages
+    marked = marked_pages.load(runs).get(f"{subject}/{run_id}")
+    if marked is not None:
+        row = {**row, "markedPages": marked}
     out.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(row, ensure_ascii=False, indent=2), encoding="utf-8")
     return target

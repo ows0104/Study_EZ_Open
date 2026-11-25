@@ -180,3 +180,14 @@ def test_a_supplement_may_add_only_the_admins_marked_pages():
     assert not c.added_profile(PROFILE, {**PROFILE, 'marked_pages': MARKED})       # the notes' words need a new extraction
     assert not c.added_profile(PROFILE, {**PROFILE, 'legend': 'changed', 'marked_pages': admin})
     assert not c.added_profile({**PROFILE, 'marked_pages': MARKED}, {**PROFILE, 'marked_pages': admin})
+
+
+def test_with_review_evidence_the_answer_page_decides():
+    """review-evidence/1: the page the item review checked the answer on, not the goal's other pages."""
+    b, _ = split()
+    reviews = [{'question_id': 'Q1', 'evidence': {'mode': 'single', 'reason': 'x', 'slides': [{'page': 9, 'evidence': 'x'}]}},
+               {'question_id': 'Q2', 'evidence': {'mode': 'single', 'reason': 'x', 'slides': [{'page': 8, 'evidence': 'x'}]}},
+               {'question_id': 'Q3', 'evidence': {'mode': 'unresolved', 'reason': 'x', 'slides': []}}]
+    assert c.marked_questions(b, rows(), {'S1': {8}}, reviews, 'S1') == ['Q2']
+    assert c.marked_questions(b, rows(), {'S1': {8}}, reviews, 'S2') == []
+    assert c.marked_goals(b, {'S1': {8}}) == ['D1']

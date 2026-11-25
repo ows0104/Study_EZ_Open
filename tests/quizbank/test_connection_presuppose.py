@@ -430,3 +430,45 @@ def test_a_rewrite_the_re_review_finds_worse_in_design_is_undone_and_the_lecture
     assert not record.get('rewrittenQuestions')
     carried = next(c for c in record['carry'] if c['revision'] == old['document']['revision'])
     assert carried['tasks'] == carried['of'] == len(old['document']['tasks'])
+
+
+# ---------------------------------------------------------------- marked pages (docs/changes/2026-11-25-professor-marked-pages)
+ADMIN_MARKED = {'instruction': {'quote': '시험은 햇살 슬라이드만 외우면 된다', 'refs': [], 'year': 2026, 'source': 'admin'},
+                'marker': '슬라이드 오른쪽 위 해 그림', 'pages': [{'source_id': 'S1', 'pages': [1]}]}
+
+
+def test_a_fill_adds_the_admins_marked_pages_and_raises_their_answers_to_core(tmp_path, monkeypatch):
+    from studyez_contracts.roots import generation_v4 as v4
+    previous, old, packet = judged(tmp_path)
+    # The synthetic lecture cites no pages; name the question answering the marked page directly. The consumer
+    # calls the same function, so both sides see the same set.
+    monkeypatch.setattr(v4, 'marked_questions', lambda *a, **k: ['Q2'])
+    model = t4.Model()
+    result = g.run(packet, tmp_path / 'new', invoke=model, presuppose_of=previous,
+                   fill={**fill_record(old), 'markedPages': ADMIN_MARKED})
+    assert consume(result, packet) == result['document']
+    assert model.calls == []                                   # nothing to write: only the importance is recomputed
+    meta = result['manifest']
+    assert meta['supplementPoints']['notebook_profile']['marked_pages'] == ADMIN_MARKED
+    assert meta['importanceProjection']['policy'] == 'importance-basis/2'
+    old_tiers = {q['question_id']: q['tier'] for q in old['document']['bank_snapshot']['questions']}
+    tiers = {q['question_id']: q['tier'] for q in result['document']['bank_snapshot']['questions']}
+    assert old_tiers['Q2'] == 'Optional' and tiers == {**old_tiers, 'Q2': 'Core'}
+    assert meta['importanceWarnings']['markedFloor'] == ['Q2']
+    assert meta['presupposeOnly']['fill']['markedPages'] == ADMIN_MARKED
+    # every task continues its history: the question did not change, only its tier
+    carried = next(c for c in meta['presupposeOnly']['carry'] if c['revision'] == old['document']['revision'])
+    assert carried['tasks'] == carried['of'] == len(old['document']['tasks'])
+    # a result that drops the record from the profile is refused
+    bad = copy.deepcopy(result)
+    bad['manifest']['supplementPoints']['notebook_profile'].pop('marked_pages')
+    with pytest.raises(ValueError, match='projections differ'):
+        consume(bad, packet)
+
+
+def test_a_fill_takes_only_the_admins_marked_pages(tmp_path):
+    previous, old, packet = judged(tmp_path)
+    notes = copy.deepcopy(ADMIN_MARKED)
+    notes['instruction'].update(source='notes', refs=[{'source_id': 'S1', 'pages': [1]}])
+    with pytest.raises(ValueError, match='관리자 기록'):
+        g.run(packet, tmp_path / 'x', invoke=t4.Model(), presuppose_of=previous, fill={**fill_record(old), 'markedPages': notes})
