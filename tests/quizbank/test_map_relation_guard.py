@@ -108,6 +108,26 @@ def test_c_a_late_duplicate_of_answer_is_refused(tmp_path):
         run(tmp_path, DuplicateLateModel())
 
 
+class OutOfScopeLateModel(LateModel):
+    def __call__(self, stage, ctx, material, model):
+        if stage == 'v4-supplement-late':
+            self.calls.append(stage)
+            return {'rows': [{'question_id': q['question_id'], 'decision': 'out_of_scope', 'point': None, 'duplicate_of': None,
+                              'reason': 'Past exam only'} for q in ctx['questions']]}, {}
+        return super().__call__(stage, ctx, material, model)
+
+
+def test_c_a_question_the_late_round_puts_out_of_scope_leaves_the_coverage_rows_too(tmp_path):
+    """261125_06 (암면역) Q064: the D1 coverage row named the question as evidence without a relation, the late
+    supplement put it out of scope, and the assembly stopped on "coverage names a missing question"."""
+    p, model, result = run(tmp_path, OutOfScopeLateModel())
+    assert consume(result, p) == result['document']
+    assert 'v4-supplement-late' in model.calls and 'medical-0' in model.calls
+    assert [r['question_id'] for r in result['manifest']['offGoalQuestions']] == ['Q2']
+    assert 'Q2' not in {q['question_id'] for q in result['document']['bank_snapshot']['questions']}
+    assert 'Q2' not in dict(tasks(result))
+
+
 def test_d_an_ok_question_left_off_the_map_is_reported_and_the_run_goes_on(tmp_path):
     """사용자 결정 2026-11-14 「멈추지 말고 보고」: the run is published; the question is listed with its reason."""
     p, model, result = run(tmp_path, LateModel(keep_off=True))

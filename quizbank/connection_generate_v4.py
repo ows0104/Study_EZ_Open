@@ -187,6 +187,13 @@ def remove_questions(bank, stimuli, basis, reviews, rows, goals, gone):
     stimuli = [s for s in stimuli if s['question_id'] not in gone]
     basis = {q: b for q, b in basis.items() if q not in gone}
     reviews = {q: r for q, r in reviews.items() if q not in gone}
+    forget_in_rows(rows, goals, gone)
+    return bank, stimuli, basis, reviews
+
+
+def forget_in_rows(rows, goals, gone):
+    """Take questions that left the bank out of the coverage rows that name them, in place; a goal's status follows
+    the evidence it has left."""
     for did, r in list(rows.items()):
         if not any(e['question_id'] in gone for e in r['evidence']) and not any(set(g['question_ids']) & gone for g in r.get('duplicates', [])):
             continue
@@ -196,7 +203,6 @@ def remove_questions(bank, stimuli, basis, reviews, rows, goals, gone):
         if row['status'] != 'unknown':
             row['status'] = 'covered' if v4.full(row, goals[did]) else 'missing'
         rows[did] = row
-    return bank, stimuli, basis, reviews
 
 
 def report_marked(warnings):
@@ -389,6 +395,10 @@ def run(packet, out, model, invoke, resume=None):
                 q['prerequisites'] = [p for p in q['prerequisites'] if p not in gone]
         stimuli = [s for s in stimuli if s['question_id'] not in gone]
         basis = {q: b for q, b in basis.items() if q not in gone}
+        # A question the late round puts out of scope can be evidence in a goal's coverage row (it answers a component
+        # but names no relation, so no goal took it). The row must not keep naming it (261125_06 Q064: the assembly
+        # stopped on "coverage names a missing question"). The first round's questions are in no row.
+        forget_in_rows(rows, _goals(brief), gone)
         return gone
 
     off_goal = v4.off_goal(bank, rows.values(), placement)
