@@ -1,0 +1,88 @@
+{
+  "_note": "사용자 11-26 「A,B하고 Telitacicept도 해줘」. A = 신약 이름 회상·미토콘드리아·poly(I:C), B = epithelitis·cevimeline·Q026·Q080. ESSDAI–ESSPRI 상관은 SJ-Q019(Core O/X)가 이미 물어 새 카드를 만들지 않는다.",
+  "261123_07": {
+    "tier": {
+      "Core": ["Q120", "Q016"],
+      "Important": ["Q026", "Q080"]
+    },
+    "new": [
+      {
+        "parent": "Q120",
+        "tier": "Core",
+        "format": "basic",
+        "question": "CD40L을 차단하는 쇼그렌병 표적치료 후보약은?",
+        "answer": "Dazodalibep",
+        "answer_units": ["Dazodalibep"],
+        "explanation": "T세포의 CD40L과 B세포의 CD40 사이 공동자극(T–B 상호작용)을 막는다. 필기: 「CD40L을 차단」.",
+        "exam_rationale": "p.31 필기에서 교수가 직접 설명한 신약 / 약–표적 연결(Ianalumab–BAFF-R, Dazodalibep–CD40L, Nipocalimab–FcRn)",
+        "basis": "S1 p.31 표 「Dazodalibep against CD40L」, 필기 「이외에도 CD40L을 차단」"
+      },
+      {
+        "parent": "Q120",
+        "tier": "Core",
+        "format": "basic",
+        "question": "FcRn을 막아 IgG 대사에 영향을 주는 쇼그렌병 표적치료 후보약은?",
+        "answer": "Nipocalimab",
+        "answer_units": ["Nipocalimab"],
+        "explanation": "필기: 「IgG를 많이 만드므로 IgG 대사에 영향을 주는 접근」. FcRn은 IgG를 재활용해 혈중에 오래 남게 하는 수용체다.",
+        "exam_rationale": "p.31 필기에서 교수가 직접 설명한 신약 / 약–표적 연결",
+        "basis": "S1 p.31 표 「Nipocalimab against FcRn」, 필기 「IgG를 많이 만드므로 IgG 대사에 영향을 주는 접근」"
+      },
+      {
+        "parent": "Q120",
+        "tier": "Important",
+        "format": "basic",
+        "question": "BAFF와 APRIL을 함께 차단하는 쇼그렌병 표적치료 후보약은?",
+        "answer": "Telitacicept",
+        "answer_units": ["Telitacicept"],
+        "explanation": "TACI 수용체 융합단백(-cept)으로 두 리간드 BAFF·APRIL을 함께 잡는다. 슬라이드 표에만 있고 필기 설명은 없다.",
+        "exam_rationale": "p.31 슬라이드 표의 약–표적 연결(사용자 11-26 요청으로 추가)",
+        "basis": "S1 p.31 표 「Telitacicept against BAFF & APRIL」, 그림 「BAFF/APRIL blockade Telitacicept」"
+      },
+      {
+        "parent": "Q015",
+        "tier": "Core",
+        "format": "basic",
+        "question": "손상된 미토콘드리아에서 새어 나온 핵산이 1형 IFN 반응을 일으키는 이유는?",
+        "answer": "host origin이 아니어서 바이러스와 거의 같게 취급되기 때문이다",
+        "answer_units": ["host origin이 아니어서 바이러스와 거의 같게 취급되기 때문이다"],
+        "explanation": "그림: mtDNA → cGAS → STING → Type I IFN. 다만 IFN 자체도 미토콘드리아 손상을 일으켜 무엇이 먼저인지는 모른다.",
+        "exam_rationale": "p.10 필기 「핵산이 host origin이 아니기 때문에, 바이러스와 거의 동일한 취급 → IFN 반응 활성화」",
+        "basis": "S1 p.10 필기 「mitochondria가 손상되어 내부의 핵산이 빠져나오기 시작하면 핵산이 host origin이 아니기 때문에, 바이러스와 거의 동일한 취급 -> IFN 반응 활성화」"
+      },
+      {
+        "parent": "Q018",
+        "tier": "Core",
+        "format": "cloze",
+        "question": "합성 RNA인 poly(I:C)를 투여한 실험 결과를 채우시오.\n| 동물 | 침 분비량 |\n|---|---|\n| IFN-α 수용체 KO(IFNAR−/−) | {크게 변하지 않음} |\n| 정상(IFNAR+/+) | {크게 감소} |",
+        "answer": "IFN-α 수용체 KO: 크게 변하지 않음; 정상: 크게 감소",
+        "answer_units": ["크게 변하지 않음", "크게 감소"],
+        "explanation": "그림: 정상 41% 감소, KO 9.6%. IFN이 외분비샘 기능저하에 관여할 가능성을 뒷받침한다.",
+        "exam_rationale": "p.10 실험 설명 필기 / 「KO 동물은 침 분비가 감소한다」는 함정",
+        "basis": "S1 p.10 필기 「합성 RNA인 poly(I:C) 투여 -> (1)[IFNAR KO]에서는 침 분비량이 크게 변하지 않았고, (2)에서는 침 분비량이 많이 감소」"
+      },
+      {
+        "parent": "Q122",
+        "tier": "Important",
+        "format": "basic",
+        "question": "외분비샘 상피세포가 면역공격의 표적이면서 면역반응을 이끈다는 점에서, 쇼그렌병을 달리 부르자고 제안된 이름은?",
+        "answer": "Autoimmune epithelitis",
+        "answer_units": ["Autoimmune epithelitis"],
+        "explanation": "필기: Sjögren 이름을 빼고 Autoimmune epithelitis로 부르자는 주장도 있다. 「Autoimmune exocrinopathy」로도 불린다.",
+        "exam_rationale": "p.7 슬라이드 제목·필기",
+        "basis": "S1 p.7 「“Autoimmune epithelitis”」, 필기 「Sjogren 이름을 빼고 Autoimmune epithelitis로 부르자고 주장하기도 한다」"
+      },
+      {
+        "parent": "SJ-Q063",
+        "tier": "Important",
+        "format": "basic",
+        "question": "쇼그렌병 구강건조 치료에서 pilocarpine과 함께 언급된 같은 계열의 콜린성 약제는?",
+        "answer": "Cevimeline",
+        "answer_units": ["Cevimeline"],
+        "explanation": "우리나라에서 유일하게 쓰는 약은 pilocarpine이다. cevimeline은 같은 콜린성 침분비 촉진제로 슬라이드에 덧붙어 있다.",
+        "exam_rationale": "p.30 슬라이드 「콜린성 약제(pilocarpine) cevimeline」",
+        "basis": "S1 p.30 「타액분비자극, 인공타액 혹은 콜린성 약제 (pilocarpine) cevimeline」"
+      }
+    ]
+  }
+}
