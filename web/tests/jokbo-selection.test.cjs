@@ -85,3 +85,20 @@ test('합친 문제는 나온 해 어느 버튼에서든 한 번만, 변형은 �
   // 2020 버튼만 골라도 합친 문제가 들어간다
   assert.deepEqual(plain(sel.pickItems(d, 'more', new Set([ys[2].key])).map(i => i.id)), ['m', 'v1']);
 });
+
+test('오래된 해부터: 교수 구분 없이 연도 오름차순, 같은 해는 원래 순서, 변형은 이어서', () => {
+  const y = (id, label, extra = {}) => item(id, label, { year: Number(label), ...extra });
+  const d = {
+    lecture: { eventId: 'e' },
+    sections: [
+      { kind: 'same', professors: ['방예지'], years: ['2025', '2019'], itemIds: ['s1', 's2', 's3'] },
+      { kind: 'other', professors: ['김현제'], years: ['2023', '2019'], itemIds: ['o1', 'o2', 'v2', 'v1'] },
+    ],
+    items: [y('s1', '2025'), y('s2', '2019'), y('s3', '2019'), y('o1', '2023'), y('o2', '2019'),
+      y('v2', '2023', { variantGroup: 'g' }), y('v1', '2019', { variantGroup: 'g' })],
+  };
+  const keys = new Set(sel.otherYears(d).map(k => k.key));
+  assert.deepEqual(plain(sel.pickItems(d, 'more', keys).map(i => i.id)), ['s1', 's2', 's3', 'o1', 'v2', 'v1', 'o2']);
+  assert.deepEqual(plain(sel.pickItems(d, 'more', keys, 'old').map(i => i.id)), ['s2', 's3', 'o2', 'v1', 'v2', 'o1', 's1']);
+  assert.deepEqual(plain(sel.pickItems(d, 'same', keys, 'old').map(i => i.id)), ['s2', 's3', 's1']);
+});
