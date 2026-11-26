@@ -340,6 +340,7 @@ def test_a_new_run_raises_the_question_a_must_know_question_stands_on(tmp_path):
     proof = meta['importanceProjection']
     assert proof['policy'] == 'importance-basis/3' and proof['table']['carries'] == {'Q2': ['Q1']}
     assert meta['importanceWarnings']['carriedFloor'] == ['Q2']
+    assert meta['importanceWarnings']['carriedUnplaced'] == []          # Q2 has its task
     assert consume(result, p) == result['document']
 
 

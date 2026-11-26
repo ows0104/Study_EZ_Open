@@ -163,6 +163,27 @@ def test_assembly_applies_both_and_the_consumer_rebuilds_the_same_document():
         consume(value, p)
 
 
+def test_a_raised_trunk_without_a_task_is_reported():
+    """2026-11-26 피부근염 2회: 「MSA 세 계열」 was carried to Must-Know but sat on a relation the map check called a
+    conflict, so no goal took it. The warning names it; nothing is blocked."""
+    from test_generation_v4 import map_ok, JUDGMENT
+    from studyez_contracts.roots import generation_v2 as v2, generation_v3 as v3
+    b, bank = scenario()
+    coverage = rows()
+    coverage[1] = {**coverage[1], 'status': 'missing', 'evidence': []}           # nobody places Q2 on D2
+    reviews = [review(q['question_id']) for q in bank['questions']]
+    raw = c.assessment_raw(b, bank, coverage, map_ok(b), reviews, v3.context_summary(JUDGMENT), 'Synthetic', 'evidence')
+    audit = c.compile_assessment(b, bank, v2.envelope(b, bank, raw), 'evidence')
+    p = v4_packet(bank)
+    args = (b, bank, audit, coverage, {'Q1': EXAM, 'Q2': [], 'Q3': []}, PROFILE)
+    kw = dict(revision=p['revision'], title=p['title'], exam_date=p['examDate'], presuppositions=[link('Q1', ['Q2'])],
+              item_reviews=[{**r, c.OFF_LEVEL: []} for r in reviews])
+    doc, placed, proofs = c.assemble(*args, **kw, answer_level=True)
+    assert 'Q2' not in {t['question_id'] for t in doc['tasks']} and [u['question_id'] for u in placed['unplacedQuestions']] == ['Q2']
+    assert proofs['importanceWarnings']['carriedFloor'] == ['Q2'] and proofs['importanceWarnings']['carriedUnplaced'] == ['Q2']
+    assert 'carriedUnplaced' not in c.assemble(*args, **kw)[2]['importanceWarnings']
+
+
 def test_a_result_made_before_the_policy_is_assembled_as_before():
     p, value = full_result()
     assert 'answerLevel' not in value['manifest'] and consume(value, p) == value['document']

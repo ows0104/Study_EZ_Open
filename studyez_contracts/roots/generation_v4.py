@@ -1224,6 +1224,11 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
                                 placement=placement, presuppositions=presuppositions,
                                 discriminations=discriminations, settled=settled, settled_places=settled_places)
     warnings = importance_warnings(table)
+    if answer_level:
+        # A trunk the carry raised but no goal took: the learner meets the questions standing on it without it
+        # (2026-11-26 피부근염 2회: 「MSA 세 계열」 sat on a relation the map check called a conflict). Reported only.
+        tasked = {t['question_id'] for t in doc['tasks']}
+        warnings['carriedUnplaced'] = sorted(q for q in level['carries'] if q not in tasked)
     if pages:
         warnings['markedPages'] = marked_report(brief, coverage_rows, pages, table, item_reviews, evidence_source)
     elif (profile or {}).get('marked_pages'):

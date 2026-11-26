@@ -811,6 +811,9 @@ def run(packet, out, model, invoke, resume=None):
         carried, off = proofs['importanceWarnings']['carriedFloor'], proofs['importanceWarnings']['offLevelExam']
         print(f"── 답 자리: 다른 문항이 발문에 준 연결을 묻는 문항 {len(carried)}개를 그 문항들의 등급으로 올림 · "
               f"족보와 층이 달라 족보 근거를 뺀 문항 {len(off)}개" + (': ' + ', '.join(sorted(off)) if off else ''), flush=True)
+        stray = proofs['importanceWarnings']['carriedUnplaced']
+        if stray:
+            print(f"── 답 자리 경고: 올린 줄기 {len(stray)}개가 과제에 못 들어감(그 위 문항만 학습됨): {', '.join(stray)}", flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "

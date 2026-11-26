@@ -35,3 +35,4 @@ docs/changes/2026-11-26-answer-holds-the-link(피부근염 261124_02에서 줄�
 - item-review.md: 같은 여덟 가지와 판단 기준(R4), 뜻풀이→이름 doubt(R5), 입력에 `exam_level`이 있으면 층이 어긋난 족보 연도 `off_level_exam_years`(R2, answer-level/1).
 - `../map-tree/bank-task-v4.md`: `current_exam` 같은 문장(R2). `../../bank/bankPrompt.md` 1.85에 같은 원칙.
 - supplement-normalize.md(새로 복사, 2026-11-26 재현 뒤): `../v3/supplement-normalize.md`에 component 하나 = 채점할 내용 하나, 입력에 `origin_questions`가 있으면 목표를 그 문항이 답하는 방향으로 쓰라는 두 줄을 더했다. item-review.md에 「오답 선지를 바로잡는 답은 같은 층」 예.
+- map-check.md(2026-11-26 재현 2회 뒤): 관계 판정은 그 관계가 말하는 사실로 하고, 끝점 모양만 어긋나면 supported + map_fix(사실이 틀리면 conflict). presuppose.md: recalled_by는 그 연결 자체를 답하는 문항만, 판단·할 일 문항은 그 판단이 필요해지는 앞 연결 위에 선다.
