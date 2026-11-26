@@ -34,3 +34,4 @@ docs/changes/2026-11-26-answer-holds-the-link(피부근염 261124_02에서 줄�
 - add.md·fix.md: 판단 연결의 존재 문항은 상황만 주고 판단을 답하게 함(R1, add). 싣지 않는 것 다섯 → 여덟(범주가 곧 판단인 말·핵심인 개수·판단과 중간 단계)과 한 가지 판단 기준(R4). 뜻풀이만 주고 이름을 답하게 하지 않음(R5, fix는 뒤집지 않음). `current_exam`은 족보 정답 선지가 말한 판단과 같은 층일 때만(R2).
 - item-review.md: 같은 여덟 가지와 판단 기준(R4), 뜻풀이→이름 doubt(R5), 입력에 `exam_level`이 있으면 층이 어긋난 족보 연도 `off_level_exam_years`(R2, answer-level/1).
 - `../map-tree/bank-task-v4.md`: `current_exam` 같은 문장(R2). `../../bank/bankPrompt.md` 1.85에 같은 원칙.
+- supplement-normalize.md(새로 복사, 2026-11-26 재현 뒤): `../v3/supplement-normalize.md`에 component 하나 = 채점할 내용 하나, 입력에 `origin_questions`가 있으면 목표를 그 문항이 답하는 방향으로 쓰라는 두 줄을 더했다. item-review.md에 「오답 선지를 바로잡는 답은 같은 층」 예.

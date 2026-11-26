@@ -86,6 +86,17 @@ def _merge_row(old, new, goal, replaced=(), by_evidence=False):
     return row
 
 
+INTEGRATION_WITHOUT_BASE = ': integration의 기초 문항 필요'
+
+
+def _origin_questions(bank, points):
+    """answer-level/1: the questions a supplement point was made from, as the learner sees them with the scored answer.
+    The goal made from the point must be one the question answers (2026-11-26 피부근염: four goals took two facts in
+    one component and the coverage judgment found their own question answering none of it)."""
+    wanted = {p.get('origin_question_id') for p in points}
+    return [v3._front(q) for q in bank['questions'] if q['question_id'] in wanted]
+
+
 def _first_evidence(old, new):
     """goal-duplicates/1: a re-check that reads questions already judged for the goal keeps their first evidence
     (the same question is not judged twice); it adds the evidence of the others and its duplicate groups."""
@@ -93,14 +104,25 @@ def _first_evidence(old, new):
     return {**new, 'evidence': [e for e in new['evidence'] if e['question_id'] not in had]}
 
 
-def _intake(packet, out):
-    """The independent bank with each question's basis; questions with format errors are left out (as /3)."""
+def _intake(packet, out, keep_integration=False):
+    """The independent bank with each question's basis; questions with format errors are left out (as /3).
+
+    `keep_integration` (answer-level/1): an integration question is not left out only because it names no prerequisite.
+    The intake bank never has prerequisites (the authoring prompt writes none; the order comes from later stages), so
+    this check dropped every case→judgment question of the first bank: 193 in 116 runs on this PC, and on the 피부근염
+    replay of 2026-11-26 the steroid-myopathy and AST/ALT judgments. The final validation still lists them."""
     intake = copy.deepcopy(packet['intakeBank'])
     basis = v4.check_intake(intake)
     bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
-    rejected = intake_rejections(report['errors'], question_ids={q['question_id'] for q in bank['questions']})
+    errors = report['errors']
+    if keep_integration:
+        kept = [e for e in errors if e.endswith(INTEGRATION_WITHOUT_BASE)]
+        errors = [e for e in errors if not e.endswith(INTEGRATION_WITHOUT_BASE)]
+        if kept:
+            print(f"── 접수: 선행 문항이 아직 없는 통합 문항 {len(kept)}개를 빼지 않고 받음", flush=True)
+    rejected = intake_rejections(errors, question_ids={q['question_id'] for q in bank['questions']})
     bad = {r['question_id'] for r in rejected}
     if bad:
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in bad]
@@ -268,7 +290,7 @@ def run(packet, out, model, invoke, resume=None):
     profile = points_doc['notebook_profile']
 
     # 1c: intake bank and its basis ------------------------------------------
-    bank, stimuli, conflicts, rejected, intake_changes, basis, intake_cloze = _intake(packet, out)
+    bank, stimuli, conflicts, rejected, intake_changes, basis, intake_cloze = _intake(packet, out, keep_integration=level_on)
     initial_bank = copy.deepcopy(bank)
     intake_conflict_ids = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
 
@@ -372,6 +394,8 @@ def run(packet, out, model, invoke, resume=None):
         if new_points:
             allowed = v3.supplement_ids(brief, len(new_points))
             ctx = v3.supplement_normalize_input(brief, new_points, allowed)
+            if level_on:
+                ctx['origin_questions'] = _origin_questions(bank, new_points)
             state = {'brief': brief, 'blank': True}
             addition = st.run(X + 'supplement-normalize' + tag, ctx, lambda raw: check_stage('supplement-normalize', raw, ctx, state, None), state)
             brief, new_tids = v3.extend_brief(brief, v3.supplement_addition(brief, addition, True), [p['point_id'] for p in new_points])

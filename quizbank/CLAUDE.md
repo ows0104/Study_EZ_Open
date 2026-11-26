@@ -52,6 +52,7 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
 - 전제 판정이 발문이 사실로 준 **판단·다음 할 일**도 상위 연결로 적는다(증례의 자료는 전제가 아니고, 그 자료에서 나오는 결론은 전제다). 지시문만 바뀐다.
 - 문항 검토가 문항마다 `off_level_exam_years`를 적는다: 그 문항이 근거로 든 족보(`current_exam`) 가운데, 족보 정답 선지가 말한 판단보다 잘게 바꿔 물은 연도다. 입력에 `exam_level`이 있을 때만이다.
 - 조립이 등급표 `importance-basis/3`을 계산한다. 그 연도의 족보 줄은 점수에서 빠지고(근거는 적힌 대로 남는다), 다른 문항이 발문에 준 연결을 답으로 묻는 문항은 그 문항들의 최고 등급까지 오른다(규칙 `carries`, `v4.carried_by`: 전제 줄의 `recalled_by`와 존재 목표를 통째로 답하는 문항). `exam_exclusion`은 그대로 Optional이다.
+- 접수는 선행 문항이 없다는 이유만으로 통합(integration) 문항을 빼지 않는다(첫 은행은 선행을 쓰지 않는다). 보충 정규화 입력에 포인트를 만든 문항(`origin_questions`)이 들어간다.
 - manifest `answerLevel`(선택 키)이 없는 판은 이전 계산 그대로다. 보강·재배치·중복 재판정은 이어받는 판의 표시를 따른다. 검사: `tests/contracts/test_answer_level.py`.
 /4 고치기는 같은 question_id로 다른 물음을 쓰지 않는다(`docs/changes/2026-11-23-fix-same-question/`). ID에 학습 기록이 이어지기 때문이다. 같은 물음 안의 셋(정답 교체·같은 범주 목록의 빠진 원소·줄이거나 나누기)만 답을 바꾸고, 검토는 다른 물음을 note의 「별도 문항: …」으로 남긴다. 지시문 규칙이며 코드는 막지 않는다. 검사: `tests/quizbank/test_fix_same_question.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.

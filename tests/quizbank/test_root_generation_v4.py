@@ -341,3 +341,22 @@ def test_a_new_run_raises_the_question_a_must_know_question_stands_on(tmp_path):
     assert proof['policy'] == 'importance-basis/3' and proof['table']['carries'] == {'Q2': ['Q1']}
     assert meta['importanceWarnings']['carriedFloor'] == ['Q2']
     assert consume(result, p) == result['document']
+
+
+def test_intake_keeps_an_integration_question_only_under_the_answer_level_policy(tmp_path):
+    """The intake bank never names prerequisites, so the old check dropped every integration question of it."""
+    from quizbank import connection_generate_v4 as gen
+    p = packet(tmp_path)
+    p['intakeBank']['bank']['questions'][0]['retrieval_direction'] = 'integration'
+    kept = gen._intake(p, tmp_path / 'a', keep_integration=True)
+    dropped = gen._intake(p, tmp_path / 'b')
+    assert [q['question_id'] for q in kept[0]['questions']] == ['Q1', 'Q2'] and kept[3] == []
+    assert [q['question_id'] for q in dropped[0]['questions']] == ['Q2']
+    assert dropped[3][0]['error'].endswith(gen.INTEGRATION_WITHOUT_BASE)
+
+
+def test_a_supplement_goal_is_written_with_the_question_it_comes_from():
+    from quizbank import connection_generate_v4 as gen
+    bank = f.old.bank()
+    got = gen._origin_questions(bank, [{'point_id': 'P9', 'origin_question_id': 'Q2'}])
+    assert [q['question_id'] for q in got] == ['Q2'] and 'answer' in got[0] and 'question' in got[0]
