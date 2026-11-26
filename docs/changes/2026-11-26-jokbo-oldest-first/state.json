@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-26-jokbo-oldest-first",
+  "title": "족보 강의별 풀기 오래된 해부터",
+  "area": "site",
+  "created_at": "2026-11-26T08:43:03.711072+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-26T08:43:03.711101+00:00"
+}

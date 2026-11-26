@@ -9,7 +9,7 @@ import { JokboBody } from "./JokboBody";
 import { RATINGS, shownBand, useMarkWriter, type Shown } from "./marks";
 import {
   changedChoices, defaultScope, grade, needed, otherYears, pickItems, professorsOf, sameItemIds, yearsOf,
-  type JokboScope, type Verdict,
+  type JokboOrder, type JokboScope, type Verdict,
 } from "./selection";
 import "../bank/main-quiz.css";
 import "../lecture/prequiz.css";
@@ -93,15 +93,16 @@ export function lectureTitle(doc: JokboDoc): string {
 
 const STORE = "jokbo-scope:";
 
-function loadChoice(doc: JokboDoc): { scope: JokboScope; years: string[] | null } {
+function loadChoice(doc: JokboDoc): { scope: JokboScope; years: string[] | null; order: JokboOrder } {
   try {
     const raw = localStorage.getItem(STORE + doc.lecture.eventId);
     if (raw) {
-      const got = JSON.parse(raw) as { scope?: JokboScope; years?: string[] };
-      if (got.scope === "same" || got.scope === "more") return { scope: got.scope, years: Array.isArray(got.years) ? got.years : null };
+      const got = JSON.parse(raw) as { scope?: JokboScope; years?: string[]; order?: JokboOrder };
+      const order: JokboOrder = got.order === "old" ? "old" : "new";
+      if (got.scope === "same" || got.scope === "more") return { scope: got.scope, years: Array.isArray(got.years) ? got.years : null, order };
     }
   } catch { /* 저장소가 막혀 있으면 기본값 */ }
-  return { scope: defaultScope(doc), years: null };
+  return { scope: defaultScope(doc), years: null, order: "new" };
 }
 
 function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: () => void; onStart: (items: JokboItem[]) => void }) {
@@ -115,12 +116,13 @@ function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: ()
     const saved = initial.years?.filter(k => known.has(k));
     return new Set(saved && saved.length ? saved : others.map(y => y.key));
   });
-  const items = pickItems(doc, scope, years);
+  const [order, setOrder] = useState<JokboOrder>(initial.order);
+  const items = pickItems(doc, scope, years, order);
   const allOn = others.length > 0 && others.every(y => years.has(y.key));
 
   useEffect(() => {
-    try { localStorage.setItem(STORE + doc.lecture.eventId, JSON.stringify({ scope, years: [...years] })); } catch { /* 무시 */ }
-  }, [doc.lecture.eventId, scope, years]);
+    try { localStorage.setItem(STORE + doc.lecture.eventId, JSON.stringify({ scope, years: [...years], order })); } catch { /* 무시 */ }
+  }, [doc.lecture.eventId, scope, years, order]);
 
   function toggle(key: string) {
     setYears(prev => {
@@ -178,6 +180,14 @@ function JokboStart({ data, onBack, onStart }: { data: JokboResponse; onBack: ()
               ))}
             </div>
           ) : null}
+          <div className="mq-focus jokbo-order" role="radiogroup" aria-label="순서">
+            {([["new", "최신 해부터"], ["old", "오래된 해부터"]] as const).map(([key, label]) => (
+              <button key={key} type="button" role="radio" aria-checked={order === key} aria-pressed={order === key}
+                onClick={() => setOrder(key)}>
+                {order === key && <Icon.check />}{label}
+              </button>
+            ))}
+          </div>
         </div>
         <button className="mq-start-button" disabled={!items.length} onClick={() => onStart(items)}>
           <Icon.play />시작<span className="mq-card-count" aria-label={`문제 ${items.length}개`}>{items.length}</span>

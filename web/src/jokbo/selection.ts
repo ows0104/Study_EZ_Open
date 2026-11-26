@@ -46,14 +46,23 @@ export function yearsOf(item: JokboItem | undefined): string[] {
 /**
  * 고른 범위의 문항. 같은 교수 → 고른 다른 교수 연도(최신부터) 순서.
  * 합친 문제는 한 번만. 변형 묶음은 처음 나온 자리에 모아 이어서 낸다(바뀐 선지를 견주게).
+ *
+ * `order = "old"`(2026-11-26 사용자 「오래된 해부터」): 교수 구분 없이 대표 연도 오름차순. 같은 해는 위 순서 그대로.
  */
-export function pickItems(doc: JokboDoc, scope: JokboScope, years: Set<string>): JokboItem[] {
+export function pickItems(doc: JokboDoc, scope: JokboScope, years: Set<string>, order: JokboOrder = "new"): JokboItem[] {
   const byId = new Map(doc.items.map(it => [it.id, it]));
   const ids = [...sameItemIds(doc)];
   if (scope === "more") for (const y of otherYears(doc)) if (years.has(y.key)) ids.push(...y.itemIds);
   const picked = [...new Set(ids)].map(id => byId.get(id)).filter((it): it is JokboItem => Boolean(it));
+  if (order === "old") {
+    const ranked = picked.map((it, i) => ({ it, i })).sort((a, b) => a.it.year - b.it.year || a.i - b.i).map(({ it }) => it);
+    return groupVariants(ranked);
+  }
   return groupVariants(picked);
 }
+
+/** 진입 화면의 순서. `new`가 기본(같은 교수 → 다른 교수, 각각 최신부터). */
+export type JokboOrder = "new" | "old";
 
 export function groupVariants(items: JokboItem[]): JokboItem[] {
   const out: JokboItem[] = [];

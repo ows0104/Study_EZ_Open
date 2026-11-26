@@ -17,6 +17,8 @@
 .jokbo-scope .mq-focus{margin-top:0}
 .jokbo-scope .jokbo-years{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .main-quiz-learning .jokbo-years button{height:30px;padding:0 12px;font-size:13px}
+.jokbo-scope .jokbo-order{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.main-quiz-learning .jokbo-order button{height:30px;padding:0 12px;font-size:13px}
 @media (max-width:640px){.jokbo-scope{flex-direction:column;align-items:stretch}}
 
 /* ── 풀이 ─────────────────────────────────────────── */
