@@ -65,13 +65,14 @@ def test_older_maps_and_free_text_are_ignored():
 def test_prompt_schema_and_example_agree():
     schema = json.loads((ASSETS / 'map-output.schema.json').read_text(encoding='utf-8'))
     example = json.loads((ASSETS / 'map-output.example.json').read_text(encoding='utf-8'))
-    prompt = (ASSETS / 'map-extract.md').read_text(encoding='utf-8')
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(example)
     assert t.tree_findings(example) == []
-    blocks = re.findall(r'```json\s*([\s\S]*?)```', prompt)
-    assert len(blocks) == 1 and json.loads(blocks[0]) == example
-    assert 'concept-map-extract/3' in prompt and 'parent_id' in prompt and 'concept-map.json' in prompt
+    for name in ('map-extract.md', 'map-extract-v4.md'):
+        prompt = (ASSETS / name).read_text(encoding='utf-8')
+        blocks = re.findall(r'```json\s*([\s\S]*?)```', prompt)
+        assert len(blocks) == 1 and json.loads(blocks[0]) == example
+        assert 'concept-map-extract/3' in prompt and 'parent_id' in prompt and 'concept-map.json' in prompt
     missing = copy.deepcopy(example)
     del missing['concepts'][0]['parent_id']
     assert list(Draft202012Validator(schema).iter_errors(missing))

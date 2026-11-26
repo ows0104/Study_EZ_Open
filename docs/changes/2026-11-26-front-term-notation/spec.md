@@ -23,7 +23,10 @@
 
 ## R1 개념 지도·출제포인트 지시문에 같은 순서 규칙
 
-`map-extract.md`과 `point-extract-v4.md`의 「## 출력」 앞에 「## 의학용어 표기」를 넣는다. 내용은 bankPrompt 1.84 §3.4의 ①~④와 같다:
+v4 앞 단계(`runner/root_front.py` ASSET4)가 쓰는 개념 지도·출제포인트 지시문의 「## 출력」 앞에 「## 의학용어 표기」를 넣는다.
+`map-extract.md`는 옛 사슬알균 시범판(v3)의 task를 바이트 단위로 재현하는 검사(`tests/runner/test_root_front.py`)가 고정하고 있다.
+그래서 그 파일은 그대로 두고, 같은 내용에 규칙만 더한 `map-extract-v4.md`를 새로 만들어 ASSET4의 지도가 이 파일을 쓰게 한다.
+`point-extract-v4.md`는 v4에서만 쓰므로 그 파일에 바로 넣는다. 내용은 bankPrompt 1.84 §3.4의 ①~④와 같다:
 강의 표기 그대로 → 없으면 영어(번역어를 짓지 않음) → 어려운 말은 괄호 병기 → 한 강의 안에서 한 표기로 통일.
 「뒤 단계가 이 문장을 그대로 옮긴다」는 이유도 함께 적는다.
 
@@ -32,12 +35,12 @@
 
 ## 범위
 
-- 지시문 두 파일만 바뀐다. 코드·스키마·DB 변경은 없다.
+- 지시문(`map-extract-v4.md` 새 파일, `point-extract-v4.md`)과 ASSET4의 지도 파일 이름 한 줄만 바뀐다. 스키마·DB 변경은 없다.
 - 새 출제부터 적용된다. 러너가 새 지시문을 쓰려면 병합 뒤 `.runtime` 재설치가 필요하다.
 - 게시된 문항은 바꾸지 않는다(사용자 「게시된 문항은 놔두고」).
 - 고치기·검토 단계에 표기 검사를 더하는 일은 이번 범위가 아니다.
 
 ## 확인
 
-- `tests/contracts/test_concept_tree.py`(지도 프롬프트와 예시의 일치), `tests/contracts/test_map_tree.py`, `tests/runner/test_root_front.py`.
+- `tests/contracts/test_concept_tree.py`(지도 프롬프트와 예시의 일치, 이제 두 지도 파일 모두), `tests/contracts/test_map_tree.py`, `tests/runner/test_root_front.py`.
 - 실제 출제로 확인하는 것은 다음 강의 출제 때다. 이 변경에서는 실행하지 않았다.
