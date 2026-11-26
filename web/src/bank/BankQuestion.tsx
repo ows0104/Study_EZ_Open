@@ -91,7 +91,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, photoViewer = false, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes, choiceGroups }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true, markChoices = false,onStimuliReady, photoViewer = false, recallChoices, choiceCorrectIds, choiceHint = true, choiceNotes, choiceGroups }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -101,6 +101,8 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   showOptions?: boolean;
   disabled?: boolean;
   showChoiceScore?: boolean;
+  /** 점수 상자는 숨겨도 답을 본 뒤 선지마다 정답·오답 표시는 한다(Main-Quiz 주관식 모드의 문항 자체 선지, 2026-11-27). */
+  markChoices?: boolean;
   onStimuliReady?:(ready:boolean)=>void;
   /** 사진 여러 장을 한 장씩 크게, A·B·C 썸네일로 넘긴다(Main-Quiz). */
   photoViewer?: boolean;
@@ -115,10 +117,11 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   /** 나눠 묻는 문항의 묶음(빈칸마다·「항목: 값」마다). 묶음마다 제목을 달고 선지를 따로 보인다. 번호는 이어진다. */
   choiceGroups?: { label: string; ids: string[] }[];
 }) {
-  const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
+  const graded = choiceScore(q, answer, picked);
+  const score = showChoiceScore ? graded : null;
   const options = recallChoices ?? q.options;
   const expected = recallChoices ? (choiceCorrectIds ?? answer?.recallCorrectIds) : answer?.correctOptionIds;
-  const marked = recallChoices ? Boolean(answer && expected?.length) : Boolean(score);
+  const marked = recallChoices ? Boolean(answer && expected?.length) : Boolean(markChoices ? graded : score);
   const notes = recallChoices && answer && showOptions ? choiceNotes ?? {} : {};
   const note = (id: string) => notes[id] ? <span className="bank-option-why">{notes[id].source ? <b>{notes[id].source}</b> : null}{notes[id].why}</span> : null;
   const otherNotes = options.filter(option => notes[option.id] && !picked.has(option.id));
