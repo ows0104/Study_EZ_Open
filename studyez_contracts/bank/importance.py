@@ -13,6 +13,7 @@ POLICY = "importance-basis/1"
 # /2 (docs/changes/2026-11-25-professor-marked-pages): a question whose answer is on a page the professor marked
 # ("시험은 햇살 슬라이드만") is at least Core. Used only when the lecture records marked pages; /1 is unchanged.
 POLICY2 = "importance-basis/2"
+POLICY3 = "importance-basis/3"    # answer-level/1: carried floors and off-level exam rows (2026-11-26)
 MARKED_TIER = "Core"
 BANK_IMPORTANCE = {"Essential": 5, "Core": 4, "Important": 3, "Optional": 2}  # bank 3.3
 LABEL = {"Essential": "Must-Know", "Core": "Core", "Important": "Important", "Optional": "Optional"}
@@ -107,16 +108,62 @@ def point_table(points, profile):
     return {"policy": POLICY, "emphasis_style": profile["emphasis_style"], "points": table}
 
 
-def question_table(basis_by_question, profile, marked=None):
+def _carry(rows, carries):
+    """Raise each trunk question to the highest tier among the questions standing on it, following chains to the end.
+    An excluded trunk stays Optional; a question never lowers another."""
+    changed = True
+    while changed:
+        changed = False
+        for trunk, leaves in carries.items():
+            if rows[trunk]["rule"] == "exclusion":
+                continue
+            top = max(leaves, key=lambda q: ORDER[rows[q]["tier"]])
+            tier = rows[top]["tier"]
+            if ORDER[rows[trunk]["tier"]] < ORDER[tier]:
+                rows[trunk].update(tier=tier, importance=BANK_IMPORTANCE[tier], rule="carries")
+                changed = True
+
+
+def question_table(basis_by_question, profile, marked=None, carries=None, off_level=None):
     """Per question (root-generation/4): the question's own basis and computed decision.
 
     From 2026-11-10 the authoring stages write the basis per question and the exam points carry none
     (docs/changes/2026-11-10-importance-at-authoring R2). Kinds, weights and lines are the point table's.
 
-    `marked` (a set of question ids, /2): questions answering a marked page; None keeps /1 exactly."""
+    `marked` (a set of question ids, /2): questions answering a marked page; None keeps /1 exactly.
+
+    /3 (docs/changes/2026-11-26-answer-holds-the-link), only when `carries` or `off_level` is given:
+    `off_level` {question: [exam years]} — the item review found that this question asks something finer than what
+    those years' exam questions asked, so their `current_exam` rows do not count for it (the basis is kept as written).
+    `carries` {trunk question: [questions whose stem gives the link the trunk asks]} — the trunk is at least as
+    important as the questions standing on it (rule `carries`). An exclusion stays Optional."""
     _require(type(profile) is dict and profile.get("emphasis_style") in STYLES, "notebook_profile.emphasis_style required")
     _require(type(basis_by_question) is dict, "question basis must map question_id to a basis")
     _require(marked is None or set(marked) <= set(basis_by_question), "marked questions must be questions of the table")
+    if carries is not None or off_level is not None:
+        carries, off_level = carries or {}, off_level or {}
+        known = set(basis_by_question)
+        _require(type(carries) is dict and set(carries) <= known and all(
+            type(v) is list and v and len(v) == len(set(v)) and set(v) <= known and k not in v for k, v in carries.items()),
+            "carries must map a question to the other questions standing on it")
+        _require(type(off_level) is dict and set(off_level) <= known, "off-level exam years must name questions of the table")
+        rows = {}
+        for qid, basis in basis_by_question.items():
+            years = off_level.get(qid, [])
+            _require(type(years) is list and years and len(years) == len(set(years)) or qid not in off_level,
+                     "off-level exam years must be a non-empty list of distinct years")
+            validate_basis(basis)
+            cited = {r["year"] for r in basis if r["kind"] == "current_exam"}
+            _require(set(years) <= cited, f"{qid}: off-level exam years the basis does not cite")
+            counted = [r for r in basis if not (r["kind"] == "current_exam" and r["year"] in years)]
+            rows[qid] = {"basis": basis, **score(counted, profile["emphasis_style"], marked is not None and qid in marked)}
+            if years:
+                rows[qid]["offLevelExamYears"] = sorted(years)
+        _carry(rows, carries)
+        return {"policy": POLICY3, "source": "question", "emphasis_style": profile["emphasis_style"],
+                **({"marked": sorted(marked)} if marked is not None else {}),
+                "carries": {k: list(v) for k, v in sorted(carries.items())},
+                "offLevel": {k: sorted(v) for k, v in sorted(off_level.items())}, "questions": rows}
     rows = {qid: {"basis": basis, **score(basis, profile["emphasis_style"], marked is not None and qid in marked)}
             for qid, basis in basis_by_question.items()}
     if marked is None:

@@ -86,6 +86,17 @@ def _merge_row(old, new, goal, replaced=(), by_evidence=False):
     return row
 
 
+INTEGRATION_WITHOUT_BASE = ': integration의 기초 문항 필요'
+
+
+def _origin_questions(bank, points):
+    """answer-level/1: the questions a supplement point was made from, as the learner sees them with the scored answer.
+    The goal made from the point must be one the question answers (2026-11-26 피부근염: four goals took two facts in
+    one component and the coverage judgment found their own question answering none of it)."""
+    wanted = {p.get('origin_question_id') for p in points}
+    return [v3._front(q) for q in bank['questions'] if q['question_id'] in wanted]
+
+
 def _first_evidence(old, new):
     """goal-duplicates/1: a re-check that reads questions already judged for the goal keeps their first evidence
     (the same question is not judged twice); it adds the evidence of the others and its duplicate groups."""
@@ -93,14 +104,25 @@ def _first_evidence(old, new):
     return {**new, 'evidence': [e for e in new['evidence'] if e['question_id'] not in had]}
 
 
-def _intake(packet, out):
-    """The independent bank with each question's basis; questions with format errors are left out (as /3)."""
+def _intake(packet, out, keep_integration=False):
+    """The independent bank with each question's basis; questions with format errors are left out (as /3).
+
+    `keep_integration` (answer-level/1): an integration question is not left out only because it names no prerequisite.
+    The intake bank never has prerequisites (the authoring prompt writes none; the order comes from later stages), so
+    this check dropped every case→judgment question of the first bank: 193 in 116 runs on this PC, and on the 피부근염
+    replay of 2026-11-26 the steroid-myopathy and AST/ALT judgments. The final validation still lists them."""
     intake = copy.deepcopy(packet['intakeBank'])
     basis = v4.check_intake(intake)
     bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
-    rejected = intake_rejections(report['errors'], question_ids={q['question_id'] for q in bank['questions']})
+    errors = report['errors']
+    if keep_integration:
+        kept = [e for e in errors if e.endswith(INTEGRATION_WITHOUT_BASE)]
+        errors = [e for e in errors if not e.endswith(INTEGRATION_WITHOUT_BASE)]
+        if kept:
+            print(f"── 접수: 선행 문항이 아직 없는 통합 문항 {len(kept)}개를 빼지 않고 받음", flush=True)
+    rejected = intake_rejections(errors, question_ids={q['question_id'] for q in bank['questions']})
     bad = {r['question_id'] for r in rejected}
     if bad:
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in bad]
@@ -239,8 +261,12 @@ def run(packet, out, model, invoke, resume=None):
     # discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): a new run also judges which named elements a
     # cue alone has to pick out, makes a reverse goal for the ones no question asks that way and orders each after
     # the forward question's goal.
+    # answer-level/1 (docs/changes/2026-11-26-answer-holds-the-link): a new run's item review also names the exam years
+    # a question is off the level of, and the assembly computes importance-basis/3 (off-level exam rows out, a question
+    # asking a link at least as important as the questions whose stems give it).
     fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES},
-             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE}}
+             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE},
+             'answerLevel': {'policy': v4.ANSWER_LEVEL}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
@@ -255,6 +281,7 @@ def run(packet, out, model, invoke, resume=None):
     goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
     presuppose_on = ledger.get('presuppositions') == {'policy': pre.PRESUPPOSE}
     discriminate_on = ledger.get('discriminations') == {'policy': dis.DISCRIMINATE}
+    level_on = ledger.get('answerLevel') == {'policy': v4.ANSWER_LEVEL}
 
     def merge_row(old, new, goal, replaced=()):
         return _merge_row(old, new, goal, replaced, by_evidence=goal_dups)
@@ -263,7 +290,7 @@ def run(packet, out, model, invoke, resume=None):
     profile = points_doc['notebook_profile']
 
     # 1c: intake bank and its basis ------------------------------------------
-    bank, stimuli, conflicts, rejected, intake_changes, basis, intake_cloze = _intake(packet, out)
+    bank, stimuli, conflicts, rejected, intake_changes, basis, intake_cloze = _intake(packet, out, keep_integration=level_on)
     initial_bank = copy.deepcopy(bank)
     intake_conflict_ids = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
 
@@ -367,6 +394,8 @@ def run(packet, out, model, invoke, resume=None):
         if new_points:
             allowed = v3.supplement_ids(brief, len(new_points))
             ctx = v3.supplement_normalize_input(brief, new_points, allowed)
+            if level_on:
+                ctx['origin_questions'] = _origin_questions(bank, new_points)
             state = {'brief': brief, 'blank': True}
             addition = st.run(X + 'supplement-normalize' + tag, ctx, lambda raw: check_stage('supplement-normalize', raw, ctx, state, None), state)
             brief, new_tids = v3.extend_brief(brief, v3.supplement_addition(brief, addition, True), [p['point_id'] for p in new_points])
@@ -460,6 +489,8 @@ def run(packet, out, model, invoke, resume=None):
             ctx['evidence_source'] = evidence_notes
         if placement in v4.REVIEW_RULES:
             ctx['map_relations'] = v4.map_relations(brief, map_checks)
+        if level_on:
+            ctx['exam_level'] = True
         if presuppositions:
             # existence questions are judged as such (2026-11-16); the intake bank is not written for them (2026-11-17)
             pre.mark_review(ctx, brief, presuppositions, bank_, exclude=intake_ids)
@@ -764,7 +795,8 @@ def run(packet, out, model, invoke, resume=None):
                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                                       placement=placement, presuppositions=presuppositions,
                                       discriminations=discriminations, item_reviews=review_rows,
-                                      evidence_source=ledger['reviewEvidence']['sourceId'] if evidence_on else None)
+                                      evidence_source=ledger['reviewEvidence']['sourceId'] if evidence_on else None,
+                                      answer_level=level_on)
     if presuppositions is not None:
         counts = pre.report(presuppositions, doc)
         print(f"── 전제 정리: {counts['presupposed']}개 중 답으로 묻는 과제 있음 {counts['recalledByTask']} · 존재 목표 {counts['existenceGoal']} · "
@@ -775,6 +807,13 @@ def run(packet, out, model, invoke, resume=None):
               f"역방향 목표 {counts['goalsMade']}개 중 문항 생김 {counts['goalsWithTask']} · 남은 연결 {len(counts['open'])} · "
               f"발문이 답을 흘린 문항 {len(counts['answerInStem'])}개", flush=True)
     report_marked(proofs['importanceWarnings'])
+    if level_on:
+        carried, off = proofs['importanceWarnings']['carriedFloor'], proofs['importanceWarnings']['offLevelExam']
+        print(f"── 답 자리: 다른 문항이 발문에 준 연결을 묻는 문항 {len(carried)}개를 그 문항들의 등급으로 올림 · "
+              f"족보와 층이 달라 족보 근거를 뺀 문항 {len(off)}개" + (': ' + ', '.join(sorted(off)) if off else ''), flush=True)
+        stray = proofs['importanceWarnings']['carriedUnplaced']
+        if stray:
+            print(f"── 답 자리 경고: 올린 줄기 {len(stray)}개가 과제에 못 들어감(그 위 문항만 학습됨): {', '.join(stray)}", flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "
@@ -830,6 +869,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
                   **({'reviewEvidence': ledger['reviewEvidence'], 'citationAlignments': alignments} if evidence_on else {}),
                   **({'placement': ledger['placement']} if placement in v4.REVIEW_RULES else {}),
+                  **({'answerLevel': ledger['answerLevel']} if level_on else {}),
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
     v4.validate_result(result, packet)

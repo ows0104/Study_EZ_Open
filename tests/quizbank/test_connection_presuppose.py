@@ -450,7 +450,8 @@ def test_a_fill_adds_the_admins_marked_pages_and_raises_their_answers_to_core(tm
     assert model.calls == []                                   # nothing to write: only the importance is recomputed
     meta = result['manifest']
     assert meta['supplementPoints']['notebook_profile']['marked_pages'] == ADMIN_MARKED
-    assert meta['importanceProjection']['policy'] == 'importance-basis/2'
+    # the base revision is a new run (answer-level/1): its table is /3 and keeps the marked floor
+    assert meta['importanceProjection']['policy'] == 'importance-basis/3' and 'marked' in meta['importanceProjection']['table']
     old_tiers = {q['question_id']: q['tier'] for q in old['document']['bank_snapshot']['questions']}
     tiers = {q['question_id']: q['tier'] for q in result['document']['bank_snapshot']['questions']}
     assert old_tiers['Q2'] == 'Optional' and tiers == {**old_tiers, 'Q2': 'Core'}

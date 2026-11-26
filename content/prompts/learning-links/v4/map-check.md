@@ -3,6 +3,7 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 지도 확인. input.json의 targets(목표)와 relations를 첨부된 원본 쪽 PNG(input.pages)와 material의 글로 대조한다. 문항은 보지 않는다.
 - relation_checks: 모든 relations에 정확히 한 번. target_checks: 모든 targets에 정확히 한 번. direction_checks: 모든 goals에 scope_status를 정확히 한 번.
 - issues에는 고칠 지도 문제(map_fix)만 text와 direction_ids로 적는다. 지도를 고쳐 쓰지 않는다.
+- relation_checks의 status는 그 관계가 말하는 사실(condition, 없으면 from→to와 kind)이 원본·임상에 맞는지로 정한다(docs/changes/2026-11-26-answer-holds-the-link). supported가 아닌 관계에는 어떤 문항도 놓이지 않는다. 그래서 사실은 맞는데 끝점 모양만 어긋나면 supported로 하고, 끝점을 고칠 점을 issues의 map_fix에 적는다. 끝점 모양이 어긋난 경우는 셋이다: condition이 나열한 여러 대상 중 하나만 to로 가리킨다, 그 대상의 상위·하위 노드를 가리킨다, 비교의 상대가 묶음 이름이다. 사실이 틀리면 conflict다. 원본과 다른 대상·수치, 거꾸로 된 인과·순서 방향(원인과 결과가 바뀜), 원본이 말하지 않은 연결을 사실로 단정한 경우다. 예: condition이 「강의가 제시한 (묶음)의 세 범주는? → X, Y, Z」이고 원본이 그 세 범주를 보이면, to가 X 하나여도 supported다(끝점은 map_fix). condition은 「…에 더 흔한 유형 → DM」인데 to가 PM이면 conflict다. 「A가 B를 일으킨다」인데 화살표가 B→A면 conflict다.
 아래 옮긴 규칙의 prerequisite_checks와 문항 관련 문장은 이 단계에 해당하지 않는다. 중요도 근거·강조 표시는 이 단계의 입력이 아니며 판정하지 않는다.
 
 ## 옮긴 규칙 (source-v2.md)

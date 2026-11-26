@@ -141,6 +141,10 @@ def run(packet, out, model, invoke, previous, resume=None):
     rows = {r['direction_id']: copy.deepcopy(r) for r in meta['coverage']}
     map_checks = [meta['mapCheck']]
     reviews = meta['itemReviews']
+    # answer-level/1 (docs/changes/2026-11-26-answer-holds-the-link): a revision made with it is assembled with it, from
+    # the same recorded judgments the consumer reads.
+    level = ({'answer_level': True, 'presuppositions': meta.get('presuppositions'), 'item_reviews': meta['itemReviews']}
+             if v4.answer_level_on(meta) else {})
     basis = meta['questionImportance']
     profile = v4.notebook_profile(packet, meta)
     context = v3.context_summary(meta['clinicalContext'])
@@ -157,7 +161,7 @@ def run(packet, out, model, invoke, previous, resume=None):
         raw = v4.assessment_raw(brief, bank, coverage_rows(), map_check, reviews, context, meta['sourceAssessment']['summary'], placement)
         audit = v4.compile_assessment(brief, bank, v2.envelope(brief, bank, raw), placement)
         doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows(), basis, profile, revision=packet['revision'],
-                                          title=packet['title'], exam_date=packet['examDate'], placement=placement)
+                                          title=packet['title'], exam_date=packet['examDate'], placement=placement, **level)
         return map_check, raw, audit, doc, placed, proofs
 
     before = len(meta['unplacedQuestions'])

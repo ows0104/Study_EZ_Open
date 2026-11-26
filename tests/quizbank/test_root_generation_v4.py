@@ -104,6 +104,10 @@ class Model:
                         'prerequisite_checks': [{'prerequisite_id': p, 'status': 'supported', 'reason': 'x'}
                                                 for p in q.get('prerequisites', [])]}
                        for q in ctx['questions']]
+            if ctx.get('exam_level'):
+                # answer-level/1: the years a question is off the level of (none unless the test names them)
+                for r in reviews:
+                    r['off_level_exam_years'] = list(getattr(self, 'off_level', {}).get(r['question_id'], []))
             if 'map_relations' in ctx:
                 # review-relations/1: the same relations the coverage judgment names (Q1/Q2 recall R1, Q003 R2).
                 recalls = self.relations or {'Q1': [('R1', 'whole')], 'Q2': [('R1', 'whole')], 'Q003': [('R2', 'whole')]}
@@ -318,3 +322,42 @@ def test_a_completed_fix_round_replays_with_its_recorded_targets(tmp_path):
     assert not any(c.startswith('v4-fix') or c.startswith('v4-review') for c in again.calls)
     assert [x['question_id'] for x in result['manifest']['fixes']] == ['Q1']
     assert 'Q1' not in {q['question_id'] for q in result['document']['bank_snapshot']['questions']}
+
+
+# ---------------------------------------------------------------- answer-level/1 (docs/changes/2026-11-26-answer-holds-the-link)
+def test_a_new_run_raises_the_question_a_must_know_question_stands_on(tmp_path):
+    """Q1 (Must-Know by the forecast) gives in its stem a link that Q2 (Optional) asks: Q2 is carried to Must-Know,
+    the manifest names the policy and the consumer rebuilds the same document."""
+    link = {'a': 'A', 'b': 'B', 'link': 'A에 B가 있다.', 'recalled_by': ['Q2'], 'point': None, 'reason': 'Synthetic'}
+    p, model, result = run(tmp_path, Model(presupposes={'Q1': [link]}))
+    meta = result['manifest']
+    assert meta['answerLevel'] == {'policy': v4.ANSWER_LEVEL}
+    reviews = [ctx for stage, ctx in model.inputs.items() if stage.startswith('v4-review')]
+    assert reviews and all(ctx['exam_level'] is True for ctx in reviews)
+    assert all(r['off_level_exam_years'] == [] for r in meta['itemReviews'])
+    tiers = {q['question_id']: q['tier'] for q in result['document']['bank_snapshot']['questions']}
+    assert tiers == {'Q1': 'Essential', 'Q2': 'Essential', 'Q003': 'Core'}
+    proof = meta['importanceProjection']
+    assert proof['policy'] == 'importance-basis/3' and proof['table']['carries'] == {'Q2': ['Q1']}
+    assert meta['importanceWarnings']['carriedFloor'] == ['Q2']
+    assert meta['importanceWarnings']['carriedUnplaced'] == []          # Q2 has its task
+    assert consume(result, p) == result['document']
+
+
+def test_intake_keeps_an_integration_question_only_under_the_answer_level_policy(tmp_path):
+    """The intake bank never names prerequisites, so the old check dropped every integration question of it."""
+    from quizbank import connection_generate_v4 as gen
+    p = packet(tmp_path)
+    p['intakeBank']['bank']['questions'][0]['retrieval_direction'] = 'integration'
+    kept = gen._intake(p, tmp_path / 'a', keep_integration=True)
+    dropped = gen._intake(p, tmp_path / 'b')
+    assert [q['question_id'] for q in kept[0]['questions']] == ['Q1', 'Q2'] and kept[3] == []
+    assert [q['question_id'] for q in dropped[0]['questions']] == ['Q2']
+    assert dropped[3][0]['error'].endswith(gen.INTEGRATION_WITHOUT_BASE)
+
+
+def test_a_supplement_goal_is_written_with_the_question_it_comes_from():
+    from quizbank import connection_generate_v4 as gen
+    bank = f.old.bank()
+    got = gen._origin_questions(bank, [{'point_id': 'P9', 'origin_question_id': 'Q2'}])
+    assert [q['question_id'] for q in got] == ['Q2'] and 'answer' in got[0] and 'question' in got[0]

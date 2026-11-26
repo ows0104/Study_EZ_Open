@@ -180,6 +180,7 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
         profile = points_doc['notebook_profile']
         print(f"── {LABEL} 짚은 쪽: " + ', '.join(f"{r['source_id']} {r['pages']}" for r in marked['pages'])
               + " — 답이 이 쪽인 문항은 Core 이상", flush=True)
+    level_on = v4.answer_level_on(meta)   # answer-level/1: a revision made with it is extended with it
     evidence = meta.get('reviewEvidence')
     evidence_notes = {'source_id': evidence['sourceId'], 'page_count': page_counts[evidence['sourceId']]} if evidence else None
 
@@ -300,6 +301,8 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
         if evidence_notes:
             ctx['evidence_source'] = evidence_notes
         ctx['map_relations'] = v4.map_relations(brief, map_checks)
+        if level_on:
+            ctx['exam_level'] = True   # answer-level/1 revisions keep the off-level exam years on every review
         # existence questions are judged as such (2026-11-16); published questions are not written for them (2026-11-17)
         pre.mark_review(ctx, brief, presuppositions, bank, exclude=published)
         dis.mark_review(ctx, brief, discriminations, bank, exclude=published)   # ... and reverse ones too
@@ -422,7 +425,7 @@ def run(packet, out, model, invoke, previous, resume=None, fill=None):
                                       title=packet['title'], exam_date=packet['examDate'], placement=placement,
                                       presuppositions=presuppositions, discriminations=discriminations,
                                       settled=published, settled_places=settled_places, item_reviews=review_rows,
-                                      evidence_source=(evidence or {}).get('sourceId'))
+                                      evidence_source=(evidence or {}).get('sourceId'), answer_level=level_on)
     report_marked(proofs['importanceWarnings'])
     kept_tasks = {t['question_id'] for t in old['document']['tasks']}
     # Strict: a published task never becomes a duplicate of an added question (its history would stop).
