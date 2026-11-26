@@ -184,6 +184,20 @@ def test_a_raised_trunk_without_a_task_is_reported():
     assert 'carriedUnplaced' not in c.assemble(*args, **kw)[2]['importanceWarnings']
 
 
+def test_a_trunk_merged_into_a_tasked_duplicate_is_not_reported():
+    """3회: Q001 was carried and then merged into DM-Q001, which has the first task; that trunk is learned."""
+    b, bank = scenario()
+    p = v4_packet(bank)
+    coverage = rows(dup=('Q1', 'Q3'))
+    value = result(p, b, bank, coverage, {'Q1': EXAM, 'Q2': [], 'Q3': []})
+    audit = value['sourceAudit']
+    kw = dict(revision=p['revision'], title=p['title'], exam_date=p['examDate'], presuppositions=[link('Q1', ['Q3'])],      # Q1's stem gives what Q3 asks
+              item_reviews=[{**r, c.OFF_LEVEL: []} for r in value['manifest']['itemReviews']], answer_level=True)
+    doc, placed, proofs = c.assemble(b, bank, audit, coverage, {'Q1': EXAM, 'Q2': [], 'Q3': []}, PROFILE, **kw)
+    assert [(m['question_id'], m['kept']) for m in placed['mergedDuplicates']] == [('Q3', 'Q1')]
+    assert proofs['importanceWarnings']['carriedFloor'] == ['Q3'] and proofs['importanceWarnings']['carriedUnplaced'] == []
+
+
 def test_a_result_made_before_the_policy_is_assembled_as_before():
     p, value = full_result()
     assert 'answerLevel' not in value['manifest'] and consume(value, p) == value['document']

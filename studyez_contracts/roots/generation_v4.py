@@ -1227,7 +1227,9 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
     if answer_level:
         # A trunk the carry raised but no goal took: the learner meets the questions standing on it without it
         # (2026-11-26 피부근염 2회: 「MSA 세 계열」 sat on a relation the map check called a conflict). Reported only.
+        # A trunk merged into a duplicate that has a task is learned through that one (3회: Q001 → DM-Q001).
         tasked = {t['question_id'] for t in doc['tasks']}
+        tasked |= {m['question_id'] for m in placed['mergedDuplicates'] if m['kept'] in tasked}
         warnings['carriedUnplaced'] = sorted(q for q in level['carries'] if q not in tasked)
     if pages:
         warnings['markedPages'] = marked_report(brief, coverage_rows, pages, table, item_reviews, evidence_source)
