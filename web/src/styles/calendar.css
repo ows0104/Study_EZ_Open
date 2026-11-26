@@ -2467,10 +2467,12 @@ button.event-panel-note:hover {
 .readline i { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
 /* 예습 토막도 같은 방식(2026-11-12 「예습 토막도 진하게 채워」): 미완료 = 막대와 같은 회색 테두리, 완료 = 두 번째 색으로 채움. */
 .readline i.rl-pre { box-shadow: inset 0 0 0 1px var(--bar-edge); }
-.readline i.rl-pre.is-on { background: var(--accent2); box-shadow: none; }
+/* 2026-11-25 사용자 「예습 퀴즈 색깔을 조금만 연하게」: 두 번째 색 75%. */
+.readline i.rl-pre.is-on { background: color-mix(in srgb, var(--accent2) 75%, var(--surface)); box-shadow: none; }
 /* 이어서 「나는 그냥 회색을 원해」 다음 「바 안쪽 색을 연한 강조색으로도 해볼까?」(2026-11-12): 회색 테두리는 그대로,
    채움만 연한 메인 색 — 「오늘 복습」 상자 테두리와 같은 --accent-line(메인 28%·표면 72%). 사용자 색 설정·다크 모드를 따른다. */
-.meter > span { background: var(--accent-line); }
+/* 2026-11-25 사용자 「복습 퀴즈 색깔을 조금만 진하게」: 메인 28% → 42%. */
+.meter > span { background: color-mix(in srgb, var(--accent) 42%, var(--surface)); }
 .calendar-event.has-learning { padding-bottom: 24px; }
 .calendar-event-footer { bottom: 6px; }
 .chip-learning-pair { gap: 4px; }
@@ -2540,8 +2542,8 @@ button.event-panel-note:hover {
   background: color-mix(in srgb, var(--ink-3) 70%, var(--surface));
 }
 .read-editor .rl-note.is-button:hover::after { background: var(--exam, #c13f37); }
-/* 족보 회독(2026-11-14): 강의록 회독보다 살짝 진한 회색 — 족보 칸 점과 같은 --ink-2. 누를 수 없다. */
-.readline i.rl-jokbo { background: color-mix(in srgb, var(--ink-2) 70%, var(--surface)); box-shadow: none; }
+/* 족보 회독(2026-11-14): 누를 수 없다. 2026-11-25 사용자 「시험 표시하는 연한 빨간색으로」: 시험 칸 테두리색 #f3b0b2. */
+.readline i.rl-jokbo { background: #f3b0b2; box-shadow: none; }
 .read-count { font-size: 12.5px; color: var(--ink-3); }
 .read-plus {
   display: grid; place-items: center; width: 24px; height: 24px; min-height: 0; padding: 0; border-radius: 7px;
