@@ -174,14 +174,119 @@ def spread_directions(tasks):
     return [task for _, _, task in sorted(ranked, key=lambda row: row[:2])]
 
 
+REVIEW_REASON = '복습 확인'
+PULLED_REASON = '명시적 선행 연결'
+
+
+def task_pages(doc):
+    """The slide page of every task: its question's `learning_page`. A task without one (a personal question, an older
+    import) takes the page of the task before it in the document, so it stays beside its neighbour (a personal
+    question sits right after its anchor)."""
+    pages = {q['question_id']: q.get('learning_page') for q in doc['bank_snapshot']['questions']}
+    out, last = {}, 0
+    for task in doc['tasks']:
+        page = pages.get(task['question_id'])
+        if type(page) is int:
+            last = page
+        out[task['task_id']] = last
+    return out
+
+
+def slide_flow(doc, selected, edges, existence, links, owner):
+    """The order of today's tasks (docs/changes/2026-11-26-slide-flow-order, 사용자 2026-11-26 「슬라이드 흐름으로」).
+
+    New learning comes first and in slide order (the question's page, then the document's task order); reviews follow,
+    also in slide order. Importance chooses what is in today's list (above) and never orders it. Only an explicit
+    prerequisite moves a task: an existence question goes right before the first question that presupposes it (with
+    `links`, question by question; without, goal by goal), a reverse goal after its forward goal, and any other target
+    prerequisite before its goal. A task that comes first only as a prerequisite takes the place of the earliest task
+    that needs it. Two tasks of one direction on the same page are not served back to back when another task of that
+    page can go between them (a personal question stays right after its anchor)."""
+    import heapq
+    # 내 문제(mine.with_mine)는 기준 과제와 같은 방향·task_id == question_id로 붙는다. mine을 import하면 DB 설정을 읽는다.
+    is_mine = lambda task: task['task_id'] == task['question_id']
+    page = task_pages(doc)
+    position = {t['task_id']: i for i, t in enumerate(doc['tasks'])}
+    by_id = {t['task_id']: t for t in selected}
+    by_question = {t['question_id']: t['task_id'] for t in selected}
+    by_target = defaultdict(list)
+    for task in selected:
+        by_target[owner(task)].append(task['task_id'])
+    later = defaultdict(set)
+    for after_target, befores in edges.items():
+        for before_target in befores:
+            if (before_target, after_target) in existence and links is not None:
+                continue  # 문항 단위로 아래에서
+            for a in by_target.get(after_target, ()):
+                for b in by_target.get(before_target, ()):
+                    if a != b:
+                        later[b].add(a)
+    if links is not None:
+        for task in selected:
+            for question_id in links.get(task['question_id'], ()):
+                before = by_question.get(question_id)
+                if before is not None and before != task['task_id']:
+                    later[before].add(task['task_id'])
+
+    def block(task):
+        return {PULLED_REASON: 2, REVIEW_REASON: 1}.get(task['reason'], 0)
+    own = {i: (block(t), page[i], position[i]) for i, t in by_id.items()}
+    key, visiting = {}, set()
+
+    def earliest(i):
+        if i in key:
+            return key[i]
+        visiting.add(i)
+        best = own[i]
+        for a in later[i]:
+            if a not in visiting:
+                best = min(best, earliest(a))
+        visiting.discard(i)
+        key[i] = best
+        return best
+    for i in by_id:
+        earliest(i)
+    waiting = {i: 0 for i in by_id}
+    for b in later:
+        for a in later[b]:
+            waiting[a] += 1
+    ready = [(key[i], own[i], i) for i in by_id if waiting[i] == 0]
+    heapq.heapify(ready)
+    result, done, last = [], set(), None
+    while len(result) < len(by_id):
+        if not ready:
+            # a cycle the document checks should have refused: serve the earliest left, never fail the plan
+            i = min((i for i in by_id if i not in done), key=lambda i: (key[i], own[i], i))
+            ready = [(key[i], own[i], i)]
+        item = heapq.heappop(ready)
+        i = item[2]
+        if last is not None and by_id[i]['direction_id'] == last and not is_mine(by_id[i]):
+            same = [r for r in ready if r[0][:2] == item[0][:2] and by_id[r[2]]['direction_id'] != last]
+            if same:
+                other = min(same)
+                ready.remove(other)
+                heapq.heapify(ready)
+                heapq.heappush(ready, item)
+                i = other[2]
+        done.add(i)
+        result.append(by_id[i])
+        last = by_id[i]['direction_id']
+        for a in later[i]:
+            waiting[a] -= 1
+            if waiting[a] == 0 and a not in done:
+                heapq.heappush(ready, (key[a], own[a], a))
+    return result
+
+
 def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, links=None, prereqs=True):
     """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
 
     Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
     target-based), due tasks, unassessed tasks of learned goals, history fill and explicit prerequisites.
-    Tasks of one target keep the document's task order, which validate_document holds to the map/prerequisite
-    plan order. Several tasks of one direction are then spread through the session (spread_directions); explicit
-    prerequisites still come first."""
+    Importance (a target's exam/clinical evidence) chooses which new goals come in today; the order of what comes in
+    is the slide flow (slide_flow, docs/changes/2026-11-26-slide-flow-order). Until then the important goals came
+    first as one block and the document's goal grouping held, so a goal with only structural evidence (피부근염
+    「IIM의 세 가지 범주」) waited behind every important one."""
     rows, _, states = replay_tasks(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
     owners = direction_owners(doc)
@@ -207,7 +312,12 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, 
     if new_goals is not None:
         quota = min(len(unseen), max(0, new_goals))
     def priority(tid):
-        return (not by_target[tid]['important'], order[tid])
+        # Which goals come in today when not all fit (사용자 2026-11-26 「오늘 범위 고르기에만」): the important ones first,
+        # and with them the skeleton — a goal with structural evidence, which the others stand on (피부근염 「정의와
+        # 아형」 had only that and never came in first). It never orders today's list (slide_flow does).
+        axes = authored[tid].get('importance') or {}
+        skeleton = (axes.get('structural') or {}).get('status') == 'supported'
+        return (not (by_target[tid]['important'] or skeleton), order[tid])
     unseen.sort(key=priority)
     selected, chosen = [], set()
     def add(task, reason):
@@ -300,19 +410,14 @@ def plan_tasks(doc, events, available, now, policy, focus=None, new_goals=None, 
                     add(before, '명시적 선행 연결')
         if all(owner(t) in expanded for t in selected):
             break
-    emitted, result = set(), []
-    def emit(tid):
-        if tid in emitted:
-            return
-        emitted.add(tid)
-        for parent in sorted(prereqs[tid], key=lambda p: order[p]):
-            emit(parent)
-        result.extend(sorted((t for t in selected if owner(t) == tid), key=lambda t: position[t['task_id']]))
-    for task in selected:
-        emit(owner(task))
+    result = slide_flow(doc, selected, prereqs, existence, links, owner)
     from studyez_contracts.roots.generation_v2 import order_plan
     assessed = {t['question_id'] for t in doc['tasks'] if states.get(t['task_id'], {}).get('rating') is not None}
-    result = order_plan(doc, spread_directions(result), reach, assessed)
+    # With `links` the existence edges were ordered question by question above; order_plan would put the whole prior
+    # goal back in front (피부근염: 26쪽 「진단 후 평가할 동반질환」 before 7쪽, for an Optional 7쪽 question not in
+    # today's list). It still adds question prerequisites and keeps the other target edges.
+    ordering = {**doc, 'prerequisites': [e for e in doc['prerequisites'] if not is_existence_edge(e)]} if links is not None else doc
+    result = order_plan(ordering, result, reach, assessed)
     return {'tasks': result, 'newGoalQuota': quota, 'days': days, 'habitualTasks': habitual,
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(t['target_id'] not in prepared for t in target_list),
