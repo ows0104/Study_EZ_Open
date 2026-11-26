@@ -48,6 +48,11 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
 - **역방향 목표의 빈자리는 범위 점검이 아니라 `discriminate.gaps`(그 목표로 쓴 문항이 있는가)로 정한다.** 정방향 문항이 같은 내용을 이미 답해서 범위 점검은 covered로 본다. 새 목표에 add 전 범위 점검을 부르지 않고 `blank_rows`를 쓴다.
 - 발문이 답 쪽을 흘리지 않는 규칙은 add·검토·고치기 프롬프트가 지키고, 어긴 문항은 막지 않고 `report`의 `answerInStem`으로 센다. 학습 순서는 정방향 목표 → 역방향 목표(`REV-` 간선).
 - 보강(presuppose-only/1)도 같은 실행에서 존재 목표와 역방향 목표를 함께 만든다. 검사: `tests/quizbank/test_discriminate.py`.
+/4의 새 실행(ledger `answerLevel`, answer-level/1, `docs/changes/2026-11-26-answer-holds-the-link/`, 사용자 「가장 중요한 부분을 답으로써 물어보지 않고」)은 가장 무거운 연결이 답 자리에 오게 한다. 새 단계는 없다.
+- 전제 판정이 발문이 사실로 준 **판단·다음 할 일**도 상위 연결로 적는다(증례의 자료는 전제가 아니고, 그 자료에서 나오는 결론은 전제다). 지시문만 바뀐다.
+- 문항 검토가 문항마다 `off_level_exam_years`를 적는다: 그 문항이 근거로 든 족보(`current_exam`) 가운데, 족보 정답 선지가 말한 판단보다 잘게 바꿔 물은 연도다. 입력에 `exam_level`이 있을 때만이다.
+- 조립이 등급표 `importance-basis/3`을 계산한다. 그 연도의 족보 줄은 점수에서 빠지고(근거는 적힌 대로 남는다), 다른 문항이 발문에 준 연결을 답으로 묻는 문항은 그 문항들의 최고 등급까지 오른다(규칙 `carries`, `v4.carried_by`: 전제 줄의 `recalled_by`와 존재 목표를 통째로 답하는 문항). `exam_exclusion`은 그대로 Optional이다.
+- manifest `answerLevel`(선택 키)이 없는 판은 이전 계산 그대로다. 보강·재배치·중복 재판정은 이어받는 판의 표시를 따른다. 검사: `tests/contracts/test_answer_level.py`.
 /4 고치기는 같은 question_id로 다른 물음을 쓰지 않는다(`docs/changes/2026-11-23-fix-same-question/`). ID에 학습 기록이 이어지기 때문이다. 같은 물음 안의 셋(정답 교체·같은 범주 목록의 빠진 원소·줄이거나 나누기)만 답을 바꾸고, 검토는 다른 물음을 note의 「별도 문항: …」으로 남긴다. 지시문 규칙이며 코드는 막지 않는다. 검사: `tests/quizbank/test_fix_same_question.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.

@@ -117,6 +117,10 @@ def run(packet, out, model, invoke, previous, resume=None):
                '중복 재판정: 이 폴더는 다른 판에서 시작했습니다.')
 
     meta, brief = old['manifest'], old['brief']
+    # answer-level/1 (docs/changes/2026-11-26-answer-holds-the-link): a revision made with it is assembled with it, from
+    # the same recorded judgments the consumer reads.
+    level = ({'answer_level': True, 'presuppositions': meta.get('presuppositions'), 'item_reviews': meta['itemReviews']}
+             if v4.answer_level_on(meta) else {})
     reviewed = v2.restore_container_concepts(v2.restore_importance(old['document']['bank_snapshot'], meta.get('importanceProjection')),
                                              meta.get('bankProjection'))
     placement = v4._placement4(old, brief, reviewed, meta)
@@ -152,7 +156,7 @@ def run(packet, out, model, invoke, previous, resume=None):
     audit = v4.compile_assessment(brief, reviewed, v2.envelope(brief, reviewed, raw), placement)
     doc, placed, proofs = v4.assemble(brief, reviewed, audit, coverage_rows, meta['questionImportance'], v4.notebook_profile(packet, meta),
                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
-                                      placement=placement)
+                                      placement=placement, **level)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     print(f"── 중복 재판정 조립: 과제 {len(old['document']['tasks'])} → {len(doc['tasks'])} · "
           f"중복으로 합침 {len(meta['mergedDuplicates'])} → {len(placed['mergedDuplicates'])} · 묶음이 바뀐 목표 {len(changed)}개", flush=True)

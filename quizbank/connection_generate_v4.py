@@ -239,8 +239,12 @@ def run(packet, out, model, invoke, resume=None):
     # discriminate/1 (docs/changes/2026-11-16-reverse-discriminating): a new run also judges which named elements a
     # cue alone has to pick out, makes a reverse goal for the ones no question asks that way and orders each after
     # the forward question's goal.
+    # answer-level/1 (docs/changes/2026-11-26-answer-holds-the-link): a new run's item review also names the exam years
+    # a question is off the level of, and the assembly computes importance-basis/3 (off-level exam rows out, a question
+    # asking a link at least as important as the questions whose stems give it).
     fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT2}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES},
-             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE}}
+             'presuppositions': {'policy': pre.PRESUPPOSE}, 'discriminations': {'policy': dis.DISCRIMINATE},
+             'answerLevel': {'policy': v4.ANSWER_LEVEL}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
@@ -255,6 +259,7 @@ def run(packet, out, model, invoke, resume=None):
     goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
     presuppose_on = ledger.get('presuppositions') == {'policy': pre.PRESUPPOSE}
     discriminate_on = ledger.get('discriminations') == {'policy': dis.DISCRIMINATE}
+    level_on = ledger.get('answerLevel') == {'policy': v4.ANSWER_LEVEL}
 
     def merge_row(old, new, goal, replaced=()):
         return _merge_row(old, new, goal, replaced, by_evidence=goal_dups)
@@ -460,6 +465,8 @@ def run(packet, out, model, invoke, resume=None):
             ctx['evidence_source'] = evidence_notes
         if placement in v4.REVIEW_RULES:
             ctx['map_relations'] = v4.map_relations(brief, map_checks)
+        if level_on:
+            ctx['exam_level'] = True
         if presuppositions:
             # existence questions are judged as such (2026-11-16); the intake bank is not written for them (2026-11-17)
             pre.mark_review(ctx, brief, presuppositions, bank_, exclude=intake_ids)
@@ -764,7 +771,8 @@ def run(packet, out, model, invoke, resume=None):
                                       revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                                       placement=placement, presuppositions=presuppositions,
                                       discriminations=discriminations, item_reviews=review_rows,
-                                      evidence_source=ledger['reviewEvidence']['sourceId'] if evidence_on else None)
+                                      evidence_source=ledger['reviewEvidence']['sourceId'] if evidence_on else None,
+                                      answer_level=level_on)
     if presuppositions is not None:
         counts = pre.report(presuppositions, doc)
         print(f"── 전제 정리: {counts['presupposed']}개 중 답으로 묻는 과제 있음 {counts['recalledByTask']} · 존재 목표 {counts['existenceGoal']} · "
@@ -775,6 +783,10 @@ def run(packet, out, model, invoke, resume=None):
               f"역방향 목표 {counts['goalsMade']}개 중 문항 생김 {counts['goalsWithTask']} · 남은 연결 {len(counts['open'])} · "
               f"발문이 답을 흘린 문항 {len(counts['answerInStem'])}개", flush=True)
     report_marked(proofs['importanceWarnings'])
+    if level_on:
+        carried, off = proofs['importanceWarnings']['carriedFloor'], proofs['importanceWarnings']['offLevelExam']
+        print(f"── 답 자리: 다른 문항이 발문에 준 연결을 묻는 문항 {len(carried)}개를 그 문항들의 등급으로 올림 · "
+              f"족보와 층이 달라 족보 근거를 뺀 문항 {len(off)}개" + (': ' + ', '.join(sorted(off)) if off else ''), flush=True)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "
@@ -830,6 +842,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
                   **({'reviewEvidence': ledger['reviewEvidence'], 'citationAlignments': alignments} if evidence_on else {}),
                   **({'placement': ledger['placement']} if placement in v4.REVIEW_RULES else {}),
+                  **({'answerLevel': ledger['answerLevel']} if level_on else {}),
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
     v4.validate_result(result, packet)

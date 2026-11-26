@@ -164,16 +164,28 @@ REVIEW_PLACEMENT2 = 'review-relations/2'
 RELATION_CLAIM = obj(relation_id=TEXT, part={'type': 'string', 'enum': ['whole', 'partial']}, reason=TEXT)
 
 
+# answer-level/1 (docs/changes/2026-11-26-answer-holds-the-link): a new run's item review also names the exam years
+# whose question asked something coarser than this question's answer (R2); the assembly leaves those current_exam
+# rows out of the tier and raises a question that asks a link to the tier of the questions whose stems give it (R3).
+ANSWER_LEVEL = 'answer-level/1'
+OFF_LEVEL = 'off_level_exam_years'
+
+
 def review_schema(ctx):
     """The item-review output schema of this review input: with evidence pages when the input names a notes source,
-    with the recalled map relations when it lists the map relations."""
-    evidence, relations = bool(ctx.get('evidence_source')), 'map_relations' in ctx
-    if not relations:
+    with the recalled map relations when it lists the map relations, with the off-level exam years when it asks for
+    the exam level (exam_level)."""
+    evidence, relations, level = bool(ctx.get('evidence_source')), 'map_relations' in ctx, bool(ctx.get('exam_level'))
+    if not relations and not level:
         return ITEM_REVIEW_EVIDENCE_OUTPUT if evidence else ITEM_REVIEW_OUTPUT
     schema = copy.deepcopy(ITEM_REVIEW_EVIDENCE_OUTPUT if evidence else ITEM_REVIEW_OUTPUT)
     item = schema['properties']['reviews']['items']
-    item['properties']['relations'] = arr(RELATION_CLAIM)
-    item['required'].append('relations')
+    if relations:
+        item['properties']['relations'] = arr(RELATION_CLAIM)
+        item['required'].append('relations')
+    if level:
+        item['properties'][OFF_LEVEL] = arr({'type': 'integer'})
+        item['required'].append(OFF_LEVEL)
     return schema
 
 
@@ -248,9 +260,54 @@ def check_review_input(value, ctx):
             ids = [c['relation_id'] for c in r['relations']]
             require(len(ids) == len(set(ids)) and set(ids) <= known,
                     f"v4 review: {r['question_id']} names a relation that is not a supported map relation, or one twice")
-    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k not in ('importance_note', 'evidence', 'relations')}
+    if ctx.get('exam_level'):
+        cited = {r['question_id']: {b['year'] for b in r['importance_basis'] if b['kind'] == 'current_exam'}
+                 for r in ctx['question_importance']}
+        for r in value['reviews']:
+            years = r[OFF_LEVEL]
+            require(len(years) == len(set(years)) and set(years) <= cited.get(r['question_id'], set()),
+                    f"v4 review: {r['question_id']} names an off-level exam year its basis does not cite, or one twice")
+    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k not in ('importance_note', 'evidence', 'relations', OFF_LEVEL)}
                                        for r in value['reviews']]}, ctx)
     return value
+
+
+def off_level_years(item_reviews, basis):
+    """{question: exam years} the last item reviews found off level, kept to the years the basis still cites (a fix
+    may have rewritten the basis after the review)."""
+    out = {}
+    for r in item_reviews or []:
+        cited = {b['year'] for b in basis.get(r['question_id'], []) if b['kind'] == 'current_exam'}
+        years = sorted(set(r.get(OFF_LEVEL) or []) & cited)
+        if years:
+            out[r['question_id']] = years
+    return out
+
+
+def carried_by(brief, bank, coverage_rows, presuppositions):
+    """{trunk question: [questions whose stem gives, as known, the link the trunk asks]} from the presupposition
+    records: the questions a record names as recalling the link, or, for a link nobody recalled, the questions that
+    answer the whole existence goal made for it."""
+    present = {q['question_id'] for q in bank['questions']}
+    whole = {}
+    for qid, did in pre.whole_answers(coverage_rows, brief, presuppositions):
+        whole.setdefault(did, set()).add(qid)
+    targets = {p['point_id']: p.get('target_ids') or [] for p in brief['points']}
+    goals = {t['target_id']: [d['direction_id'] for d in t['directions']] for t in brief['targets']}
+    out = {}
+    for r in presuppositions or []:
+        leaf = r['question_id']
+        if leaf not in present:
+            continue
+        trunks = set(r['recalled_by'])
+        if r['point_id']:
+            for tid in targets.get(r['point_id'], []):
+                for did in goals.get(tid, []):
+                    trunks |= whole.get(did, set())
+        for trunk in sorted((trunks & present) - {leaf}):
+            if leaf not in out.setdefault(trunk, []):
+                out[trunk].append(leaf)
+    return {k: sorted(v) for k, v in sorted(out.items())}
 
 
 # ---------------------------------------------------------------- evidence pages and citations (review-evidence/1)
@@ -460,12 +517,13 @@ def check_points(points_doc):
     return points_doc
 
 
-def question_table(basis, profile, bank, marked=None):
+def question_table(basis, profile, bank, marked=None, carries=None, off_level=None):
     """The importance table of the final bank: every question needs its basis, nothing else is accepted.
-    `marked`: question ids answering a marked page (importance-basis/2), None for /1."""
+    `marked`: question ids answering a marked page (importance-basis/2), None for /1.
+    `carries`, `off_level`: answer-level/1 (importance-basis/3), None for /1 and /2."""
     qids = [q['question_id'] for q in bank['questions']]
     require(set(basis) == set(qids), 'v4 importance: every question of the bank needs exactly one basis')
-    return imp.question_table({qid: basis[qid] for qid in qids}, profile, marked)
+    return imp.question_table({qid: basis[qid] for qid in qids}, profile, marked, carries, off_level)
 
 
 def project_importance(bank, table):
@@ -519,8 +577,11 @@ def importance_warnings(table):
     _, warn = imp.must_know_share(list(rows.values()))
     spread = imp.forecast_spread([{'point_id': qid, 'importance_basis': r['basis']} for qid, r in rows.items()])
     out = {'mustKnow': warn, 'forecastSpread': {k: v for k, v in spread.items() if len(v) > 1}}
-    if table['policy'] == imp.POLICY2:
+    if table['policy'] == imp.POLICY2 or 'marked' in table:
         out['markedFloor'] = sorted(qid for qid, r in rows.items() if r['rule'] == 'marked_page')
+    if table['policy'] == imp.POLICY3:
+        out['carriedFloor'] = sorted(qid for qid, r in rows.items() if r['rule'] == 'carries')
+        out['offLevelExam'] = table['offLevel']
     return out
 
 
@@ -1142,16 +1203,20 @@ def added_profile(original, extended):
 
 def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence',
              presuppositions=None, discriminations=None, settled=(), settled_places=None, item_reviews=None,
-             evidence_source=None):
+             evidence_source=None, answer_level=False):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing).
 
-    With marked pages (importance-basis/2) the questions answering them are at least Core."""
+    With marked pages (importance-basis/2) the questions answering them are at least Core.
+    `answer_level` (answer-level/1, importance-basis/3): exam rows the item review found off level do not count,
+    and a question asking a link is at least as important as the questions whose stems give that link."""
     pages = marked_pages(profile, exam_date)
     if pages:
         marked = set(marked_questions(brief, coverage_rows, pages, item_reviews, evidence_source))
         marked &= {q['question_id'] for q in reviewed['questions']}
-    table = question_table(basis, profile, reviewed, sorted(marked) if pages else None)
+    level = {'carries': carried_by(brief, reviewed, coverage_rows, presuppositions),
+             'off_level': off_level_years(item_reviews, basis)} if answer_level else {}
+    table = question_table(basis, profile, reviewed, sorted(marked) if pages else None, **level)
     snapshot, projection = v2.project_container_concepts(reviewed)
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
@@ -1267,7 +1332,8 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
                                      placement=placement, presuppositions=meta.get('presuppositions'),
                                      discriminations=meta.get('discriminations'), settled=_settled(meta),
                                      settled_places=_settled_places(meta), item_reviews=meta['itemReviews'],
-                                     evidence_source=(meta.get('reviewEvidence') or {}).get('sourceId'))
+                                     evidence_source=(meta.get('reviewEvidence') or {}).get('sourceId'),
+                                     answer_level=answer_level_on(meta))
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
     if (meta.get('unplacedOnly') or meta.get('presupposeOnly')) and packet.get('carrySources'):
@@ -1289,6 +1355,16 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
     for qid, b in meta['questionImportance'].items():
         if qid in intake and qid not in fixed:
             require(b == intake[qid], f'result4: {qid} importance basis differs from the intake bank')
+
+
+def answer_level_on(meta):
+    """answer-level/1 runs name the policy in the manifest; a result without it is assembled as before."""
+    if 'answerLevel' not in meta:
+        require(not any(OFF_LEVEL in r for r in meta['itemReviews']), 'result4: off-level exam years without the answer-level policy')
+        return False
+    require(meta['answerLevel'] == {'policy': ANSWER_LEVEL}, 'result4: unknown answer-level policy')
+    require(all(OFF_LEVEL in r for r in meta['itemReviews']), 'result4: an item review names no off-level exam years')
+    return True
 
 
 def _unalign4(meta, final):
