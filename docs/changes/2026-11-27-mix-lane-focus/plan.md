@@ -5,9 +5,10 @@
 1. `server/app/root_learning/content.py`: `saved_focus` 추가.
 2. `server/app/routes/root_learning.py`: `mix_overview` 응답에 `focus` 한 칸. 다른 구역은 안 건드린다.
 3. `web/src/types/rootLearning.ts`: `RootMixInfo.focus`.
-4. `web/src/bank/RootBatch.tsx`: 시작 화면 중요도 처음 값(`savedOf`)·강의별 칩 펼침 기본.
+4. `web/src/bank/TierRange.tsx`(새): `RootToday.tsx`의 범위 슬라이더를 떼어 낸 부품(live·label 추가). `FocusRange`는 이것을 쓴다(동작 그대로).
+   `web/src/bank/RootBatch.tsx`: 칩 → 전체 슬라이더 + 강의별 슬라이더, 처음 값(`savedOf`)·펼침 기본. `root-batch.css` 해당 구역.
 5. 검사: `server/tests/test_root_mix.py`(고른 적 없음 → null, 강의 화면 저장 → 그 값, 마지막 선택), `web/tests/root-batch.test.cjs`
-   (펼침 기본 반영, 저장값 기본·화면에서 바꿔도 저장값 그대로 새 검사).
+   (칩 조작을 슬라이더 조작으로, 저장값 기본·화면에서 바꿔도 저장값 그대로 새 검사). 오늘 학습 슬라이더 회귀: 고정물 `web/tests/root-today-prereqs.html`.
 
 ## 검사 명령과 성공 조건
 

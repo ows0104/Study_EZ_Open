@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ROOT_TIERS } from '../types/rootLearning';
 import type { RootFocus, RootOverview, RootSummary, RootPolicy, RootTierName } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
+import { TierRange } from './TierRange';
 import { readQuizMode, readQuizOrder, saveQuizMode, saveQuizOrder, type QuizMode, type QuizOrder } from './quizMode';
 
 export function RootPolicyNotice({policy}:{policy?:RootPolicy}) {
@@ -40,42 +41,10 @@ function Stat({label,value,total,tone}:{label:string;value:number;total?:number;
  * 옛 비연속 선택은 가장 낮은 것~가장 높은 것으로 보이고, 처음 움직일 때 연속 구간으로 저장된다.
  */
 function FocusRange({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;onChange:(tiers:RootTierName[],prereqs?:boolean)=>void}) {
-  const end=ROOT_TIERS.length;
-  const picked=focus.tiers.map(t=>ROOT_TIERS.indexOf(t)).filter(i=>i>=0);
-  const from=picked.length?Math.min(...picked):0,to=picked.length?Math.max(...picked)+1:end;
-  const [draft,setDraft]=useState<[number,number]>([from,to]);
-  const draftRef=useRef(draft);
-  const set=(next:[number,number])=>{draftRef.current=next;setDraft(next);};
-  // 서버 값(저장 응답·다른 강의로 이동)이 바뀌면 손잡이도 따라간다.
-  useEffect(()=>{set([from,to]);},[from,to]);
-  const commit=(next=draftRef.current)=>{
-    const tiers=ROOT_TIERS.slice(next[0],next[1]);
-    if(tiers.join()!==focus.tiers.join())onChange(tiers);
-  };
-  const [lo,hi]=draft;
-  const pick=(i:number)=>{
-    const next:[number,number]=i<lo?[i,hi]:i>=hi?[lo,i+1]:i-lo<=hi-1-i?[i,hi]:[lo,i+1];
-    set(next);commit(next);
-  };
   // 선행 문항(2026-11-18-prereq-toggle): 고른 중요도 밖의 선행 문항을 끌어올지. 모두 고르면 밖이 없다.
   const prereqs=focus.prereqs!==false,narrowed=focus.tiers.length<ROOT_TIERS.length;
-  const thumb=(which:0|1)=><input type="range" min={0} max={end} step={1} value={draft[which]} disabled={disabled}
-    aria-label={which?'중요도 끝':'중요도 시작'}
-    aria-valuetext={which?`${ROOT_TIERS[draft[1]-1]}까지`:`${ROOT_TIERS[draft[0]]}부터`}
-    onChange={e=>{const v=Number(e.currentTarget.value);set(which?[lo,Math.max(lo+1,v)]:[Math.min(hi-1,v),hi]);}}
-    onPointerUp={()=>commit()} onKeyUp={()=>commit()} onBlur={()=>commit()}/>;
   return <div className="mq-focus" role="group" aria-label="중요도">
-    <div className="mq-range" style={{'--lo':lo/end,'--hi':hi/end} as CSSProperties}>
-      <div className="mq-range-stops">
-        {ROOT_TIERS.map((tier,i)=><button key={tier} type="button" disabled={disabled}
-          className={[i>=lo&&i<hi?'is-in':'',focus.counts[tier]?'':'is-empty'].filter(Boolean).join(' ')||undefined}
-          onClick={()=>pick(i)}>{tier}<b>{focus.counts[tier]}</b></button>)}
-      </div>
-      <div className="mq-range-track" aria-hidden="true"><i/>
-        {Array.from({length:end+1},(_,i)=><span key={i} className={i>=lo&&i<=hi?'is-in':undefined} style={{left:`${i/end*100}%`}}/>)}
-      </div>
-      {thumb(0)}{thumb(1)}
-    </div>
+    <TierRange tiers={focus.tiers} counts={focus.counts} disabled={disabled} onChange={tiers=>onChange(tiers)}/>
     <button type="button" className="mq-focus-prereqs" aria-pressed={prereqs} disabled={disabled||!narrowed}
       onClick={()=>onChange(focus.tiers,!prereqs)}>{prereqs&&<Icon.check/>}선행 문항</button>
   </div>;

@@ -4,8 +4,11 @@
 
 - server: `root_mix`(root_mix·root_mix_v4 2개)·`route_contract` 통과. 새 검사: 고른 적 없는 강의 `focus` null,
   `PUT …/focus` 뒤 그 값(TIERS 순서), 두 번째 선택이 마지막 값.
-- web: `web-types` 통과. `root-batch` 브라우저 검사 4/4 통과 — 기존 3개(펼침 기본에 맞춰 「강의별」 클릭을 펼침 확인으로 바꿈)와
-  새 검사(두 번째 강의에 Essential만 저장 → 그 줄만 Essential, 첫 강의는 전부, 전체 Core 「일부」, 화면에서 바꿔도 저장값 그대로).
+- web(슬라이더판): `web-types` 통과. `root-batch` 브라우저 검사 4/4 통과 — 첫 검사의 칩 조작을 슬라이더로(강의 하나 Essential만 → 0문항·
+  「강의마다 다름」, 전체 Core 선분 → 모든 강의 Core~Optional, 손잡이 겹치지 않음, 재개는 Core만 구간으로)와 새 검사(두 번째 강의에
+  Essential만 저장 → 그 줄만 Essential, 첫 강의는 전부, 화면에서 바꿔도 저장값 그대로).
+  오늘 학습 슬라이더 고정물 `root-today-prereqs.html` 19개 통과(부품 분리 회귀).
+  브라우저 창: 저장값 Essential~Core 강의가 그 구간으로 시작, 실제 마우스 끌기로 끝 손잡이 이동·「강의마다 다름」 사라짐, 375px 폭 가로 넘침 없음.
   스크린숏 `runs/_development/2026-11-27-mix-lane-focus/batch-start-saved-focus.png`.
 
 ## 배포 대상 버전·순서·데이터 변경
