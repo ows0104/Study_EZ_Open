@@ -53,8 +53,8 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     assert.match(await globalChip(page,'Core').innerText(),/Core\s*6/);
     assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'true');
 
-    // 강의별: 한 강의의 Core를 끄면 그 강의만 0, 전체 칩은 「일부」.
-    await page.getByRole('button',{name:'강의별'}).click();
+    // 강의별: 처음부터 펼쳐 있다(2026-11-27-mix-lane-focus). 한 강의의 Core를 끄면 그 강의만 0, 전체 칩은 「일부」.
+    assert.equal(await page.getByRole('button',{name:'강의별'}).getAttribute('aria-expanded'),'true');
     const second=lectureRows(page).filter({hasText:'Second root lecture'});
     await second.getByRole('button').filter({hasText:'Core'}).click();
     assert.match(await second.innerText(),/0문항/);
@@ -139,7 +139,7 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     assert.equal(events.filter(e=>e.kind==='undo').length,2);
 
     await page.setViewportSize({width:390,height:844});
-    await page.getByRole('button',{name:'강의별'}).click();
+    assert.equal(await page.getByRole('button',{name:'강의별'}).getAttribute('aria-expanded'),'true');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await shot(page,'start-mobile');
     assert.deepEqual(errors,[]);
@@ -199,5 +199,34 @@ test('모아풀기 묶음: 강의를 건너 미열람을 먼저, 복습 주기 �
     assert.deepEqual(seen.slice(4).sort(),['Synthetic question 1?','Synthetic question 2?']);
     assert.deepEqual(errors,[]);
   }catch(error){await shot(page,'failure-phases');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
+  finally{await browser.close();}
+});
+
+test('모아풀기 강의별 중요도: 강의 화면에 저장한 중요도가 기본값, 고른 적 없는 강의는 전부(2026-11-27-mix-lane-focus)',async()=>{
+  const {browser,page}=await launch('d');const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  try{
+    // 두 번째 강의만 강의 화면에서 Essential만 골라 두었다(PUT …/focus, 오늘 학습 칩과 같은 저장).
+    const api=new URL('/api/root-learning/lectures/test/demo2/focus',url).href;
+    const saved=await page.request.put(api,{data:{requestId:'d-focus-1',tiers:['Essential']}});
+    assert.equal(saved.status(),200,await saved.text());
+    await page.goto(url+'?l=test/demo&l=test/demo2');
+    await counted(page);
+    await page.getByLabel('미열람 문항 보기').check();
+    const first=lectureRows(page).filter({hasText:'Synthetic root lecture'}),second=lectureRows(page).filter({hasText:'Second root lecture'});
+    const pressed=async row=>(await Promise.all((await row.getByRole('button').all()).map(async b=>(await b.getAttribute('aria-pressed'))==='true'?(await b.innerText()).replace(/\s*\d+$/,''):null))).filter(Boolean);
+    assert.deepEqual(await pressed(first),['Essential','Core','Important','Optional']);
+    assert.deepEqual(await pressed(second),['Essential']);
+    assert.match(await second.innerText(),/0문항/);
+    assert.equal(await startCount(page),'3');
+    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'mixed');
+    assert.equal(await globalChip(page,'Essential').getAttribute('aria-pressed'),'true');
+    await shot(page,'start-saved-focus');
+    // 여기서 바꾸면 그 강의만 바뀌고, 강의 화면의 저장값은 그대로다.
+    await second.getByRole('button').filter({hasText:'Core'}).click();
+    assert.equal(await startCount(page),'6');
+    const after=await page.request.get(new URL('/api/root-learning/lectures/test/demo2/mix',url).href);
+    assert.deepEqual((await after.json()).focus,['Essential']);
+    assert.deepEqual(errors,[]);
+  }catch(error){await shot(page,'failure-saved-focus');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
   finally{await browser.close();}
 });

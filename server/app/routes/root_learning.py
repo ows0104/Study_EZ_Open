@@ -1277,6 +1277,8 @@ def mix_overview(subject: str, run_id: str, user: CurrentUser = Depends(require_
     sessions = mix_sessions(db, row, user, when, configured)
     # closed: 오늘 다 푼 모아풀기 회차. 새로고침 전에 끝낸 강의도 마침 화면에 결과로 남긴다(#219 e198b5c8와 같은 뜻).
     return {'revision': row.revision, 'title': row.document['title'], 'counts': mix.counts(classes, tiers),
+            # focus: 이 강의에 저장한 오늘 학습 중요도. 시작 화면의 강의별 기본값이다(2026-11-27-mix-lane-focus). 고른 적 없으면 null.
+            'focus': content.saved_focus(db, row.subject, row.run_id, user.id),
             # phases: 복습 대상·미열람·복습 주기 이전 묶음(2026-11-19-mix-urgency-order). 옛 회차는 없다.
             'open': [{'sessionId': s.id, 'options': s.state['mix'], 'left': len(s.tasks) - s.state['index'],
                       **({'phases': s.state['mixPhases']} if s.state.get('mixPhases') else {})}

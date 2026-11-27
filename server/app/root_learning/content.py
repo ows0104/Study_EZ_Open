@@ -240,6 +240,16 @@ def focus_for(db, subject, run_id, user_id):
     return [t for t in TIERS if t in chosen] or list(TIERS)
 
 
+def saved_focus(db, subject, run_id, user_id):
+    """The tiers this learner saved for the lecture, or None if they never chose (모아풀기 기본값, 2026-11-27-mix-lane-focus)."""
+    from .policy import TIERS
+    row = _last_focus(db, subject, run_id, user_id)
+    if row is None:
+        return None
+    chosen = set(row.payload.get('tiers', []))
+    return [t for t in TIERS if t in chosen] or None
+
+
 def focus_prereqs(db, subject, run_id, user_id):
     """선행 문항 포함/미포함(2026-11-18-prereq-toggle): the same last choice. Older choices without it bring prerequisites in."""
     row = _last_focus(db, subject, run_id, user_id)

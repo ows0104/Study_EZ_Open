@@ -156,14 +156,16 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   const [advancing,setAdvancing]=useState(false);
   const [error,setError]=useState('');
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
-  // 시작 화면 선택지. 강의 하나 화면의 중요도 저장값과 따로다.
+  // 시작 화면 선택지. 중요도는 강의마다 고르고, 처음에는 그 강의 화면에 저장한 중요도를 쓴다(2026-11-27-mix-lane-focus).
+  // 여기서 바꾼 값은 저장하지 않는다 — 강의 화면의 오늘 학습 계획을 바꾸지 않게.
   const [laneTiers,setLaneTiers]=useState<Record<string,RootTierName[]>>({});
   const [unseen,setUnseen]=useState(false);
   const [ignoreSchedule,setIgnoreSchedule]=useState(false);
   // 선행 문항 포함(2026-11-18-prereq-toggle): 서버가 고른 문항의 선행 문항을 중요도 밖에서도 더한다.
   const [prereqs,setPrereqs]=useState(false);
   const [order,setOrder]=useState<RootMixOrder>('ordered');
-  const [perLecture,setPerLecture]=useState(false);
+  // 강의별 칩은 처음부터 펼친다(사용자 「중요도 필터를 강의별로 개별선택」).
+  const [perLecture,setPerLecture]=useState(true);
   const orderRef=useRef<RootMixOrder>('ordered');
   const lanes=lanesRef.current;
   const setLanes=(change:(lanes:Lane[])=>Lane[])=>{lanesRef.current=change(lanesRef.current);redraw(v=>v+1);};
@@ -200,7 +202,9 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
     patch(key,{view:next});
   }
 
-  const tiersOf=(key:string)=>laneTiers[key]??ALL;
+  /** 강의 줄의 중요도: 이 화면에서 바꾼 값, 없으면 그 강의에 저장한 중요도, 그것도 없으면 전부. */
+  const savedOf=(key:string)=>{const saved=lane(key)?.mix?.focus;return saved?.length?saved:ALL;};
+  const tiersOf=(key:string)=>laneTiers[key]??savedOf(key);
   const optionsOf=(key:string):RootMixOptions=>({tiers:tiersOf(key),unseen,ignoreSchedule,order,...(prereqs?{prereqs}:{})});
   const openOf=(l:Lane)=>l.mix?.open.find(o=>sameOptions(o.options,optionsOf(l.key)));
   /** 강의 줄의 수. 같은 조건으로 이어 풀 회차가 있으면 남은 수. */
@@ -212,12 +216,12 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   function setTierEverywhere(tier:RootTierName,on:boolean) {
     setLaneTiers(old=>{
       const next={...old};
-      for(const l of live){const now=old[l.key]??ALL;next[l.key]=ROOT_TIERS.filter(t=>t===tier?on:now.includes(t));}
+      for(const l of live){const now=old[l.key]??savedOf(l.key);next[l.key]=ROOT_TIERS.filter(t=>t===tier?on:now.includes(t));}
       return next;
     });
   }
   function setLaneTier(key:string,tier:RootTierName,on:boolean) {
-    setLaneTiers(old=>{const now=old[key]??ALL;return {...old,[key]:ROOT_TIERS.filter(t=>t===tier?on:now.includes(t))};});
+    setLaneTiers(old=>{const now=old[key]??savedOf(key);return {...old,[key]:ROOT_TIERS.filter(t=>t===tier?on:now.includes(t))};});
   }
 
   async function begin() {

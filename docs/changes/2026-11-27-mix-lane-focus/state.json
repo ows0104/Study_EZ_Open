@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-27-mix-lane-focus",
+  "title": "모아풀기 강의별 중요도·저장값 기본",
+  "area": "site",
+  "created_at": "2026-11-27T02:08:29.251691+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-27T02:09:01.746699+00:00",
+      "evidence": "사용자 2026-11-27 채팅: 「모아풀기할때 중요도 필터를 강의별로 개별선택할 수 있게 해줘. 그리고 기존 선택해둔게 있으면 그걸 기본값으로 해줘.」",
+      "scope": "plan.md 파일: content.saved_focus, mix_overview focus 칸, RootMixInfo.focus, RootBatch 시작 화면 중요도 처음 값·강의별 펼침, 해당 검사. 읽기만, DB 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "eb750b13d2cc62634809fb5344468d7004a777462f49e9e6981db96976d15931",
+      "plan_hash": "c1ee44c5c3e3009e2f8c83259f808ffb8b48472740b7fa1231e971ab2d95b23e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "86dd6801df2368bcafad1cb5e893144ca56a27abe8a8009cb348d776f30dad5e"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-27T02:09:16.269377+00:00"
+}
