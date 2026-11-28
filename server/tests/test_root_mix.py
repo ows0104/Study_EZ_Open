@@ -31,6 +31,8 @@ def task_ids(sid):
 # ── R1: nothing seen yet → every unit is unseen ──
 first = counts()
 assert first['title'] == 'Synthetic root lecture' and first['open'] == [] and first['closed'] == []
+# 고른 적 없는 강의: 저장 중요도 없음(처음 값 Essential~Important를 모아풀기에 들이지 않는다, 2026-11-27-mix-lane-focus).
+assert first['focus'] is None, first
 assert first['counts']['Core'] == {'unseen': 3, 'due': 0, 'later': 0}, first
 assert all(first['counts'][t] == {'unseen': 0, 'due': 0, 'later': 0} for t in ['Essential', 'Important', 'Optional'])
 
@@ -111,6 +113,12 @@ phases = r.json()['phases']
 assert phases['due'] == 1 and phases['unseen'] == 0 and len(phases['urgency']) == 1 and phases['urgency'][0] > 0, phases
 # 강의 화면의 중요도 저장값은 그대로다(처음 값 Essential~Important, 2026-11-25-lecture-tier-range).
 assert client.get(BASE).json()['focus']['tiers'] == ['Essential', 'Core', 'Important']
+assert counts()['focus'] is None
+# 강의 화면에서 고른 중요도가 모아풀기 시작 화면의 기본값으로 온다(2026-11-27-mix-lane-focus). 마지막 선택을 따른다.
+r = client.put(BASE + '/focus', json={'requestId': 'f1', 'tiers': ['Important', 'Core']}); assert r.status_code == 200, r.text
+assert counts()['focus'] == ['Core', 'Important']
+r = client.put(BASE + '/focus', json={'requestId': 'f2', 'tiers': ['Essential', 'Core', 'Important', 'Optional']}); assert r.status_code == 200, r.text
+assert counts()['focus'] == ALL
 
 # ── R4 섞어서: same seed same order, prerequisite question first ──
 doc = {'tasks': [{'task_id': f't{i}', 'question_id': f'q{i}', 'direction_id': f'd{i}'} for i in range(8)],

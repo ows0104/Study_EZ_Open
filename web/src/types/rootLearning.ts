@@ -29,6 +29,8 @@ export type RootMixOptions={tiers:RootTierName[]; unseen:boolean; ignoreSchedule
  *  urgency는 그 나머지 칸마다 급함 값(작을수록 급함). 옛 회차는 없다. */
 export type RootMixPhases={due:number; unseen:number; urgency:number[]};
 export type RootMixInfo={revision:string; title:string; counts:Record<RootTierName,Record<RootMixKind,number>>;
+  /** 이 강의에 저장한 오늘 학습 중요도(2026-11-27-mix-lane-focus). 시작 화면 강의별 기본값. 고른 적 없으면 null, 옛 서버는 없다. */
+  focus?:RootTierName[]|null;
   /** 오늘 안 끝난 모아풀기 회차. 같은 조건으로 시작하면 이어 푼다. */
   open:{sessionId:string; options:RootMixOptions; left:number; phases?:RootMixPhases}[];
   /** 오늘 다 푼 모아풀기 회차. 새로고침 전에 끝낸 강의를 마침 화면에 남긴다. 옛 서버는 보내지 않는다. */

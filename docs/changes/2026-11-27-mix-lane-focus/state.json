@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-27-mix-lane-focus",
+  "title": "모아풀기 강의별 중요도·저장값 기본",
+  "area": "site",
+  "created_at": "2026-11-27T02:08:29.251691+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-27T02:28:20.349574+00:00",
+      "evidence": "사용자 2026-11-27 채팅: 「모아풀기할때 중요도 필터를 강의별로 개별선택할 수 있게 해줘. 그리고 기존 선택해둔게 있으면 그걸 기본값으로 해줘.」, 칩 구현 병합 직전 「잠만 저게 아니라 슬라이드로.」",
+      "scope": "plan.md 파일: content.saved_focus, mix_overview focus 칸, RootMixInfo.focus, TierRange 부품 분리, RootBatch 시작 화면 전체·강의별 범위 슬라이더·저장값 처음 값, root-batch.css, 해당 검사. 읽기만, DB 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "ed28b729be7a054db5de4570283ad7dafb9a255bc0d55ec678113c3f6a7d86b4",
+      "plan_hash": "7028c99301faf1fc82ca729d6428ca893076a75bf6938a5acdc90f5e469c113f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "e8d052259e9d3806c3d2d0ba0f0b24916a4a363c6c645cf2a9474b6532b6942e"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-27T02:28:20.813743+00:00"
+}

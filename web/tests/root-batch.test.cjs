@@ -21,7 +21,13 @@ async function revealAndRate(page,key='3'){
 async function counted(page){await page.waitForFunction(()=>{const t=document.querySelector('.mq-mix-list')?.textContent;return t&&!t.includes('…');});}
 const lectureRows=page=>page.getByRole('list',{name:'고른 강의'}).locator('li');
 const startCount=page=>page.locator('.mq-start-button .mq-card-count').innerText();
-const globalChip=(page,tier)=>page.getByRole('group',{name:'중요도',exact:true}).getByRole('button').filter({hasText:tier});
+// 중요도 슬라이더(2026-11-27-mix-lane-focus): 선분 이름 버튼(.is-in이 고른 구간)과 손잡이 둘(input range).
+const globalGroup=page=>page.getByRole('group',{name:'중요도',exact:true});
+const globalStop=(page,tier)=>globalGroup(page).locator('.mq-range-stops button').filter({hasText:tier});
+const thumb=(page,label,end)=>page.getByRole('slider',{name:`${label} 중요도 ${end?'끝':'시작'}`,exact:true});
+/** 구간 [lo,hi)를 손잡이로 맞춘다(0 Essential … 4 Optional 끝). */
+async function range(page,label,lo,hi){await thumb(page,label,0).fill(String(lo));await thumb(page,label,1).fill(String(hi));}
+const inRange=scope=>scope.locator('.mq-range-stops button.is-in').evaluateAll(bs=>bs.map(b=>b.firstChild.textContent));
 
 async function launch(user){
   const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
@@ -50,24 +56,26 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
 
     await page.getByLabel('미열람 문항 보기').check();
     assert.equal(await startCount(page),'6');
-    assert.match(await globalChip(page,'Core').innerText(),/Core\s*6/);
-    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'true');
+    assert.match(await globalStop(page,'Core').innerText(),/Core\s*6/);
+    assert.deepEqual(await inRange(globalGroup(page)),['Essential','Core','Important','Optional']);
 
-    // 강의별: 한 강의의 Core를 끄면 그 강의만 0, 전체 칩은 「일부」.
-    await page.getByRole('button',{name:'강의별'}).click();
+    // 강의별: 처음부터 펼쳐 있다(2026-11-27-mix-lane-focus). 한 강의를 Essential만으로 줄이면 그 강의만 0, 전체에 「강의마다 다름」.
+    assert.equal(await page.getByRole('button',{name:'강의별'}).getAttribute('aria-expanded'),'true');
     const second=lectureRows(page).filter({hasText:'Second root lecture'});
-    await second.getByRole('button').filter({hasText:'Core'}).click();
+    await range(page,'Second root lecture',0,1);
+    assert.deepEqual(await inRange(second),['Essential']);
     assert.match(await second.innerText(),/0문항/);
     assert.equal(await startCount(page),'3');
-    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'mixed');
+    await globalGroup(page).getByText('강의마다 다름').waitFor();
     await shot(page,'start-per-lecture');
-    // 전체 칩을 누르면 모든 강의에 다시 적용된다.
-    await globalChip(page,'Core').click();
-    assert.equal(await globalChip(page,'Core').getAttribute('aria-pressed'),'true');
+    // 전체 슬라이더를 움직이면 모든 강의가 그 구간이 된다(Core 선분 → 시작 손잡이가 Core로).
+    await globalStop(page,'Core').click();
+    assert.deepEqual(await inRange(second),['Core','Important','Optional']);
+    assert.equal(await globalGroup(page).getByText('강의마다 다름').count(),0);
     assert.equal(await startCount(page),'6');
-    // 마지막 남은 전체 칩은 끌 수 없다(다른 중요도는 0개라도 켜져 있어 Core는 끌 수 있다).
-    for(const tier of ['Essential','Important','Optional'])await globalChip(page,tier).click();
-    assert.equal(await globalChip(page,'Core').isDisabled(),true);
+    // 손잡이는 겹치지 않는다: 끝을 시작에 붙이면 Core 하나.
+    await thumb(page,'전체',1).fill('1');
+    assert.deepEqual(await inRange(globalGroup(page)),['Core']);
     assert.equal(await startCount(page),'6');
 
     await page.getByRole('button',{name:/^모아풀기 시작/}).click();
@@ -108,7 +116,7 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     await page.getByLabel('미열람 문항 보기').check();
     // 다른 조건(중요도 넷)이면 새 회차 자리다. 시작할 때와 같은 조건(Core만)이면 그 회차를 잇는다.
     assert.equal(await page.getByRole('button',{name:/^모아풀기 시작/}).count(),1);
-    for(const tier of ['Essential','Important','Optional'])await globalChip(page,tier).click();
+    await range(page,'전체',1,2);
     await page.waitForFunction(()=>(document.querySelector('.mq-mix-list')?.textContent??'').includes('남은 2문항'));
     assert.match(await page.getByRole('list',{name:'고른 강의'}).innerText(),/Synthetic root lecture[\s\S]*0문항[\s\S]*Second root lecture[\s\S]*남은 2문항/);
     await page.getByRole('button',{name:/^모아풀기 재개/}).click();
@@ -139,7 +147,7 @@ test('모아풀기 시작 화면: 선택지·강의별 중요도·순서대로·
     assert.equal(events.filter(e=>e.kind==='undo').length,2);
 
     await page.setViewportSize({width:390,height:844});
-    await page.getByRole('button',{name:'강의별'}).click();
+    assert.equal(await page.getByRole('button',{name:'강의별'}).getAttribute('aria-expanded'),'true');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await shot(page,'start-mobile');
     assert.deepEqual(errors,[]);
@@ -199,5 +207,34 @@ test('모아풀기 묶음: 강의를 건너 미열람을 먼저, 복습 주기 �
     assert.deepEqual(seen.slice(4).sort(),['Synthetic question 1?','Synthetic question 2?']);
     assert.deepEqual(errors,[]);
   }catch(error){await shot(page,'failure-phases');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
+  finally{await browser.close();}
+});
+
+test('모아풀기 강의별 중요도: 강의 화면에 저장한 중요도가 기본값, 고른 적 없는 강의는 전부(2026-11-27-mix-lane-focus)',async()=>{
+  const {browser,page}=await launch('d');const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  try{
+    // 두 번째 강의만 강의 화면에서 Essential만 골라 두었다(PUT …/focus, 오늘 학습 칩과 같은 저장).
+    const api=new URL('/api/root-learning/lectures/test/demo2/focus',url).href;
+    const saved=await page.request.put(api,{data:{requestId:'d-focus-1',tiers:['Essential']}});
+    assert.equal(saved.status(),200,await saved.text());
+    await page.goto(url+'?l=test/demo&l=test/demo2');
+    await counted(page);
+    await page.getByLabel('미열람 문항 보기').check();
+    const first=lectureRows(page).filter({hasText:'Synthetic root lecture'}),second=lectureRows(page).filter({hasText:'Second root lecture'});
+    assert.deepEqual(await inRange(first),['Essential','Core','Important','Optional']);
+    assert.deepEqual(await inRange(second),['Essential']);
+    assert.match(await second.innerText(),/0문항/);
+    assert.equal(await startCount(page),'3');
+    await globalGroup(page).getByText('강의마다 다름').waitFor();
+    await shot(page,'start-saved-focus');
+    // 여기서 바꾸면 그 강의만 바뀌고(Core 선분 → 끝 손잡이가 Core까지), 강의 화면의 저장값은 그대로다.
+    await second.locator('.mq-range-stops button').filter({hasText:'Core'}).click();
+    assert.deepEqual(await inRange(second),['Essential','Core']);
+    assert.deepEqual(await inRange(first),['Essential','Core','Important','Optional']);
+    assert.equal(await startCount(page),'6');
+    const after=await page.request.get(new URL('/api/root-learning/lectures/test/demo2/mix',url).href);
+    assert.deepEqual((await after.json()).focus,['Essential']);
+    assert.deepEqual(errors,[]);
+  }catch(error){await shot(page,'failure-saved-focus');console.error((await page.locator('body').innerText()).slice(0,3000));throw error;}
   finally{await browser.close();}
 });

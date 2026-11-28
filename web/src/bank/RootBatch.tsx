@@ -11,6 +11,7 @@ import { warm } from './useRootFrames';
 import { RootSolve } from './RootSolve';
 import { readQuizMode, saveQuizMode, type QuizMode } from './quizMode';
 import { readMix, type MixLecture } from './mixLinks';
+import { TierRange, tierSpan } from './TierRange';
 import './roots.css';
 import './main-quiz.css';
 import './root-batch.css';
@@ -156,14 +157,16 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   const [advancing,setAdvancing]=useState(false);
   const [error,setError]=useState('');
   const [mode,setMode]=useState<QuizMode>(readQuizMode);
-  // 시작 화면 선택지. 강의 하나 화면의 중요도 저장값과 따로다.
+  // 시작 화면 선택지. 중요도는 강의마다 고르고, 처음에는 그 강의 화면에 저장한 중요도를 쓴다(2026-11-27-mix-lane-focus).
+  // 여기서 바꾼 값은 저장하지 않는다 — 강의 화면의 오늘 학습 계획을 바꾸지 않게.
   const [laneTiers,setLaneTiers]=useState<Record<string,RootTierName[]>>({});
   const [unseen,setUnseen]=useState(false);
   const [ignoreSchedule,setIgnoreSchedule]=useState(false);
   // 선행 문항 포함(2026-11-18-prereq-toggle): 서버가 고른 문항의 선행 문항을 중요도 밖에서도 더한다.
   const [prereqs,setPrereqs]=useState(false);
   const [order,setOrder]=useState<RootMixOrder>('ordered');
-  const [perLecture,setPerLecture]=useState(false);
+  // 강의별 칩은 처음부터 펼친다(사용자 「중요도 필터를 강의별로 개별선택」).
+  const [perLecture,setPerLecture]=useState(true);
   const orderRef=useRef<RootMixOrder>('ordered');
   const lanes=lanesRef.current;
   const setLanes=(change:(lanes:Lane[])=>Lane[])=>{lanesRef.current=change(lanesRef.current);redraw(v=>v+1);};
@@ -200,7 +203,10 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
     patch(key,{view:next});
   }
 
-  const tiersOf=(key:string)=>laneTiers[key]??ALL;
+  /** 강의 줄의 중요도: 이 화면에서 바꾼 값, 없으면 그 강의에 저장한 중요도, 그것도 없으면 전부. */
+  // 슬라이더라 연속 구간으로 맞춘다(옛 비연속 저장값은 가장 낮은 것~가장 높은 것).
+  const savedOf=(key:string)=>{const saved=lane(key)?.mix?.focus;return saved?.length?ROOT_TIERS.slice(...tierSpan(saved)):ALL;};
+  const tiersOf=(key:string)=>laneTiers[key]??savedOf(key);
   const optionsOf=(key:string):RootMixOptions=>({tiers:tiersOf(key),unseen,ignoreSchedule,order,...(prereqs?{prereqs}:{})});
   const openOf=(l:Lane)=>l.mix?.open.find(o=>sameOptions(o.options,optionsOf(l.key)));
   /** 강의 줄의 수. 같은 조건으로 이어 풀 회차가 있으면 남은 수. */
@@ -208,17 +214,13 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
   const live=lanes.filter(l=>l.mix&&!l.error);
   const eligible=live.filter(l=>countOf(l)>0);
   const totalCount=eligible.reduce((sum,l)=>sum+countOf(l),0);
-  /** 전체 칩 하나를 모든 강의에 적용한다(강의별로 바꾼 그 중요도를 덮어쓴다). 다른 중요도는 강의별 값 그대로. */
-  function setTierEverywhere(tier:RootTierName,on:boolean) {
-    setLaneTiers(old=>{
-      const next={...old};
-      for(const l of live){const now=old[l.key]??ALL;next[l.key]=ROOT_TIERS.filter(t=>t===tier?on:now.includes(t));}
-      return next;
-    });
-  }
-  function setLaneTier(key:string,tier:RootTierName,on:boolean) {
-    setLaneTiers(old=>{const now=old[key]??ALL;return {...old,[key]:ROOT_TIERS.filter(t=>t===tier?on:now.includes(t))};});
-  }
+  /** 전체 슬라이더: 모든 강의를 같은 구간으로. 강의마다 다르면 가장 넓게 덮는 구간을 보인다. */
+  const spans=live.map(l=>tierSpan(tiersOf(l.key)));
+  const differs=spans.some(([a,b])=>a!==spans[0][0]||b!==spans[0][1]);
+  const allTiers=spans.length?ROOT_TIERS.slice(Math.min(...spans.map(x=>x[0])),Math.max(...spans.map(x=>x[1]))):ALL;
+  const allCounts=Object.fromEntries(ROOT_TIERS.map(t=>[t,live.reduce((sum,l)=>sum+mixCount(l.mix,[t],unseen,ignoreSchedule),0)]));
+  const setAll=(tiers:RootTierName[])=>setLaneTiers(Object.fromEntries(live.map(l=>[l.key,tiers])));
+  const setLane=(key:string,tiers:RootTierName[])=>setLaneTiers(old=>({...old,[key]:tiers}));
 
   async function begin() {
     if(advancing||writes.blocked||!eligible.length)return;
@@ -369,18 +371,9 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
           <div className="mq-today-text">
             <div className="mq-mix-tiers">
               <div className="mq-focus" role="group" aria-label="중요도">
-                {ROOT_TIERS.map(tier=>{
-                  const having=live.filter(l=>tiersOf(l.key).includes(tier)).length;
-                  const on=live.length>0&&having===live.length,some=having>0&&!on;
-                  // 끄면 어느 강의에도 중요도가 남지 않는 칩은 끌 수 없다.
-                  const last=on&&ROOT_TIERS.every(t=>t===tier||!live.some(l=>tiersOf(l.key).includes(t)));
-                  const n=live.reduce((sum,l)=>sum+mixCount(l.mix,[tier],unseen,ignoreSchedule),0);
-                  return <button key={tier} type="button" aria-pressed={on?true:some?'mixed':false}
-                    disabled={loading||advancing||last||!live.length}
-                    className={[n?'':'is-empty',some?'is-some':''].filter(Boolean).join(' ')||undefined}
-                    onClick={()=>setTierEverywhere(tier,!on)}>
-                    {on&&<Icon.check/>}{tier}<b>{loading?'…':count(n)}</b></button>;
-                })}
+                {/* 전체(2026-11-27-mix-lane-focus): 움직이면 모든 강의가 이 구간이 된다. */}
+                <TierRange tiers={allTiers} counts={allCounts} live label="전체" disabled={loading||advancing||!live.length} onChange={setAll}/>
+                {differs&&<span className="mq-mix-differs">강의마다 다름</span>}
               </div>
               <button type="button" className="mq-mix-expand" aria-expanded={perLecture} aria-controls="mq-mix-lectures"
                 disabled={!live.length} onClick={()=>setPerLecture(v=>!v)}>강의별<Icon.chevronDown/></button>
@@ -417,12 +410,10 @@ function Batch({account,lectures}:{account:string;lectures:MixLecture[]}) {
             return <li key={l.key} className={l.error||!n?'is-off':undefined}>
               <span className="mq-mix-title">{l.title??l.runId}</span>
               <span className="mq-mix-count">{loading?'…':l.error?`열 수 없음 · ${l.error}`:open?`남은 ${count(n)}문항`:`${count(n)}문항`}</span>
-              {perLecture&&l.mix&&!l.error&&<div className="mq-focus mq-mix-lane-tiers" role="group" aria-label={`${l.title??l.runId} 중요도`}>
-                {ROOT_TIERS.map(tier=>{
-                  const on=tiersOf(l.key).includes(tier),k=mixCount(l.mix,[tier],unseen,ignoreSchedule);
-                  return <button key={tier} type="button" aria-pressed={on} disabled={advancing} className={k?undefined:'is-empty'}
-                    onClick={()=>setLaneTier(l.key,tier,!on)}>{on&&<Icon.check/>}{tier}<b>{count(k)}</b></button>;
-                })}
+              {perLecture&&l.mix&&!l.error&&<div className="mq-focus mq-mix-lane-range" role="group" aria-label={`${l.title??l.runId} 중요도`}>
+                <TierRange tiers={tiersOf(l.key)} live label={l.title??l.runId} disabled={advancing}
+                  counts={Object.fromEntries(ROOT_TIERS.map(t=>[t,mixCount(l.mix,[t],unseen,ignoreSchedule)]))}
+                  onChange={tiers=>setLane(l.key,tiers)}/>
               </div>}
             </li>;
           })}
